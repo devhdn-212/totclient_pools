@@ -1,0 +1,36 @@
+package connection
+
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/lib/pq"
+	"gofibergocu/internal/config"
+	"log"
+	"time"
+)
+
+func GetDatabase(conf config.Database) *sql.DB {
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s search_path=%s sslmode=disable Timezone=Asia/Jakarta",
+		conf.Host,
+		conf.Port,
+		conf.User,
+		conf.Pass,
+		conf.Name,
+		conf.Schema)
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		log.Fatal("Failed to connect to database", err.Error())
+	} else {
+		fmt.Println("Successfully connected to database")
+	}
+
+	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(100)
+	db.SetConnMaxIdleTime(5 * time.Minute)
+	db.SetConnMaxLifetime(60 * time.Minute)
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("Failed to ping database", err.Error())
+	}
+	return db
+}
