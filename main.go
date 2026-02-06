@@ -21,6 +21,13 @@ import (
 func main() {
 	cnf := config.Get()
 	dbConnection := connection.GetDatabase(cnf.Database)
+	if err := connection.InitRedis(cnf.Redis); err != nil {
+		panic(err)
+	}
+	defer connection.RDB.Close()
+	if !connection.RedisHealth() {
+		panic("Redis is not healthy")
+	}
 
 	app := fiber.New()
 	app.Use(logger.New())

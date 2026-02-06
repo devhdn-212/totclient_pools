@@ -3,15 +3,22 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"github.com/doug-martin/goqu/v9"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
+	"gofibergocu/internal/connection"
 	"gofibergocu/internal/repository"
 	"gofibergocu/internal/util"
 	"time"
+)
+
+const (
+	RedisCustomerAllKey = "customers:all"
 )
 
 type customerService struct {
@@ -27,6 +34,20 @@ func NewCustomerService(db *sql.DB, repo domain.CustomerRepository) domain.Custo
 }
 
 func (c customerService) Index(ctx context.Context) ([]dto.CustomerData, error) {
+	cached, found, err := connection.GetRedis(RedisCustomerAllKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if found {
+		var data []dto.CustomerData
+		if err := json.Unmarshal([]byte(cached), &data); err == nil {
+			log.Info("Returning data from Redis - Customer")
+			return data, nil
+		}
+		// kalau corrupt → lanjut ke DB
+	}
+
 	exec := goqu.New("default", c.db)
 	repo := repository.NewCustomer(exec)
 
@@ -42,6 +63,9 @@ func (c customerService) Index(ctx context.Context) ([]dto.CustomerData, error) 
 			Name: v.Name,
 		})
 	}
+
+	go connection.SetRedis(RedisCustomerAllKey, customerData, 60*time.Minute)
+	log.Info("Returning data Database - Customer")
 	return customerData, nil
 }
 func (c customerService) Create(ctx context.Context, req dto.CreateCustomerRequest) error {
@@ -80,7 +104,11 @@ func (c customerService) Create(ctx context.Context, req dto.CreateCustomerReque
 			}
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	go connection.DeleteRedis(RedisCustomerAllKey)
+	return nil
 
 }
 func (c customerService) Update(ctx context.Context, req dto.UpdateCustomerRequest) error {
@@ -111,7 +139,11 @@ func (c customerService) Update(ctx context.Context, req dto.UpdateCustomerReque
 	if err = repo.Update(ctx, &flag); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	go connection.DeleteRedis(RedisCustomerAllKey)
+	return nil
 }
 func (c customerService) Delete(ctx context.Context, id string) error {
 	tx, err := c.db.BeginTx(ctx, nil)
@@ -138,9 +170,25 @@ func (c customerService) Delete(ctx context.Context, id string) error {
 	if err = repo.Delete(ctx, id); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	go connection.DeleteRedis(RedisCustomerAllKey)
+	return nil
 }
 func (c customerService) Show(ctx context.Context, id string) (dto.CustomerData, error) {
+	cacheKey := "customer:detail:" + id
+
+	cached, found, err := connection.GetRedis(cacheKey)
+	if err == nil && found {
+		var dto dto.CustomerData
+		if err := json.Unmarshal([]byte(cached), &dto); err == nil {
+			log.Info("Returning data from Redis - Customer/%s", id)
+			return dto, nil
+		}
+		// kalau unmarshal error → lanjut ke DB (fail open)
+	}
+
 	exec := goqu.New("default", c.db)
 	repo := repository.NewCustomer(exec)
 
@@ -151,9 +199,14 @@ func (c customerService) Show(ctx context.Context, id string) (dto.CustomerData,
 	if flag.ID == "" {
 		return dto.CustomerData{}, errors.New("customer id not found")
 	}
-	return dto.CustomerData{
+
+	result := dto.CustomerData{
 		ID:   flag.ID,
 		Code: flag.Code,
 		Name: flag.Name,
-	}, nil
+	}
+
+	_ = connection.SetRedis(cacheKey, result, 60*time.Minute)
+	log.Info("Returning data Database - Customer/$s", id)
+	return result, nil
 }

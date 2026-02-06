@@ -34,5 +34,11 @@ func Get() *Config {
 			Key: os.Getenv("JWT_KEY"),
 			Exp: expInt,
 		},
+		Redis: Redis{
+			Host: os.Getenv("DB_REDIS_HOST"),
+			Port: os.Getenv("DB_REDIS_PORT"),
+			Pass: os.Getenv("DB_REDIS_PASSWORD"),
+			Name: os.Getenv("DB_REDIS_NAME"),
+		},
 	}
 }

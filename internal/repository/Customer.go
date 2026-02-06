@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/doug-martin/goqu/v9"
 	"gofibergocu/domain"
+	"log"
 	"time"
 )
 
@@ -27,6 +28,10 @@ func (cr customerRepository) FindByID(ctx context.Context, id string) (result do
 		Where(
 			goqu.C("deleted_at").IsNull(),
 			goqu.C("id").Eq(id))
+
+	start := time.Now()
+	sql, args, _ := dataset.ToSQL()
+	log.Println("[SQL][FindByID]", sql, args, "elapsed:", time.Since(start))
 
 	_, err = dataset.ScanStructContext(ctx, &result)
 	return

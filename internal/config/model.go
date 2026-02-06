@@ -4,6 +4,7 @@ type Config struct {
 	Server   Server
 	Database Database
 	Jwt      Jwt
+	Redis    Redis
 }
 
 type Server struct {
@@ -22,4 +23,11 @@ type Database struct {
 	User   string
 	Pass   string
 	Tz     string
+}
+
+type Redis struct {
+	Host string
+	Port string
+	Pass string
+	Name string
 }
