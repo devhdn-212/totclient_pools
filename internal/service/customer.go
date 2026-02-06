@@ -5,16 +5,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/doug-martin/goqu/v9"
-	"github.com/gofiber/fiber/v2/log"
-	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
 	"gofibergocu/internal/connection"
 	"gofibergocu/internal/repository"
 	"gofibergocu/internal/util"
 	"time"
+
+	"github.com/doug-martin/goqu/v9"
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const (
@@ -42,7 +43,7 @@ func (c customerService) Index(ctx context.Context) ([]dto.CustomerData, error) 
 	if found {
 		var data []dto.CustomerData
 		if err := json.Unmarshal([]byte(cached), &data); err == nil {
-			log.Info("Returning data from Redis - Customer")
+			connection.Log.Info("Returning data from Redis - Customer")
 			return data, nil
 		}
 		// kalau corrupt → lanjut ke DB
@@ -65,7 +66,7 @@ func (c customerService) Index(ctx context.Context) ([]dto.CustomerData, error) 
 	}
 
 	go connection.SetRedis(RedisCustomerAllKey, customerData, 60*time.Minute)
-	log.Info("Returning data Database - Customer")
+	connection.Log.Info("Returning data Database - Customer")
 	return customerData, nil
 }
 func (c customerService) Create(ctx context.Context, req dto.CreateCustomerRequest) error {

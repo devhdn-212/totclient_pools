@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gofiber/fiber/v2/log"
+
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
 	"gofibergocu/internal/config"
 	"strconv"
 	"time"
@@ -22,11 +24,12 @@ func InitRedis(conf config.Redis) error {
 	pwd := conf.Pass
 	dbStr := conf.Name
 	if host == "" || port == "" || dbStr == "" {
+		Log.Info("Redis env variables missing")
 		return fmt.Errorf("redis env variables missing")
 	}
 	dbNum, err := strconv.Atoi(dbStr)
 	if err != nil {
-		return fmt.Errorf("invalid DB_REDIS_NAME: %v", err)
+		return fmt.Errorf("invalid DB_REDIS_NAME: %v", zap.Error(err))
 	}
 
 	RDB = redis.NewClient(&redis.Options{
@@ -38,29 +41,29 @@ func InitRedis(conf config.Redis) error {
 	if _, err := RDB.Ping(ctx).Result(); err != nil {
 		return fmt.Errorf("cannot connect to Redis: %v", err)
 	}
-	log.Info("Connected to Redis")
+	Log.Info("Connected to Redis")
 	return nil
 }
 func RedisHealth() bool {
 	if RDB == nil {
-		log.Error("Redis client not initialized. Call InitRedis() first.")
+		Log.Fatal("Redis client not initialized. Call InitRedis() first.")
 		return false
 	}
 
 	_, err := RDB.Ping(ctx).Result()
 	if err != nil {
-		fmt.Errorf("Redis health check failed: %v", err)
+		Log.Fatal("Redis health check failed: ", zap.Error(err))
 		return false
 	}
 
-	log.Info("Redis is healthy")
+	Log.Info("Redis is healthy")
 	return true
 }
 func getClient(db int) *redis.Client {
 	var conf config.Redis
 	if db == 0 {
 		if RDB == nil {
-			panic("Redis client not initialized. Call InitRedis() first.")
+			Log.Panic("Redis client not initialized. Call InitRedis() first.")
 		}
 		return RDB
 	}
@@ -93,7 +96,7 @@ func SetRedis(key string, data interface{}, expire time.Duration, db ...int) err
 
 	err = client.Set(ctx, key, jsonData, expire).Err()
 	if err != nil {
-		fmt.Sprintf("Redis Set failed : %v", err)
+		Log.Fatal("Redis Set failed : ", zap.Error(err))
 		return err
 	}
 	return nil
@@ -116,7 +119,7 @@ func GetRedis(key string, db ...int) (string, bool, error) {
 	if err == redis.Nil {
 		return "", false, nil
 	} else if err != nil {
-		fmt.Sprintf("Redis Get failed : %v", err)
+		Log.Fatal("Redis Get failed : ", zap.Error(err))
 		return "", false, err
 	}
 	return result, true, nil
@@ -137,7 +140,7 @@ func DeleteRedis(key string, db ...int) (int64, error) {
 
 	deleted, err := client.Del(ctx, key).Result()
 	if err != nil {
-		fmt.Sprintf("Redis Delete failed : %v", err)
+		Log.Fatal("Redis Delete failed : ", zap.Error(err))
 		return 0, err
 	}
 	return deleted, nil

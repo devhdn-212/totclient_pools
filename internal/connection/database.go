@@ -3,7 +3,10 @@ package connection
 import (
 	"database/sql"
 	"fmt"
+
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
+
 	"gofibergocu/internal/config"
 	"log"
 	"time"
@@ -19,9 +22,9 @@ func GetDatabase(conf config.Database) *sql.DB {
 		conf.Schema)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Failed to connect to database", err.Error())
+		Log.Fatal("Failed to connect to database", zap.Error(err))
 	} else {
-		fmt.Println("Successfully connected to database")
+		Log.Info("Successfully connected to database")
 	}
 
 	db.SetMaxIdleConns(10)
@@ -30,7 +33,7 @@ func GetDatabase(conf config.Database) *sql.DB {
 	db.SetConnMaxLifetime(60 * time.Minute)
 	err = db.Ping()
 	if err != nil {
-		log.Fatal("Failed to ping database", err.Error())
+		log.Fatal("Failed to ping database", zap.Error(err))
 	}
 	return db
 }
