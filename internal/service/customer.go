@@ -4,26 +4,33 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
+	"gofibergocu/internal/repository"
 	"gofibergocu/internal/util"
 	"time"
 )
 
 type customerService struct {
-	customerRepository domain.CustomerRepository
+	db   *sql.DB
+	repo domain.CustomerRepository
 }
 
-func NewCustomer(customerRepository domain.CustomerRepository) domain.CustomerService {
+func NewCustomerService(db *sql.DB, repo domain.CustomerRepository) domain.CustomerService {
 	return &customerService{
-		customerRepository: customerRepository,
+		db:   db,
+		repo: repo,
 	}
 }
 
 func (c customerService) Index(ctx context.Context) ([]dto.CustomerData, error) {
-	customers, err := c.customerRepository.FindAll(ctx)
+	exec := goqu.New("default", c.db)
+	repo := repository.NewCustomer(exec)
+
+	customers, err := repo.FindAll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +45,20 @@ func (c customerService) Index(ctx context.Context) ([]dto.CustomerData, error) 
 	return customerData, nil
 }
 func (c customerService) Create(ctx context.Context, req dto.CreateCustomerRequest) error {
-	flag, err := c.customerRepository.FindByCode(ctx, req.Code)
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	txExec := goqu.NewTx("default", tx)
+	repo := repository.NewCustomer(txExec)
+
+	flag, err := repo.FindByCode(ctx, req.Code)
 	if err != nil {
 		return err
 	}
@@ -51,7 +71,7 @@ func (c customerService) Create(ctx context.Context, req dto.CreateCustomerReque
 		Name:      req.Name,
 		CreatedAt: sql.NullTime{Valid: true, Time: time.Now()},
 	}
-	err = c.customerRepository.Save(ctx, &customer)
+	err = repo.Save(ctx, &customer)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) {
@@ -60,11 +80,24 @@ func (c customerService) Create(ctx context.Context, req dto.CreateCustomerReque
 			}
 		}
 	}
-	return err
+	return tx.Commit()
 
 }
 func (c customerService) Update(ctx context.Context, req dto.UpdateCustomerRequest) error {
-	flag, err := c.customerRepository.FindByID(ctx, req.ID)
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	txExec := goqu.NewTx("default", tx)
+	repo := repository.NewCustomer(txExec)
+
+	flag, err := repo.FindByID(ctx, req.ID)
 	if err != nil {
 		return err
 	}
@@ -75,10 +108,26 @@ func (c customerService) Update(ctx context.Context, req dto.UpdateCustomerReque
 	flag.Name = req.Name
 	flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now()}
 
-	return c.customerRepository.Update(ctx, &flag)
+	if err = repo.Update(ctx, &flag); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 func (c customerService) Delete(ctx context.Context, id string) error {
-	flag, err := c.customerRepository.FindByID(ctx, id)
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	txExec := goqu.NewTx("default", tx)
+	repo := repository.NewCustomer(txExec)
+
+	flag, err := repo.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -86,10 +135,16 @@ func (c customerService) Delete(ctx context.Context, id string) error {
 		return errors.New("customer id not found")
 	}
 
-	return c.customerRepository.Delete(ctx, id)
+	if err = repo.Delete(ctx, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 func (c customerService) Show(ctx context.Context, id string) (dto.CustomerData, error) {
-	flag, err := c.customerRepository.FindByID(ctx, id)
+	exec := goqu.New("default", c.db)
+	repo := repository.NewCustomer(exec)
+
+	flag, err := repo.FindByID(ctx, id)
 	if err != nil {
 		return dto.CustomerData{}, err
 	}

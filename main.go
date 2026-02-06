@@ -41,10 +41,10 @@ func main() {
 				JSON(dto.CreateResponseError("missing token, please login"))
 		},
 	})
-
-	customerRepository := repository.NewCustomer(dbConnection)
+	goquExec := repository.NewGoquExecutor(dbConnection)
+	customerRepository := repository.NewCustomer(goquExec)
 	userRepository := repository.NewUser(dbConnection)
-	customerService := service.NewCustomer(customerRepository)
+	customerService := service.NewCustomerService(dbConnection, customerRepository)
 	authService := service.NewAuth(cnf, userRepository)
 
 	api.NewCustomer(app, customerService, jwtMidd)
