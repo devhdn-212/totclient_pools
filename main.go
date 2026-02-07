@@ -17,6 +17,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/etag"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -70,7 +71,20 @@ func main() {
 	})
 
 	jwtMidd := jwtMid.New(jwtMid.Config{
-		SigningKey: jwtMid.SigningKey{Key: []byte(cnf.Jwt.Key)},
+		SigningKey: jwtMid.SigningKey{Key: []byte(cnf.Jwt.Key), JWTAlg: "HS256"},
+		SuccessHandler: func(c *fiber.Ctx) error {
+			token, ok := c.Locals("user").(*jwt.Token)
+			if !ok || token == nil {
+				return c.Status(fiber.StatusUnauthorized).
+					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
+			}
+			claims, ok := token.Claims.(jwt.MapClaims)
+			if !ok || !validateJwtClaims(claims, cnf.Jwt.Issuer, cnf.Jwt.Audience) {
+				return c.Status(fiber.StatusUnauthorized).
+					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
+			}
+			return c.Next()
+		},
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			return c.Status(fiber.StatusUnauthorized).
 				JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "missing token, please login"))
@@ -103,6 +117,48 @@ func main() {
 	// Your cleanup tasks go here
 	dbConnection.Close()
 	logger.Info("Shutdown complete")
+}
+
+func validateJwtClaims(claims jwt.MapClaims, issuer, audience string) bool {
+	if issuer != "" {
+		iss, ok := claims["iss"].(string)
+		if !ok || iss != issuer {
+			return false
+		}
+	}
+	if audience != "" {
+		switch aud := claims["aud"].(type) {
+		case string:
+			if aud != audience {
+				return false
+			}
+		case []interface{}:
+			found := false
+			for _, v := range aud {
+				if s, ok := v.(string); ok && s == audience {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		case []string:
+			found := false
+			for _, s := range aud {
+				if s == audience {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func NewGCPLogger() *zap.Logger {

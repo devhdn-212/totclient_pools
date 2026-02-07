@@ -12,8 +12,10 @@ type Server struct {
 	Port string
 }
 type Jwt struct {
-	Key string
-	Exp int
+	Key      string
+	Exp      int
+	Issuer   string
+	Audience string
 }
 type Database struct {
 	Host   string

@@ -38,6 +38,9 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 
 	claim := jwt.MapClaims{
 		"id":  user.ID,
+		"iss": a.conf.Jwt.Issuer,
+		"aud": a.conf.Jwt.Audience,
+		"iat": time.Now().Unix(),
 		"exp": time.Now().Add(time.Duration(a.conf.Jwt.Exp) * time.Minute).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)

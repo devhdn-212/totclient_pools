@@ -31,8 +31,10 @@ func Get() *Config {
 			Tz:     os.Getenv("DB_TIMEZONE"),
 		},
 		Jwt: Jwt{
-			Key: os.Getenv("JWT_KEY"),
-			Exp: expInt,
+			Key:      os.Getenv("JWT_KEY"),
+			Exp:      expInt,
+			Issuer:   os.Getenv("JWT_ISSUER"),
+			Audience: os.Getenv("JWT_AUDIENCE"),
 		},
 		Redis: Redis{
 			Host: os.Getenv("DB_REDIS_HOST"),
