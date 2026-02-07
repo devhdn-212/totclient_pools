@@ -40,7 +40,7 @@ func (ca *customerApi) Index(ctx *fiber.Ctx) error {
 	res, err := ca.customerService.Index(c)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(err.Error()))
+			JSON(dto.CreateResponseError(http.StatusBadRequest, err.Error()))
 	}
 	return ctx.JSON(dto.CreateResponseSuccess(res))
 }
@@ -65,7 +65,7 @@ func (ca *customerApi) Create(ctx *fiber.Ctx) error {
 			zap.Any("body", req),
 		)
 		return ctx.Status(http.StatusBadRequest).
-			JSON(dto.CreateResponseErrorData("validation failed", fails))
+			JSON(dto.CreateResponseErrorData(http.StatusBadRequest, "validation failed", fails))
 	}
 	err := ca.customerService.Create(c, req)
 	if err != nil {
@@ -77,7 +77,7 @@ func (ca *customerApi) Create(ctx *fiber.Ctx) error {
 			zap.String("record", string(recordJson)),
 		)
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(err.Error()))
+			JSON(dto.CreateResponseError(http.StatusBadRequest, err.Error()))
 	}
 	return ctx.Status(http.StatusCreated).
 		JSON(dto.CreateResponseSuccess(""))
@@ -103,7 +103,7 @@ func (ca *customerApi) Update(ctx *fiber.Ctx) error {
 			zap.Any("body", req),
 		)
 		return ctx.Status(http.StatusBadRequest).
-			JSON(dto.CreateResponseErrorData("validation failed", fails))
+			JSON(dto.CreateResponseErrorData(http.StatusBadRequest, "validation failed", fails))
 	}
 
 	// /customer/:id
@@ -117,12 +117,12 @@ func (ca *customerApi) Update(ctx *fiber.Ctx) error {
 			zap.String("record", string(recordJson)),
 		)
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(err.Error()))
+			JSON(dto.CreateResponseError(http.StatusBadRequest, err.Error()))
 	}
 	connection.Log.Info("Customer updated successfully",
 		zap.String("id", req.ID),
 	)
-	return ctx.Status(http.StatusCreated).
+	return ctx.Status(http.StatusOK).
 		JSON(dto.CreateResponseSuccess(""))
 }
 func (ca *customerApi) Delete(ctx *fiber.Ctx) error {
@@ -138,7 +138,7 @@ func (ca *customerApi) Delete(ctx *fiber.Ctx) error {
 			zap.String("error", err.Error()),
 		)
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(err.Error()))
+			JSON(dto.CreateResponseError(http.StatusBadRequest, err.Error()))
 	}
 	connection.Log.Info("Customer deleted successfully",
 		zap.String("id", id),
@@ -154,7 +154,7 @@ func (ca *customerApi) Show(ctx *fiber.Ctx) error {
 	data, err := ca.customerService.Show(c, id)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(err.Error()))
+			JSON(dto.CreateResponseError(http.StatusBadRequest, err.Error()))
 	}
 	return ctx.Status(http.StatusOK).
 		JSON(dto.CreateResponseSuccess(data))

@@ -2,11 +2,12 @@ package api
 
 import (
 	"context"
-	"github.com/gofiber/fiber/v2"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
 	"net/http"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type authApi struct {
@@ -30,7 +31,7 @@ func (a authApi) Login(ctx *fiber.Ctx) error {
 	res, err := a.authService.Login(c, req)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(err.Error()))
+			JSON(dto.CreateResponseError(http.StatusBadRequest, err.Error()))
 	}
 	return ctx.Status(http.StatusOK).
 		JSON(dto.CreateResponseSuccess(res))

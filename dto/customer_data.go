@@ -1,9 +1,11 @@
 package dto
 
 type CustomerData struct {
-	ID   string `json:"id"`
-	Code string `json:"code"`
-	Name string `json:"name"`
+	ID        string `json:"id"`
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_datetime"`
+	UpdateAt  string `json:"updated_datetime"`
 }
 
 type CreateCustomerRequest struct {

@@ -3,67 +3,116 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/doug-martin/goqu/v9"
 	"gofibergocu/domain"
-	"log"
 	"time"
+
+	"github.com/doug-martin/goqu/v9"
 )
 
 type customerRepository struct {
+	db   GoquDB
 	exec DBExecutor
 }
 
-func NewCustomer(exec DBExecutor) domain.CustomerRepository {
-	return &customerRepository{exec: exec}
+func NewCustomerRepository(exec *GoquExecutor) domain.CustomerRepository {
+	return &customerRepository{
+		db:   exec.DB,
+		exec: exec.Exec,
+	}
 }
 
-func (cr customerRepository) FindAll(ctx context.Context) (result []domain.Customer, err error) {
-	dataset := cr.exec.From("tbl_customer").Where(goqu.C("deleted_at").IsNull())
-	err = dataset.ScanStructsContext(ctx, &result)
-	return
+func (r customerRepository) FindAll(ctx context.Context) ([]domain.Customer, error) {
+	var res []domain.Customer
+	err := r.db.
+		From("tbl_customer").
+		Where(goqu.C("deleted_at").IsNull()).
+		ScanStructsContext(ctx, &res)
+	return res, err
 }
 
-func (cr customerRepository) FindByID(ctx context.Context, id string) (result domain.Customer, err error) {
-	dataset := cr.exec.From("tbl_customer").
+func (r customerRepository) FindByID(ctx context.Context, id string) (domain.Customer, error) {
+	var c domain.Customer
+
+	ds := r.db.From("tbl_customer").
 		Where(
+			goqu.C("id").Eq(id),
 			goqu.C("deleted_at").IsNull(),
-			goqu.C("id").Eq(id))
+		)
 
-	start := time.Now()
-	sql, args, _ := dataset.ToSQL()
-	log.Println("[SQL][FindByID]", sql, args, "elapsed:", time.Since(start))
+	sqlStr, args, err := ds.ToSQL()
+	if err != nil {
+		return c, err
+	}
 
-	_, err = dataset.ScanStructContext(ctx, &result)
-	return
+	row := r.exec.QueryRowContext(ctx, sqlStr, args...)
+	err = row.Scan(
+		&c.ID,
+		&c.Code,
+		&c.Name,
+		&c.CreatedAt,
+		&c.UpdateAt,
+		&c.DeletedAt,
+	)
+	if err == sql.ErrNoRows {
+		return domain.Customer{}, nil
+	}
+	return c, err
 }
-func (cr customerRepository) FindByCode(ctx context.Context, code string) (result domain.Customer, err error) {
-	dataset := cr.exec.From("tbl_customer").
+
+func (r customerRepository) FindByCode(ctx context.Context, code string) (domain.Customer, error) {
+	var c domain.Customer
+	_, err := r.db.
+		From("tbl_customer").
 		Where(
+			goqu.C("code").Eq(code),
 			goqu.C("deleted_at").IsNull(),
-			goqu.C("code").Eq(code))
-
-	_, err = dataset.ScanStructContext(ctx, &result)
-	return
+		).
+		ScanStructContext(ctx, &c)
+	return c, err
 }
 
-func (cr customerRepository) Save(ctx context.Context, c *domain.Customer) error {
-	exec := cr.exec.Insert("tbl_customer").Rows(c).Executor()
-	_, err := exec.ExecContext(ctx)
+func (r customerRepository) Save(ctx context.Context, c *domain.Customer) error {
+	sqlStr, args, err := r.db.Insert("tbl_customer").Rows(c).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = r.exec.ExecContext(ctx, sqlStr, args...)
 	return err
 }
 
-func (cr customerRepository) Update(ctx context.Context, c *domain.Customer) error {
-	exec := cr.exec.Update("tbl_customer").
-		Where(goqu.C("id").Eq(c.ID)).Set(c).Executor()
-	_, err := exec.ExecContext(ctx)
-	return err
+func (r customerRepository) Update(ctx context.Context, c *domain.Customer) error {
+	sqlStr, args, err := r.db.
+		Update("tbl_customer").
+		Set(goqu.Record{
+			"name":       c.Name,
+			"updated_at": time.Now(),
+		}).
+		Where(goqu.C("id").Eq(c.ID)).
+		ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := r.exec.ExecContext(ctx, sqlStr, args...)
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
-func (cr customerRepository) Delete(ctx context.Context, id string) error {
-	exec := cr.exec.Update("tbl_customer").
+func (r customerRepository) Delete(ctx context.Context, id string) error {
+	sqlStr, args, err := r.db.
+		Update("tbl_customer").
+		Set(goqu.Record{"deleted_at": time.Now()}).
 		Where(goqu.C("id").Eq(id)).
-		Set(goqu.Record{"deleted_at": sql.NullTime{Valid: true, Time: time.Now()}}).
-		Executor()
-	_, err := exec.ExecContext(ctx)
-	return err
+		ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := r.exec.ExecContext(ctx, sqlStr, args...)
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

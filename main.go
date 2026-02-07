@@ -37,49 +37,47 @@ func main() {
 	}
 
 	app := fiber.New()
+	app.Use(requestid.New())
+	app.Use(etag.New())
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
 		latency := time.Since(start)
-
+		rid, _ := c.Locals("requestid").(string)
 		fields := []zap.Field{
-			zap.String("request_id", c.Locals("requestid").(string)),
+			zap.String("request_id", rid),
 			zap.String("method", c.Method()),
 			zap.String("path", c.Path()),
 			zap.Int("status", c.Response().StatusCode()),
-			zap.Duration("latency_ms", latency),
+			zap.Int64("latency_ms", latency.Microseconds()),
 			zap.String("ip", c.IP()),
 		}
+		// Optional: POST JSON (HATI-HATI DI PROD)
 		if c.Method() == fiber.MethodPost && c.Is("json") {
-			body := c.Body()
-			if len(body) > 0 {
-				// bisa simpan sebagai string
-				fields = append(fields, zap.String("body", string(body)))
-
-				// atau parse JSON agar structured
+			if len(c.Body()) < 2048 { // guard
 				var parsed map[string]interface{}
-				if err := json.Unmarshal(body, &parsed); err == nil {
+				if err := json.Unmarshal(c.Body(), &parsed); err == nil {
+					delete(parsed, "password")
+					delete(parsed, "token")
 					fields = append(fields, zap.Any("json_body", parsed))
 				}
 			}
 		}
 
 		// log
-		logger.Info("request", fields...)
+		logger.Info("http_request", fields...)
 		return err
 	})
-	app.Use(requestid.New())
-	app.Use(etag.New())
 
 	jwtMidd := jwtMid.New(jwtMid.Config{
 		SigningKey: jwtMid.SigningKey{Key: []byte(cnf.Jwt.Key)},
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			return c.Status(fiber.StatusUnauthorized).
-				JSON(dto.CreateResponseError("missing token, please login"))
+				JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "missing token, please login"))
 		},
 	})
 	goquExec := repository.NewGoquExecutor(dbConnection)
-	customerRepository := repository.NewCustomer(goquExec)
+	customerRepository := repository.NewCustomerRepository(goquExec)
 	userRepository := repository.NewUser(dbConnection)
 	customerService := service.NewCustomerService(dbConnection, customerRepository)
 	authService := service.NewAuth(cnf, userRepository)
@@ -89,20 +87,14 @@ func main() {
 
 	go func() {
 		appsPort := cnf.Server.Port
-		if appsPort == "" {
-			appsPort = "7072"
-		}
-
 		if err := app.Listen(":" + appsPort); err != nil {
-
 			logger.Fatal("Failed to start app", zap.Error(err))
 		}
 	}()
 
-	c := make(chan os.Signal, 1)                    // Create channel to signify a signal being sent
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM) // When an interrupt or termination signal is sent, notify the channel
-
-	_ = <-c // This blocks the main thread until an interrupt is received
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
 	logger.Info("Gracefully shutting down...")
 	_ = app.Shutdown()
 
@@ -110,8 +102,7 @@ func main() {
 
 	// Your cleanup tasks go here
 	dbConnection.Close()
-	connection.RDB.Close()
-	logger.Info("Fiber was successful shutdown.")
+	logger.Info("Shutdown complete")
 }
 
 func NewGCPLogger() *zap.Logger {
