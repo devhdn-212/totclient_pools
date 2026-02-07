@@ -43,7 +43,7 @@ func (a authApi) Login(ctx *fiber.Ctx) error {
 	res, err := a.authService.Login(c, req)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(http.StatusBadRequest, err.Error()))
+			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
 	return ctx.Status(http.StatusOK).
 		JSON(dto.CreateResponseSuccess(res))
