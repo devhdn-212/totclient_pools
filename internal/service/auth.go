@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
 	"gofibergocu/internal/config"
@@ -38,6 +39,7 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 
 	claim := jwt.MapClaims{
 		"id":  user.ID,
+		"jti": uuid.NewString(),
 		"iss": a.conf.Jwt.Issuer,
 		"aud": a.conf.Jwt.Audience,
 		"iat": time.Now().Unix(),

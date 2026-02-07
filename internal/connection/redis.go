@@ -145,3 +145,18 @@ func DeleteRedis(key string, db ...int) (int64, error) {
 	}
 	return deleted, nil
 }
+
+func BlacklistJWT(jti string, ttl time.Duration) error {
+	if jti == "" {
+		return fmt.Errorf("empty jti")
+	}
+	return SetRedis("jwt:blacklist:"+jti, "1", ttl)
+}
+
+func IsJWTBlacklisted(jti string) (bool, error) {
+	if jti == "" {
+		return false, fmt.Errorf("empty jti")
+	}
+	_, found, err := GetRedis("jwt:blacklist:" + jti)
+	return found, err
+}

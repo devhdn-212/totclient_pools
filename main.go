@@ -79,7 +79,21 @@ func main() {
 					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
 			}
 			claims, ok := token.Claims.(jwt.MapClaims)
-			if !ok || !validateJwtClaims(claims, cnf.Jwt.Issuer, cnf.Jwt.Audience) {
+			if !ok {
+				return c.Status(fiber.StatusUnauthorized).
+					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
+			}
+			jti, ok := claims["jti"].(string)
+			if !ok || jti == "" {
+				return c.Status(fiber.StatusUnauthorized).
+					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
+			}
+			isBlacklisted, err := connection.IsJWTBlacklisted(jti)
+			if err != nil || isBlacklisted {
+				return c.Status(fiber.StatusUnauthorized).
+					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
+			}
+			if !validateJwtClaims(claims, cnf.Jwt.Issuer, cnf.Jwt.Audience) {
 				return c.Status(fiber.StatusUnauthorized).
 					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
 			}
@@ -97,7 +111,7 @@ func main() {
 	authService := service.NewAuth(cnf, userRepository)
 
 	api.NewCustomer(app, customerService, jwtMidd)
-	api.NewAuth(app, authService)
+	api.NewAuth(app, authService, jwtMidd)
 
 	go func() {
 		appsPort := cnf.Server.Port
