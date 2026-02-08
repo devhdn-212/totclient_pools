@@ -113,15 +113,18 @@ func main() {
 	goquExec := repository.NewGoquExecutor(dbConnection)
 	adminRepository := repository.NewAdminRepository(goquExec)
 	adminruleRepository := repository.NewAdminruleRepository(goquExec)
+	currRepository := repository.NewCurrRepository(goquExec)
 	customerRepository := repository.NewCustomerRepository(goquExec)
 	//userRepository := repository.NewUser(dbConnection)
 	adminService := service.NewAdminService(dbConnection, adminRepository)
 	adminruleService := service.NewAdminruleService(dbConnection, adminruleRepository)
+	currService := service.NewCurrService(dbConnection, currRepository)
 	customerService := service.NewCustomerService(dbConnection, customerRepository)
 	authService := service.NewAuth(cnf, adminRepository)
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
 	api.NewAdminruleApi(app, adminruleService, jwtMidd)
+	api.NewCurrApi(app, currService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 

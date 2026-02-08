@@ -1,0 +1,38 @@
+-- MASTER
+
+CREATE TABLE tbl_admin (
+	username varchar(30) NOT NULL,
+	"password" varchar(250) NULL,
+	idadmin varchar(30) NULL,
+	"name" varchar(50) NULL,
+	statuslogin varchar(1) NULL,
+	lastlogin timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	joindate date DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	ipaddress varchar(20) DEFAULT ''::character varying NULL,
+	timezone varchar(30) DEFAULT ''::character varying NULL,
+	createadmin varchar(30) NULL,
+	createdateadmin timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updateadmin varchar(30) DEFAULT ''::character varying NULL,
+	updatedateadmin timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT tbl_admin_pk PRIMARY KEY (username)
+);
+CREATE TABLE tbl_adminrole (
+	idadminrole varchar(30) NOT NULL,
+	nmadminrole varchar(50) NULL,
+	ruleadmin text NULL,
+	createadminrole varchar(30) DEFAULT ''::character varying NULL,
+	createdateadminrole timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updateadminrole varchar(30) DEFAULT ''::character varying NULL,
+	updatedateadminrole timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT tbl_adminrole_unique UNIQUE (idadminrole)
+);
+CREATE TABLE tbl_currency (
+	idcurr varchar(20) NOT NULL,
+	typecurr varchar(10) DEFAULT ''::character varying NOT NULL,
+	status char(1) NOT NULL CHECK (status IN ('Y', 'N')),
+	createcurr varchar(30) DEFAULT ''::character varying NULL,
+	createdatecurr timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatecurr varchar(30) DEFAULT ''::character varying NULL,
+	updatedatecurr timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT tbl_currency_unique UNIQUE (idcurr)
+);
