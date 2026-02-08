@@ -15,13 +15,16 @@ type Adminrule struct {
 	Update    string       `db:"updateadminrole"`
 	UpdateAt  sql.NullTime `db:"updatedateadminrole"`
 }
+
 type AdminruleRepository interface {
 	FindAll(ctx context.Context) ([]Adminrule, error)
+	FindSelect(ctx context.Context) ([]Adminrule, error)
 	FindByID(ctx context.Context, id string) (Adminrule, error)
 	Save(ctx context.Context, adminrule *Adminrule) error
 	Update(ctx context.Context, adminrule *Adminrule) error
 }
 type AdminruleService interface {
 	All(ctx context.Context) ([]dto.AdminruleData, error)
+	Select(ctx context.Context) ([]dto.AdminruleSelect, error)
 	Save(ctx context.Context, req dto.AdminruleSave, client string) error
 }

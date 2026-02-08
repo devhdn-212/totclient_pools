@@ -120,7 +120,7 @@ func main() {
 	customerService := service.NewCustomerService(dbConnection, customerRepository)
 	authService := service.NewAuth(cnf, adminRepository)
 
-	api.NewAdminApi(app, adminService, jwtMidd)
+	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
 	api.NewAdminruleApi(app, adminruleService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)

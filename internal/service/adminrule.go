@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	RedisAdminruleAllKey = "adminrule:all"
+	RedisAdminruleAllKey    = "adminrule:all"
+	RedisAdminruleSelectKey = "adminrule:select"
 )
 
 type adminruleService struct {
@@ -77,7 +78,38 @@ func (a adminruleService) All(ctx context.Context) ([]dto.AdminruleData, error) 
 	connection.Log.Info("Returning data Database - Adminrule")
 	return adminruleData, nil
 }
+func (a adminruleService) Select(ctx context.Context) ([]dto.AdminruleSelect, error) {
+	cached, found, err := connection.GetRedis(RedisAdminruleSelectKey)
+	if err != nil {
+		return nil, err
+	}
 
+	if found {
+		var data []dto.AdminruleSelect
+		if err := json.Unmarshal([]byte(cached), &data); err == nil {
+			connection.Log.Info("Returning data from Redis - Adminrule Select")
+			return data, nil
+		}
+		// kalau corrupt → lanjut ke DB
+	}
+
+	admins, err := a.repo.FindSelect(ctx)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	var adminruleSelect []dto.AdminruleSelect
+	for _, v := range admins {
+		adminruleSelect = append(adminruleSelect, dto.AdminruleSelect{
+			ID:   v.ID,
+			Name: v.Name,
+		})
+	}
+
+	go connection.SetRedis(RedisAdminruleSelectKey, adminruleSelect, 60*time.Minute)
+	connection.Log.Info("Returning data Database - Adminrule Select")
+	return adminruleSelect, nil
+}
 func (a adminruleService) Save(ctx context.Context, req dto.AdminruleSave, client_admin string) error {
 	tx, err := a.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -138,5 +170,6 @@ func (a adminruleService) Save(ctx context.Context, req dto.AdminruleSave, clien
 	}
 
 	go connection.DeleteRedis(RedisAdminruleAllKey)
+	go connection.DeleteRedis(RedisAdminruleSelectKey)
 	return nil
 }

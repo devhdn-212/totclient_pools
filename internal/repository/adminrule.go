@@ -28,7 +28,15 @@ func (a adminruleRepository) FindAll(ctx context.Context) ([]domain.Adminrule, e
 		ScanStructsContext(ctx, &res)
 	return res, err
 }
-
+func (a adminruleRepository) FindSelect(ctx context.Context) ([]domain.Adminrule, error) {
+	var res []domain.Adminrule
+	err := a.db.
+		From(config.DB_tbl_adminrule).
+		Select("idadminrole", "nmadminrole").
+		Order(goqu.C("idadminrole").Asc()).
+		ScanStructsContext(ctx, &res)
+	return res, err
+}
 func (a adminruleRepository) FindByID(ctx context.Context, id string) (domain.Adminrule, error) {
 	var c domain.Adminrule
 

@@ -16,14 +16,16 @@ import (
 )
 
 type adminApi struct {
-	adminService domain.AdminService
+	adminService     domain.AdminService
+	adminruleService domain.AdminruleService
 }
 
 func NewAdminApi(app *fiber.App,
-	adminService domain.AdminService,
+	adminService domain.AdminService, adminruleService domain.AdminruleService,
 	authmidle fiber.Handler) {
 	ad := adminApi{
-		adminService: adminService,
+		adminService:     adminService,
+		adminruleService: adminruleService,
 	}
 	admin := app.Group("/admin", authmidle)
 	admin.Get("", ad.Index)
@@ -33,12 +35,22 @@ func (ad *adminApi) Index(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
 
+	resselect, errselect := ad.adminruleService.Select(c)
+	if errselect != nil {
+		return ctx.Status(http.StatusInternalServerError).
+			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
+	}
 	res, err := ad.adminService.All(c)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-	return ctx.JSON(dto.CreateResponseSuccess(res))
+	return ctx.JSON(fiber.Map{
+		"status":        fiber.StatusOK,
+		"message":       "success",
+		"listadminrule": resselect,
+		"record":        res,
+	})
 }
 func (ad *adminApi) Save(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
