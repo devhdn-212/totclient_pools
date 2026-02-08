@@ -21,7 +21,7 @@ func NewAuth(app *fiber.App, authService domain.AuthService, authmidle fiber.Han
 	aa := &authApi{
 		authService: authService,
 	}
-	auth := app.Group("/auth", limiter.New(limiter.Config{
+	auth := app.Group("/api/auth", limiter.New(limiter.Config{
 		Max:        5,
 		Expiration: 1 * time.Minute,
 		KeyGenerator: func(c *fiber.Ctx) string {
@@ -49,8 +49,11 @@ func (a authApi) Login(ctx *fiber.Ctx) error {
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
 	ctx.Locals("client_admin", req.Username)
-	return ctx.Status(http.StatusOK).
-		JSON(dto.CreateResponseSuccess(res))
+	return ctx.JSON(fiber.Map{
+		"status":  fiber.StatusOK,
+		"message": "success",
+		"token":   res.Token,
+	})
 }
 
 func (a authApi) Logout(ctx *fiber.Ctx) error {

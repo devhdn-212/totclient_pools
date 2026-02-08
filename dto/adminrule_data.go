@@ -1,18 +1,19 @@
 package dto
 
 type AdminruleData struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Created string `json:"created"`
-	Update  string `json:"updated"`
+	ID      string `json:"adminrule_id"`
+	Name    string `json:"adminrule_name"`
+	Rule    string `json:"adminrule_rule"`
+	Created string `json:"adminrule_create"`
+	Update  string `json:"adminrule_update"`
 }
 type AdminruleSelect struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   string `json:"adminrule_id"`
+	Name string `json:"adminrule_name"`
 }
 type AdminruleSave struct {
 	Type string `json:"type" validate:"required"`
-	ID   string `json:"id" validate:"required"`
-	Name string `json:"name" validate:"required,max=30"`
-	Rule string `json:"rule"`
+	ID   string `json:"adminrule_id" validate:"required"`
+	Name string `json:"adminrule_name" validate:"required,max=30"`
+	Rule string `json:"adminrule_rule"`
 }

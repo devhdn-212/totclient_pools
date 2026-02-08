@@ -1,15 +1,15 @@
 package dto
 
 type AdminData struct {
-	Username  string `json:"username"`
-	Idadmin   string `json:"idadmin"`
-	Name      string `json:"name"`
-	Lastlogin string `json:"lastlogin"`
-	Joindate  string `json:"joindate"`
-	Ipaddress string `json:"ipaddress"`
-	Status    string `json:"status"`
-	Created   string `json:"created"`
-	Update    string `json:"updated"`
+	Username  string `json:"admin_username"`
+	Idadmin   string `json:"admin_role"`
+	Name      string `json:"admin_name"`
+	Lastlogin string `json:"admin_lastlogin"`
+	Joindate  string `json:"admin_joindate"`
+	Ipaddress string `json:"admin_ipaddress"`
+	Status    string `json:"admin_status"`
+	Created   string `json:"admin_created"`
+	Update    string `json:"admin_updated"`
 }
 type AdminLogin struct {
 	Username string `json:"username" validate:"required"`

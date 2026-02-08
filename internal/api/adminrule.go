@@ -25,8 +25,8 @@ func NewAdminruleApi(app *fiber.App,
 	ad := adminruleApi{
 		adminruleService: adminruleService,
 	}
-	admin := app.Group("/adminrule", authmidle)
-	admin.Get("", ad.Index)
+	admin := app.Group("/api/adminrule", authmidle)
+	admin.Post("", ad.Index)
 	admin.Post("/save", ad.Save)
 }
 func (ad *adminruleApi) Index(ctx *fiber.Ctx) error {
