@@ -83,6 +83,12 @@ func main() {
 				return c.Status(fiber.StatusUnauthorized).
 					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
 			}
+			username, ok := claims["username"].(string)
+			c.Locals("client_username", username)
+			if !ok || username == "" {
+				return c.Status(fiber.StatusUnauthorized).
+					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token - Username"))
+			}
 			jti, ok := claims["jti"].(string)
 			if !ok || jti == "" {
 				return c.Status(fiber.StatusUnauthorized).
@@ -105,11 +111,14 @@ func main() {
 		},
 	})
 	goquExec := repository.NewGoquExecutor(dbConnection)
+	adminRepository := repository.NewAdminRepository(goquExec)
 	customerRepository := repository.NewCustomerRepository(goquExec)
-	userRepository := repository.NewUser(dbConnection)
+	//userRepository := repository.NewUser(dbConnection)
+	adminService := service.NewAdminService(dbConnection, adminRepository)
 	customerService := service.NewCustomerService(dbConnection, customerRepository)
-	authService := service.NewAuth(cnf, userRepository)
+	authService := service.NewAuth(cnf, adminRepository)
 
+	api.NewAdminApi(app, adminService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 
