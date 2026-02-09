@@ -83,7 +83,7 @@ func main() {
 				return c.Status(fiber.StatusUnauthorized).
 					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
 			}
-			username, ok := claims["username"].(string)
+			username, ok := claims["clien_admin"].(string)
 			c.Locals("client_username", username)
 			if !ok || username == "" {
 				return c.Status(fiber.StatusUnauthorized).

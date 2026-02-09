@@ -1,6 +1,13 @@
 package util
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"gofibergocu/internal/config"
+	"golang.org/x/crypto/bcrypt"
+	"math/rand"
+	"strconv"
+	s "strings"
+	"time"
+)
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword(
@@ -8,4 +15,46 @@ func HashPassword(password string) (string, error) {
 		bcrypt.DefaultCost,
 	)
 	return string(bytes), err
+}
+func Encryption(datatext string) (string, int) {
+	min := 0
+	max := 149
+	rand.Seed(time.Now().UnixNano())
+	// keymap := rand.Intn(max-min) + min
+	keymap := rand.Intn(max-min) + min
+	var key string = config.Keymap[keymap]
+	var source string = config.Sourcechar
+	result := ""
+	for i := 0; i < len(datatext); i++ {
+		temp_indexsource := s.Index(source, string(datatext[i]))
+		temp_indexkey := s.Index(key, string(key[temp_indexsource]))
+		result += string(key[temp_indexkey])
+	}
+	return result, keymap
+}
+func Decryption(dataencrypt string) string {
+	temp := s.Split(dataencrypt, "|")
+	keymap, _ := strconv.Atoi(temp[1])
+	var key string = config.Keymap[keymap]
+	var source string = config.Sourcechar
+	result := ""
+	for i := 0; i < len(temp[0]); i++ {
+		temp_indexkey := s.Index(key, string(dataencrypt[i]))
+		temp_indexsource := s.Index(source, string(source[temp_indexkey]))
+		result += string(source[temp_indexsource])
+	}
+	return result
+}
+
+func Parsing_Decry(data, pemisah string) (string, string) {
+	temp_client := s.Split(data, pemisah)
+	client_username := temp_client[0]
+	client_rule := temp_client[1]
+	return client_username, client_rule
+}
+
+func Parsing_final(datatoken string) (string, string) {
+	temp_decp := Decryption(datatoken)
+	client_username, client_idrule := Parsing_Decry(temp_decp, "==")
+	return client_username, client_idrule
 }

@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
 	"gofibergocu/internal/connection"
@@ -75,8 +74,8 @@ func (ad *adminApi) Save(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusBadRequest).
 			JSON(dto.CreateResponseErrorData(http.StatusBadRequest, "validation failed", fails))
 	}
-	client_username := ctx.Locals("client_username").(string)
-	fmt.Println("username save : ", client_username)
+	datatoken := ctx.Locals("client_username").(string)
+	client_username, _ := util.Parsing_final(datatoken)
 
 	err := ad.adminService.Save(c, req, client_username)
 	if err != nil {

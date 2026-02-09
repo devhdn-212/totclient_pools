@@ -3,9 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
 	"gofibergocu/internal/config"
+	"gofibergocu/internal/util"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -38,13 +41,18 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 		return dto.AuthResponse{}, errors.New("auth failed")
 	}
 
+	dataclient := user.Username + "==" + user.Idadmin
+	fmt.Println("data mentah : ", dataclient)
+	dataclient_encr, keymap := util.Encryption(dataclient)
+	dataclient_encr_final := dataclient_encr + "|" + strconv.Itoa(keymap)
+
 	claim := jwt.MapClaims{
-		"username": user.Username,
-		"jti":      uuid.NewString(),
-		"iss":      a.conf.Jwt.Issuer,
-		"aud":      a.conf.Jwt.Audience,
-		"iat":      time.Now().Unix(),
-		"exp":      time.Now().Add(time.Duration(a.conf.Jwt.Exp) * time.Minute).Unix(),
+		"clien_admin": dataclient_encr_final,
+		"jti":         uuid.NewString(),
+		"iss":         a.conf.Jwt.Issuer,
+		"aud":         a.conf.Jwt.Audience,
+		"iat":         time.Now().Unix(),
+		"exp":         time.Now().Add(time.Duration(a.conf.Jwt.Exp) * time.Minute).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
 	tokenstr, err := token.SignedString([]byte(a.conf.Jwt.Key))

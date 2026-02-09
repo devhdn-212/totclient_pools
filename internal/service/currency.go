@@ -57,11 +57,11 @@ func (c currService) All(ctx context.Context) ([]dto.CurrData, error) {
 	for _, v := range curr {
 		var createdAt, updatedAt string
 		if v.CreatedAt.Valid {
-			createdAt = v.Created + " " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
 			if v.Update != "" {
-				updatedAt = v.Update + " " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
+				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
 			} else {
 				updatedAt = ""
 			}
@@ -75,7 +75,6 @@ func (c currService) All(ctx context.Context) ([]dto.CurrData, error) {
 			Update:  updatedAt,
 		})
 	}
-	fmt.Println(currData)
 	go connection.SetRedis(RedisCurrAllKey, currData, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Currency")
 	return currData, nil

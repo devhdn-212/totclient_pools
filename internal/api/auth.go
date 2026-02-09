@@ -48,7 +48,6 @@ func (a authApi) Login(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-	ctx.Locals("client_admin", req.Username)
 	return ctx.JSON(fiber.Map{
 		"status":  fiber.StatusOK,
 		"message": "success",

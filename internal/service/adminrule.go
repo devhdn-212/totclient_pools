@@ -60,11 +60,11 @@ func (a adminruleService) All(ctx context.Context) ([]dto.AdminruleData, error) 
 		var createdAt, updatedAt string
 
 		if v.CreatedAt.Valid {
-			createdAt = v.Created + " " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
 			if v.Update != "" {
-				updatedAt = v.Update + " " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
+				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
 			} else {
 				updatedAt = ""
 			}
