@@ -36,3 +36,16 @@ CREATE TABLE tbl_currency (
 	updatedatecurr timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	CONSTRAINT tbl_currency_unique UNIQUE (idcurr)
 );
+CREATE TABLE tbl_company (
+	idcompany varchar(10) NOT NULL,
+	idcurrdef varchar(20) NOT NULL,
+	compname varchar(50) NULL,
+	endjoin timestamp NULL,
+	amountcomp numeric(36, 18) NOT NULL DEFAULT 0,
+	compstatus varchar(1) DEFAULT 'Y'::character varying NULL,
+	createcomp varchar(30) DEFAULT ''::character varying NULL,
+	createdatecomp timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatecomp varchar(30) DEFAULT ''::character varying NULL,
+	updatedatecomp timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_company_unique UNIQUE (idcompany)
+);

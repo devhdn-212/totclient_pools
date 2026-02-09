@@ -47,7 +47,7 @@ func (ad *adminruleApi) Save(ctx *fiber.Ctx) error {
 	var req dto.AdminruleSave
 	if err := ctx.BodyParser(&req); err != nil {
 		connection.Log.Error("Failed to parse request body",
-			zap.String("endpoint", "Create Admin"),
+			zap.String("endpoint", "Create Adminrule"),
 			zap.String("body", string(ctx.Body())),
 			zap.String("error", err.Error()),
 		)
@@ -56,7 +56,7 @@ func (ad *adminruleApi) Save(ctx *fiber.Ctx) error {
 	fails := util.Validate(req)
 
 	if len(fails) > 0 {
-		connection.Log.Warn("Validation failed for update Admin",
+		connection.Log.Warn("Validation failed for update Adminrule",
 			zap.Any("validation_errors", fails),
 			zap.Any("body", req),
 		)
@@ -69,7 +69,7 @@ func (ad *adminruleApi) Save(ctx *fiber.Ctx) error {
 	err := ad.adminruleService.Save(c, req, client_username)
 	if err != nil {
 		recordJson, _ := json.Marshal(req)
-		connection.Log.Error("Failed to create / update admin",
+		connection.Log.Error("Failed to create / update Adminrule",
 			zap.String("id", req.ID),
 			zap.String("error", err.Error()),
 			zap.String("record", string(recordJson)),
@@ -77,7 +77,7 @@ func (ad *adminruleApi) Save(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-	connection.Log.Info("Admin create / update successfully",
+	connection.Log.Info("Adminrule create / update successfully",
 		zap.String("id", req.ID),
 	)
 

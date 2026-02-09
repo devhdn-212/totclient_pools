@@ -18,31 +18,30 @@ import (
 )
 
 const (
-	RedisCurrAllKey    = "curr:all"
-	RedisCurrSelectKey = "curr:select"
+	RedisCompanyKey = "company:all"
 )
 
-type currService struct {
+type companyService struct {
 	db   *sql.DB
-	repo domain.CurrencyRepository
+	repo domain.CompanyRepository
 }
 
-func NewCurrService(db *sql.DB, repo domain.CurrencyRepository) domain.CurrencyService {
-	return &currService{
+func NewCompanyService(db *sql.DB, repo domain.CompanyRepository) domain.CompanyService {
+	return &companyService{
 		db:   db,
 		repo: repo,
 	}
 }
-func (c currService) All(ctx context.Context) ([]dto.CurrData, error) {
-	cached, found, err := connection.GetRedis(RedisCurrAllKey)
+func (c companyService) All(ctx context.Context) ([]dto.CompanyData, error) {
+	cached, found, err := connection.GetRedis(RedisCompanyKey)
 	if err != nil {
 		return nil, err
 	}
 
 	if found {
-		var data []dto.CurrData
+		var data []dto.CompanyData
 		if err := json.Unmarshal([]byte(cached), &data); err == nil {
-			connection.Log.Info("Returning data from Redis - Currency")
+			connection.Log.Info("Returning data from Redis - Company")
 			return data, nil
 		}
 	}
@@ -53,7 +52,7 @@ func (c currService) All(ctx context.Context) ([]dto.CurrData, error) {
 		return nil, err
 	}
 	loc, _ := time.LoadLocation("Asia/Jakarta")
-	var currData []dto.CurrData
+	var compData []dto.CompanyData
 	for _, v := range curr {
 		var createdAt, updatedAt string
 		if v.CreatedAt.Valid {
@@ -67,50 +66,23 @@ func (c currService) All(ctx context.Context) ([]dto.CurrData, error) {
 			}
 		}
 
-		currData = append(currData, dto.CurrData{
-			ID:      v.ID,
-			Type:    v.Type,
-			Status:  v.Status,
-			Created: createdAt,
-			Update:  updatedAt,
-		})
-	}
-	fmt.Println(currData)
-	go connection.SetRedis(RedisCurrAllKey, currData, 60*time.Minute)
-	connection.Log.Info("Returning data Database - Currency")
-	return currData, nil
-}
-func (c currService) Select(ctx context.Context) ([]dto.CurrSelect, error) {
-	cached, found, err := connection.GetRedis(RedisCurrSelectKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if found {
-		var data []dto.CurrSelect
-		if err := json.Unmarshal([]byte(cached), &data); err == nil {
-			connection.Log.Info("Returning data from Redis - Currency Select")
-			return data, nil
-		}
-	}
-
-	curr, err := c.repo.FindSelect(ctx)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	var currSelect []dto.CurrSelect
-	for _, v := range curr {
-		currSelect = append(currSelect, dto.CurrSelect{
-			ID: v.ID,
+		compData = append(compData, dto.CompanyData{
+			ID:        v.ID,
+			IDcurrdef: v.IDcurrdef,
+			Name:      v.Name,
+			Endjoin:   createdAt,
+			Status:    v.Status,
+			Created:   createdAt,
+			Update:    updatedAt,
 		})
 	}
 
-	go connection.SetRedis(RedisCurrSelectKey, currSelect, 60*time.Minute)
-	connection.Log.Info("Returning data Database - Currency Select")
-	return currSelect, nil
+	go connection.SetRedis(RedisCompanyKey, compData, 60*time.Minute)
+	connection.Log.Info("Returning data Database - Company")
+	return compData, nil
 }
-func (c currService) Save(ctx context.Context, req dto.CurrSave, client_admin string) error {
+
+func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_admin string) error {
 	tx, err := c.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -123,7 +95,7 @@ func (c currService) Save(ctx context.Context, req dto.CurrSave, client_admin st
 	}()
 
 	txExec := repository.NewGoquTxExecutor(tx)
-	txRepo := repository.NewCurrRepository(txExec)
+	txRepo := repository.NewCompanyRepository(txExec)
 	flag, err := txRepo.FindByID(ctx, req.ID)
 	if err != nil {
 		return err
@@ -131,14 +103,15 @@ func (c currService) Save(ctx context.Context, req dto.CurrSave, client_admin st
 
 	loc, _ := time.LoadLocation("Asia/Jakarta")
 	if req.Type == "New" {
-		curr := domain.Currency{
+		comp := domain.Company{
 			ID:        req.ID,
-			Type:      req.Type_curr,
+			IDcurrdef: req.IDcurr,
+			Name:      req.Name,
 			Status:    req.Status,
 			Created:   client_admin,
 			CreatedAt: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
 		}
-		err = txRepo.Save(ctx, &curr)
+		err = txRepo.Save(ctx, &comp)
 		if err != nil {
 			var pqErr *pq.Error
 			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
@@ -151,7 +124,8 @@ func (c currService) Save(ctx context.Context, req dto.CurrSave, client_admin st
 		}
 	} else {
 		flag.ID = req.ID
-		flag.Type = req.Type_curr
+		flag.IDcurrdef = req.IDcurr
+		flag.Name = req.Name
 		flag.Status = req.Status
 		flag.Update = client_admin
 		flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
@@ -165,7 +139,6 @@ func (c currService) Save(ctx context.Context, req dto.CurrSave, client_admin st
 		}
 	}
 
-	go connection.DeleteRedis(RedisCurrAllKey)
-	go connection.DeleteRedis(RedisCurrSelectKey)
+	go connection.DeleteRedis(RedisCompanyKey)
 	return nil
 }

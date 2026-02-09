@@ -28,6 +28,15 @@ func (c currRepository) FindAll(ctx context.Context) ([]domain.Currency, error) 
 		ScanStructsContext(ctx, &res)
 	return res, err
 }
+func (c currRepository) FindSelect(ctx context.Context) ([]domain.Currency, error) {
+	var res []domain.Currency
+	err := c.db.
+		From(config.DB_tbl_currency).
+		Select("idcurr").
+		Order(goqu.C("idcurr").Asc()).
+		ScanStructsContext(ctx, &res)
+	return res, err
+}
 func (c currRepository) FindByID(ctx context.Context, id string) (domain.Currency, error) {
 	var curr domain.Currency
 

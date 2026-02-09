@@ -15,39 +15,52 @@ import (
 	"go.uber.org/zap"
 )
 
-type currApi struct {
-	currService domain.CurrencyService
+type companyApi struct {
+	companyService domain.CompanyService
+	currService    domain.CurrencyService
 }
 
-func NewCurrApi(app *fiber.App,
+func NewCompanyApi(app *fiber.App,
+	companyService domain.CompanyService,
 	currService domain.CurrencyService,
 	authmidle fiber.Handler) {
-	ad := currApi{
-		currService: currService,
+	ad := companyApi{
+		companyService: companyService,
+		currService:    currService,
 	}
-	currency := app.Group("/api/currency", authmidle)
+	currency := app.Group("/api/company", authmidle)
 	currency.Post("", ad.Index)
 	currency.Post("/save", ad.Save)
 }
-func (ad *currApi) Index(ctx *fiber.Ctx) error {
+func (co *companyApi) Index(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
 
-	res, err := ad.currService.All(c)
+	resselect, errselect := co.currService.Select(c)
+	if errselect != nil {
+		return ctx.Status(http.StatusInternalServerError).
+			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
+	}
+	res, err := co.companyService.All(c)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-	return ctx.JSON(dto.CreateResponseSuccess(res))
+	return ctx.JSON(fiber.Map{
+		"status":   fiber.StatusOK,
+		"message":  "success",
+		"listcurr": resselect,
+		"record":   res,
+	})
 }
-func (ad *currApi) Save(ctx *fiber.Ctx) error {
+func (co *companyApi) Save(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
 
-	var req dto.CurrSave
+	var req dto.CompanySave
 	if err := ctx.BodyParser(&req); err != nil {
 		connection.Log.Error("Failed to parse request body",
-			zap.String("endpoint", "Create Currency"),
+			zap.String("endpoint", "Create Admin"),
 			zap.String("body", string(ctx.Body())),
 			zap.String("error", err.Error()),
 		)
@@ -56,7 +69,7 @@ func (ad *currApi) Save(ctx *fiber.Ctx) error {
 	fails := util.Validate(req)
 
 	if len(fails) > 0 {
-		connection.Log.Warn("Validation failed for update Currency",
+		connection.Log.Warn("Validation failed for update Company",
 			zap.Any("validation_errors", fails),
 			zap.Any("body", req),
 		)
@@ -66,10 +79,10 @@ func (ad *currApi) Save(ctx *fiber.Ctx) error {
 	client_username := ctx.Locals("client_username").(string)
 	fmt.Println("username save : ", client_username)
 
-	err := ad.currService.Save(c, req, client_username)
+	err := co.companyService.Save(c, req, client_username)
 	if err != nil {
 		recordJson, _ := json.Marshal(req)
-		connection.Log.Error("Failed to create / update Currency",
+		connection.Log.Error("Failed to create / update Company",
 			zap.String("id", req.ID),
 			zap.String("error", err.Error()),
 			zap.String("record", string(recordJson)),
@@ -77,7 +90,7 @@ func (ad *currApi) Save(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-	connection.Log.Info("Currency create / update successfully",
+	connection.Log.Info("Company create / update successfully",
 		zap.String("id", req.ID),
 	)
 

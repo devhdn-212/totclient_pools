@@ -7,6 +7,9 @@ type CurrData struct {
 	Created string `json:"curr_created"`
 	Update  string `json:"curr_updated"`
 }
+type CurrSelect struct {
+	ID string `json:"curr_id"`
+}
 type CurrSave struct {
 	Type      string `json:"type" validate:"required"`
 	ID        string `json:"curr_id" validate:"required"`
