@@ -36,6 +36,17 @@ CREATE TABLE tbl_currency (
 	updatedatecurr timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	CONSTRAINT tbl_currency_unique UNIQUE (idcurr)
 );
+CREATE TABLE tbl_bank (
+    idbank varchar(10) NOT NULL,
+	typebank varchar(20) NOT NULL,
+	nmbank varchar(50) NULL,
+	bankstatus varchar(1) DEFAULT 'Y'::character varying NULL,
+	createbank varchar(30) DEFAULT ''::character varying NULL,
+	createdatebank timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatebank varchar(30) DEFAULT ''::character varying NULL,
+	updatedatebank timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_tbl_bank_unique UNIQUE (idbank)
+);
 CREATE TABLE tbl_company (
 	idcompany varchar(10) NOT NULL,
 	idcurrdef varchar(20) NOT NULL,
