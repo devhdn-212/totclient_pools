@@ -115,12 +115,14 @@ func main() {
 	adminruleRepository := repository.NewAdminruleRepository(goquExec)
 	currRepository := repository.NewCurrRepository(goquExec)
 	companyRepository := repository.NewCompanyRepository(goquExec)
+	companywalletRepository := repository.NewCompanywalletRepository(goquExec)
 	customerRepository := repository.NewCustomerRepository(goquExec)
 	//userRepository := repository.NewUser(dbConnection)
 	adminService := service.NewAdminService(dbConnection, adminRepository)
 	adminruleService := service.NewAdminruleService(dbConnection, adminruleRepository)
 	currService := service.NewCurrService(dbConnection, currRepository)
 	companyService := service.NewCompanyService(dbConnection, companyRepository)
+	companywalletService := service.NewCompanywalletService(dbConnection, companywalletRepository)
 	customerService := service.NewCustomerService(dbConnection, customerRepository)
 	authService := service.NewAuth(cnf, adminRepository)
 
@@ -128,6 +130,7 @@ func main() {
 	api.NewAdminruleApi(app, adminruleService, jwtMidd)
 	api.NewCurrApi(app, currService, jwtMidd)
 	api.NewCompanyApi(app, companyService, currService, jwtMidd)
+	api.NewCompanywalletApi(app, companywalletService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 

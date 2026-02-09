@@ -49,3 +49,15 @@ CREATE TABLE tbl_company (
 	updatedatecomp timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_company_unique UNIQUE (idcompany)
 );
+CREATE TABLE tbl_company_wallet (
+    idcompwallet varchar(64) NOT NULL,
+	idcompany varchar(10) NOT NULL,
+	idcurr varchar(20) NOT NULL,
+	amountcompwallet numeric(36, 18) NOT NULL DEFAULT 0,
+	compwalletstatus varchar(1) DEFAULT 'Y'::character varying NULL,
+	createcompwallet varchar(30) DEFAULT ''::character varying NULL,
+	createdatecompwallet timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatecompwallet varchar(30) DEFAULT ''::character varying NULL,
+	updatedatecompwallet timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_company_wallet_unique UNIQUE (idcompwallet)
+);

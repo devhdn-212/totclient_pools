@@ -103,6 +103,9 @@ func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_ad
 
 	loc, _ := time.LoadLocation("Asia/Jakarta")
 	if req.Type == "New" {
+		if flag.ID != "" {
+			return errors.New("Duplicate Entry")
+		}
 		comp := domain.Company{
 			ID:        req.ID,
 			IDcurrdef: req.IDcurr,
@@ -123,6 +126,10 @@ func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_ad
 			return err
 		}
 	} else {
+		if flag.ID == "" {
+			return errors.New("Company not found")
+		}
+
 		flag.ID = req.ID
 		flag.IDcurrdef = req.IDcurr
 		flag.Name = req.Name
