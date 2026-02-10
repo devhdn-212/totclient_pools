@@ -87,7 +87,7 @@ func (co *companywalletApi) Save(ctx *fiber.Ctx) error {
 			JSON(dto.CreateResponseErrorData(http.StatusBadRequest, "validation failed", fails))
 	}
 	datatoken := ctx.Locals("client_username").(string)
-	client_username, _ := util.Parsing_final(datatoken)
+	client_username := util.Parsing_final(datatoken)
 
 	err := co.companywalletService.Save(c, req, client_username)
 	if err != nil {

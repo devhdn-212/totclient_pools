@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
 	"gofibergocu/internal/config"
+	"gofibergocu/internal/connection"
 	"gofibergocu/internal/util"
 	"strconv"
 	"time"
@@ -16,16 +16,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	RedisClient = "client:"
+)
+
 type authService struct {
-	conf            *config.Config
-	adminRepository domain.AdminsRepository
+	conf                *config.Config
+	adminRepository     domain.AdminsRepository
+	adminruleRepository domain.AdminruleRepository
 }
 
 func NewAuth(cnf *config.Config,
-	adminRepository domain.AdminsRepository) domain.AuthService {
+	adminRepository domain.AdminsRepository, adminruleRepository domain.AdminruleRepository) domain.AuthService {
 	return authService{
-		conf:            cnf,
-		adminRepository: adminRepository,
+		conf:                cnf,
+		adminRepository:     adminRepository,
+		adminruleRepository: adminruleRepository,
 	}
 }
 func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthResponse, error) {
@@ -34,17 +40,29 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 		return dto.AuthResponse{}, err
 	}
 	if user.Username == "" {
-		return dto.AuthResponse{}, errors.New("auth failed")
+		return dto.AuthResponse{}, errors.New("Username / Password Not Found")
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.Pass), []byte(req.Password))
 	if err != nil {
-		return dto.AuthResponse{}, errors.New("auth failed")
+		return dto.AuthResponse{}, errors.New("Username / Password Not Found")
 	}
 
-	dataclient := user.Username + "==" + user.Idadmin
-	fmt.Println("data mentah : ", dataclient)
+	rule, errrule := a.adminruleRepository.GetRule(ctx, user.Idadmin)
+	if errrule != nil {
+		return dto.AuthResponse{}, errors.New("Please contact Admin")
+	}
+	//go connection.DeleteRedis(RedisClient + user.Username)
+
+	var clientRedis dto.AuthClientRedis
+	clientRedis.Username = user.Username
+	clientRedis.IDrule = user.Idadmin
+	clientRedis.Rule = rule
+
+	dataclient := user.Username
 	dataclient_encr, keymap := util.Encryption(dataclient)
 	dataclient_encr_final := dataclient_encr + "|" + strconv.Itoa(keymap)
+
+	go connection.SetRedis(RedisClient+user.Username, clientRedis, 1440*time.Minute)
 
 	claim := jwt.MapClaims{
 		"clien_admin": dataclient_encr_final,

@@ -20,6 +20,7 @@ type AdminruleRepository interface {
 	FindAll(ctx context.Context) ([]Adminrule, error)
 	FindSelect(ctx context.Context) ([]Adminrule, error)
 	FindByID(ctx context.Context, id string) (Adminrule, error)
+	GetRule(ctx context.Context, id string) (string, error)
 	Save(ctx context.Context, adminrule *Adminrule) error
 	Update(ctx context.Context, adminrule *Adminrule) error
 }

@@ -2,11 +2,12 @@ package util
 
 import (
 	"gofibergocu/internal/config"
-	"golang.org/x/crypto/bcrypt"
 	"math/rand"
 	"strconv"
 	s "strings"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func HashPassword(password string) (string, error) {
@@ -46,15 +47,7 @@ func Decryption(dataencrypt string) string {
 	return result
 }
 
-func Parsing_Decry(data, pemisah string) (string, string) {
-	temp_client := s.Split(data, pemisah)
-	client_username := temp_client[0]
-	client_rule := temp_client[1]
-	return client_username, client_rule
-}
-
-func Parsing_final(datatoken string) (string, string) {
+func Parsing_final(datatoken string) string {
 	temp_decp := Decryption(datatoken)
-	client_username, client_idrule := Parsing_Decry(temp_decp, "==")
-	return client_username, client_idrule
+	return temp_decp
 }

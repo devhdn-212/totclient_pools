@@ -60,7 +60,29 @@ func (a adminruleRepository) FindByID(ctx context.Context, id string) (domain.Ad
 	}
 	return c, err
 }
+func (a adminruleRepository) GetRule(ctx context.Context, id string) (string, error) {
+	var c domain.Adminrule
 
+	ds := a.db.From(config.DB_tbl_adminrule).
+		Select("ruleadmin").
+		Where(
+			goqu.C("idadminrole").Eq(id),
+		)
+
+	sqlStr, args, err := ds.ToSQL()
+	if err != nil {
+		return c.Rule, err
+	}
+
+	row := a.exec.QueryRowContext(ctx, sqlStr, args...)
+	err = row.Scan(
+		&c.Rule,
+	)
+	if err == sql.ErrNoRows {
+		return c.Rule, nil
+	}
+	return c.Rule, err
+}
 func (a adminruleRepository) Save(ctx context.Context, adminrule *domain.Adminrule) error {
 	sqlStr, args, err := a.db.Insert(config.DB_tbl_adminrule).Rows(adminrule).ToSQL()
 	if err != nil {

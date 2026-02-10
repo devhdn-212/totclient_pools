@@ -15,6 +15,7 @@ type AdminLogin struct {
 	Username string `json:"username" validate:"required"`
 	Pass     string `json:"password" validate:"required"`
 }
+
 type AdminSave struct {
 	Type      string `json:"type" validate:"required"`
 	Username  string `json:"username" validate:"required"`
