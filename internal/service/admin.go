@@ -150,6 +150,7 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 		if req.Pass != "" {
 			flag.Username = req.Username
 			flag.Pass = haspass
+			flag.Idadmin = req.Idadmin
 			flag.Name = req.Name
 			flag.Status = req.Status
 			flag.Ipaddress = req.Status
@@ -165,6 +166,7 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 			}
 		} else {
 			flag.Username = req.Username
+			flag.Idadmin = req.Idadmin
 			flag.Name = req.Name
 			flag.Status = req.Status
 			flag.Ipaddress = req.Status
