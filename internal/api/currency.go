@@ -64,6 +64,13 @@ func (ad *currApi) Save(ctx *fiber.Ctx) error {
 	}
 	datatoken := ctx.Locals("client_username").(string)
 	client_username := util.Parsing_final(datatoken)
+	flagpage := util.Validpage(client_username, "CURRENCY-SAVE")
+	if !flagpage {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  fiber.StatusForbidden,
+			"message": "Please Contact Admin",
+		})
+	}
 
 	err := ad.currService.Save(c, req, client_username)
 	if err != nil {

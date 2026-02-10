@@ -51,7 +51,15 @@ func (co *companywalletApi) Index(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusBadRequest).
 			JSON(dto.CreateResponseErrorData(http.StatusBadRequest, "validation failed", fails))
 	}
-
+	datatoken := ctx.Locals("client_username").(string)
+	client_username := util.Parsing_final(datatoken)
+	flagpage := util.Validpage(client_username, "COMPANYWALLET-VIEW")
+	if !flagpage {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  fiber.StatusForbidden,
+			"message": "Please Contact Admin",
+		})
+	}
 	res, err := co.companywalletService.All(c, req.IDcomp)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
@@ -88,6 +96,13 @@ func (co *companywalletApi) Save(ctx *fiber.Ctx) error {
 	}
 	datatoken := ctx.Locals("client_username").(string)
 	client_username := util.Parsing_final(datatoken)
+	flagpage := util.Validpage(client_username, "COMPANYWALLET-SAVE")
+	if !flagpage {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  fiber.StatusForbidden,
+			"message": "Please Contact Admin",
+		})
+	}
 
 	err := co.companywalletService.Save(c, req, client_username)
 	if err != nil {
@@ -100,7 +115,7 @@ func (co *companywalletApi) Save(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, err.Error()))
 	}
-	connection.Log.Info("Company create / update successfully",
+	connection.Log.Info("Company Wallet create / update successfully",
 		zap.String("id", req.ID),
 	)
 
