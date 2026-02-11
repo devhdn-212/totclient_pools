@@ -26,6 +26,16 @@ CREATE TABLE tbl_adminrole (
 	updatedateadminrole timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	CONSTRAINT tbl_adminrole_unique UNIQUE (idadminrole)
 );
+CREATE TABLE tbl_clientrule (
+	idclientrule varchar(30) NOT NULL,
+	nmclientrule varchar(50) NULL,
+	ruleclient text NULL,
+	createclientrule varchar(30) DEFAULT ''::character varying NULL,
+	createdateclientrule timestamp DEFAULT CURRENT_TIMESTAMP  NULL,
+	updateclientrule varchar(30) DEFAULT ''::character varying NULL,
+	updatedateclientrule timestamp DEFAULT CURRENT_TIMESTAMP  NULL,
+	CONSTRAINT tbl_clientrule_unique UNIQUE (idclientrule)
+);
 CREATE TABLE tbl_currency (
 	idcurr varchar(20) NOT NULL,
 	typecurr varchar(10) DEFAULT ''::character varying NOT NULL,

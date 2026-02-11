@@ -113,6 +113,7 @@ func main() {
 	goquExec := repository.NewGoquExecutor(dbConnection)
 	adminRepository := repository.NewAdminRepository(goquExec)
 	adminruleRepository := repository.NewAdminruleRepository(goquExec)
+	clientruleRepository := repository.NewClientruleRepository(goquExec)
 	currRepository := repository.NewCurrRepository(goquExec)
 	bankRepository := repository.NewBankRepository(goquExec)
 	domainRepository := repository.NewDomainRepository(goquExec)
@@ -122,6 +123,7 @@ func main() {
 
 	adminService := service.NewAdminService(dbConnection, adminRepository)
 	adminruleService := service.NewAdminruleService(dbConnection, adminruleRepository)
+	clinetruleService := service.NewClientruleService(dbConnection, clientruleRepository)
 	currService := service.NewCurrService(dbConnection, currRepository)
 	bankService := service.NewBankService(dbConnection, bankRepository)
 	domainService := service.NewDomainService(dbConnection, domainRepository)
@@ -132,6 +134,7 @@ func main() {
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
 	api.NewAdminruleApi(app, adminruleService, jwtMidd)
+	api.NewClientruleApi(app, clinetruleService, jwtMidd)
 	api.NewCurrApi(app, currService, jwtMidd)
 	api.NewBankApi(app, bankService, jwtMidd)
 	api.NewDomainApi(app, domainService, jwtMidd)
