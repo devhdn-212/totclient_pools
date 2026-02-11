@@ -170,7 +170,7 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 			flag.Name = req.Name
 			flag.Status = req.Status
 			flag.Ipaddress = req.Status
-			flag.Update = req.Username
+			flag.Update = client_admin
 			flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
 
 			if err = a.repo.Update(ctx, &flag); err != nil {
