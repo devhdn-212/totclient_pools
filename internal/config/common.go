@@ -5,6 +5,7 @@ const (
 	DB_tbl_adminrule     string = "tbl_adminrole"
 	DB_tbl_currency      string = "tbl_currency"
 	DB_tbl_bank          string = "tbl_bank"
+	DB_tbl_domain        string = "tbl_mst_domain"
 	DB_tbl_company       string = "tbl_company"
 	DB_tbl_companywallet string = "tbl_company_wallet"
 )

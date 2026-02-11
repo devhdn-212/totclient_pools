@@ -47,6 +47,18 @@ CREATE TABLE tbl_bank (
 	updatedatebank timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_tbl_bank_unique UNIQUE (idbank)
 );
+
+CREATE TABLE tbl_mst_domain (
+	iddomain varchar NOT NULL,
+	nmdomain varchar(70) NULL,
+	tipedomain varchar(50) NULL,
+	statusdomain varchar(15) NULL,
+	createdomain varchar(70) NULL,
+	createdatedomain timestamp NULL,
+	updatedomain varchar(70) DEFAULT 'root'::character varying NULL,
+	updatedatedomain timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_domain_pk PRIMARY KEY (iddomain)
+);
 CREATE TABLE tbl_company (
 	idcompany varchar(10) NOT NULL,
 	idcurrdef varchar(20) NOT NULL,
