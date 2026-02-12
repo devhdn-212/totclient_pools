@@ -119,6 +119,7 @@ func main() {
 	domainRepository := repository.NewDomainRepository(goquExec)
 	companyRepository := repository.NewCompanyRepository(goquExec)
 	companywalletRepository := repository.NewCompanywalletRepository(goquExec)
+	companyadminRepository := repository.NewCompanyadminRepository(goquExec)
 	customerRepository := repository.NewCustomerRepository(goquExec)
 
 	adminService := service.NewAdminService(dbConnection, adminRepository)
@@ -129,6 +130,7 @@ func main() {
 	domainService := service.NewDomainService(dbConnection, domainRepository)
 	companyService := service.NewCompanyService(dbConnection, companyRepository)
 	companywalletService := service.NewCompanywalletService(dbConnection, companywalletRepository)
+	companyadminService := service.NewCompanyadminService(dbConnection, companyadminRepository)
 	customerService := service.NewCustomerService(dbConnection, customerRepository)
 	authService := service.NewAuth(cnf, adminRepository, adminruleRepository)
 
@@ -138,8 +140,9 @@ func main() {
 	api.NewCurrApi(app, currService, jwtMidd)
 	api.NewBankApi(app, bankService, jwtMidd)
 	api.NewDomainApi(app, domainService, jwtMidd)
-	api.NewCompanyApi(app, companyService, currService, jwtMidd)
+	api.NewCompanyApi(app, companyService, currService, clinetruleService, jwtMidd)
 	api.NewCompanywalletApi(app, companywalletService, jwtMidd)
+	api.NewCompanyadminApi(app, companyadminService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 

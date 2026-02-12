@@ -94,3 +94,19 @@ CREATE TABLE tbl_company_wallet (
 	updatedatecompwallet timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_company_wallet_unique UNIQUE (idcompwallet)
 );
+CREATE TABLE tbl_company_admin (
+    idcompadmin varchar(64) NOT NULL,
+	idcompany varchar(10) NOT NULL,
+	idclientrule varchar(30) NOT NULL,
+	usernamecompadmin varchar(30) NOT NULL,
+	namecompadmin varchar(50) NULL,
+    passcompadmin varchar(250) NULL,
+    lastlogincompadmin timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+    ipaddresscompadmin varchar(20) DEFAULT ''::character varying NULL,
+	compadminstatus varchar(1) DEFAULT 'Y'::character varying NULL,
+	createcompadmin varchar(30) DEFAULT ''::character varying NULL,
+	createdatecompadmin timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatecompadmin varchar(30) DEFAULT ''::character varying NULL,
+	updatedatecompadmin timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_company_admin_unique UNIQUE (idcompadmin)
+);

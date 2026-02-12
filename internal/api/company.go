@@ -15,17 +15,20 @@ import (
 )
 
 type companyApi struct {
-	companyService domain.CompanyService
-	currService    domain.CurrencyService
+	companyService    domain.CompanyService
+	currService       domain.CurrencyService
+	clientruleService domain.ClientruleService
 }
 
 func NewCompanyApi(app *fiber.App,
 	companyService domain.CompanyService,
 	currService domain.CurrencyService,
+	clientruleService domain.ClientruleService,
 	authmidle fiber.Handler) {
 	ad := companyApi{
-		companyService: companyService,
-		currService:    currService,
+		companyService:    companyService,
+		currService:       currService,
+		clientruleService: clientruleService,
 	}
 	company := app.Group("/api/company", authmidle)
 	company.Post("", ad.Index)
@@ -34,6 +37,12 @@ func NewCompanyApi(app *fiber.App,
 func (co *companyApi) Index(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
+
+	resselectrule, errselectrule := co.clientruleService.Select(c)
+	if errselectrule != nil {
+		return ctx.Status(http.StatusInternalServerError).
+			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
+	}
 
 	resselect, errselect := co.currService.Select(c)
 	if errselect != nil {
@@ -49,6 +58,7 @@ func (co *companyApi) Index(ctx *fiber.Ctx) error {
 		"status":   fiber.StatusOK,
 		"message":  "success",
 		"listcurr": resselect,
+		"listrule": resselectrule,
 		"record":   res,
 	})
 }

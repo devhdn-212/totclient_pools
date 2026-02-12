@@ -9,6 +9,7 @@ const (
 	DB_tbl_domain        string = "tbl_mst_domain"
 	DB_tbl_company       string = "tbl_company"
 	DB_tbl_companywallet string = "tbl_company_wallet"
+	DB_tbl_companyadmin  string = "tbl_company_admin"
 )
 const Sourcechar string = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 !@#$%^&*()-_=+[]{};:,.<>?/`
 
