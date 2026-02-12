@@ -83,7 +83,7 @@ CREATE TABLE tbl_company (
 	CONSTRAINT tbl_company_unique UNIQUE (idcompany)
 );
 CREATE TABLE tbl_company_wallet (
-    idcompwallet varchar(64) NOT NULL,
+    idcompwallet varchar(100) NOT NULL,
 	idcompany varchar(10) NOT NULL,
 	idcurr varchar(20) NOT NULL,
 	amountcompwallet numeric(36, 18) NOT NULL DEFAULT 0,
@@ -95,7 +95,7 @@ CREATE TABLE tbl_company_wallet (
 	CONSTRAINT tbl_company_wallet_unique UNIQUE (idcompwallet)
 );
 CREATE TABLE tbl_company_admin (
-    idcompadmin varchar(64) NOT NULL,
+    idcompadmin varchar(100) NOT NULL,
 	idcompany varchar(10) NOT NULL,
 	idclientrule varchar(30) NOT NULL,
 	usernamecompadmin varchar(30) NOT NULL,
@@ -109,4 +109,20 @@ CREATE TABLE tbl_company_admin (
 	updatecompadmin varchar(30) DEFAULT ''::character varying NULL,
 	updatedatecompadmin timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_company_admin_unique UNIQUE (idcompadmin)
+);
+
+// AGEN schema sendiri berdasarkan idcompany
+CREATE TABLE tbl_mst_member (
+    idmember varchar(100) NOT NULL,
+	usernamemember varchar(30) NOT NULL,
+	passmember varchar(250) NULL,
+	namemember varchar(50) NULL,
+    lastloginmember timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+    ipaddressmember varchar(20) DEFAULT ''::character varying NULL,
+	statusmember varchar(1) DEFAULT 'Y'::character varying NULL,
+	createmember varchar(30) DEFAULT ''::character varying NULL,
+	createdatemember timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatemember varchar(30) DEFAULT ''::character varying NULL,
+	updatedatemember timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_member_unique UNIQUE (idmember)
 );
