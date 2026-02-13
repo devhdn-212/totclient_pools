@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	RedisClient = "client:"
+	RedisClient = "master:client:"
 )
 
 type authService struct {

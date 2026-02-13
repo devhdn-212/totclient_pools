@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	RedisCompanywalletKey = "companywallet:all:"
+	RedisCompanywalletKey = "master:companywallet:all:"
 )
 
 type companywalletService struct {

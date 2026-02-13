@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	RedisClientruleAllKey    = "clientrule:all"
-	RedisClientruleSelectKey = "clientrule:select"
+	RedisClientruleAllKey    = "master:clientrule:all"
+	RedisClientruleSelectKey = "master:clientrule:select"
 )
 
 type clientruleService struct {

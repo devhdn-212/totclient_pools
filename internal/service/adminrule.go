@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	RedisAdminruleAllKey    = "adminrule:all"
-	RedisAdminruleSelectKey = "adminrule:select"
+	RedisAdminruleAllKey    = "master:adminrule:all"
+	RedisAdminruleSelectKey = "master:adminrule:select"
 )
 
 type adminruleService struct {

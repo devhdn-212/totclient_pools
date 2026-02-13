@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	RedisCompanyKey = "company:all"
+	RedisCompanyKey = "master:company:all"
 )
 
 type companyService struct {

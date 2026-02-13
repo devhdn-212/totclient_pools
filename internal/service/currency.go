@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	RedisCurrAllKey    = "curr:all"
-	RedisCurrSelectKey = "curr:select"
+	RedisCurrAllKey    = "master:curr:all"
+	RedisCurrSelectKey = "master:curr:select"
 )
 
 type currService struct {
@@ -133,7 +133,7 @@ func (c currService) Save(ctx context.Context, req dto.CurrSave, client_admin st
 		if flag.ID != "" {
 			return errors.New("Duplicate Entry")
 		}
-		
+
 		curr := domain.Currency{
 			ID:        req.ID,
 			Type:      req.Type_curr,

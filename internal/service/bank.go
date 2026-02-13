@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	RedisBankKey       = "bank:all"
-	RedisBankSelectKey = "bank:select"
+	RedisBankKey       = "master:bank:all"
+	RedisBankSelectKey = "master:bank:select"
 )
 
 type bankService struct {

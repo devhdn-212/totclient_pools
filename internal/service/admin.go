@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	RedisAdminAllKey = "admin:all"
+	RedisAdminAllKey = "master:admin:all"
 )
 
 type adminService struct {

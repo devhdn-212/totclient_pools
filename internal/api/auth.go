@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
 	"gofibergocu/internal/connection"
@@ -101,6 +102,7 @@ func (a authApi) Page(ctx *fiber.Ctx) error {
 
 	datatoken := ctx.Locals("client_username").(string)
 	client_username := util.Parsing_final(datatoken)
+	fmt.Println("Username: ", client_username)
 	flagpage := util.Validpage(client_username, req.Page)
 	if !flagpage {
 		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -114,6 +116,7 @@ func (a authApi) Page(ctx *fiber.Ctx) error {
 	})
 }
 func (a authApi) Logout(ctx *fiber.Ctx) error {
+	fmt.Println("Tai")
 	token, ok := ctx.Locals("user").(*jwt.Token)
 	if !ok || token == nil {
 		return ctx.Status(fiber.StatusUnauthorized).
@@ -123,6 +126,16 @@ func (a authApi) Logout(ctx *fiber.Ctx) error {
 	if !ok {
 		return ctx.Status(fiber.StatusUnauthorized).
 			JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
+	}
+	username, ok := claims["clien_admin"].(string)
+	ctx.Locals("client_username", username)
+	client_username := util.Parsing_final(username)
+	fmt.Println("USERNAME: ", client_username)
+	if !ok || username == "" {
+		return ctx.Status(fiber.StatusUnauthorized).
+			JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
+	} else {
+		go connection.DeleteRedis("master:client:" + client_username)
 	}
 	jti, ok := claims["jti"].(string)
 	if !ok || jti == "" {
@@ -142,5 +155,8 @@ func (a authApi) Logout(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-	return ctx.SendStatus(fiber.StatusNoContent)
+	return ctx.JSON(fiber.Map{
+		"status":  fiber.StatusOK,
+		"message": "success",
+	})
 }

@@ -7,7 +7,7 @@ import (
 )
 
 func Validpage(username, page string) bool {
-	RedisAuthPage := "client:" + username
+	RedisAuthPage := "master:client:" + username
 	type Authredis struct {
 		Username string `json:"username"`
 		IDUle    string `json:"idule"`

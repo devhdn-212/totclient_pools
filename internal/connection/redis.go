@@ -150,13 +150,13 @@ func BlacklistJWT(jti string, ttl time.Duration) error {
 	if jti == "" {
 		return fmt.Errorf("empty jti")
 	}
-	return SetRedis("jwt:blacklist:"+jti, "1", ttl)
+	return SetRedis("master:jwt:blacklist:"+jti, "1", ttl)
 }
 
 func IsJWTBlacklisted(jti string) (bool, error) {
 	if jti == "" {
 		return false, fmt.Errorf("empty jti")
 	}
-	_, found, err := GetRedis("jwt:blacklist:" + jti)
+	_, found, err := GetRedis("master:jwt:blacklist:" + jti)
 	return found, err
 }

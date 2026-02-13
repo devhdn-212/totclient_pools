@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	RedisDomainAllKey = "curr:all"
+	RedisDomainAllKey = "master:domain:all"
 )
 
 type domainService struct {

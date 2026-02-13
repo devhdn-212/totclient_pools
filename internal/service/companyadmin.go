@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	RedisCompanyadminKey = "companyadmin:"
+	RedisCompanyadminKey = "master:companyadmin:"
 )
 
 type companyadminService struct {
