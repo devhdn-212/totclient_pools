@@ -20,6 +20,7 @@ import (
 const (
 	RedisClientruleAllKey    = "master:clientrule:all"
 	RedisClientruleSelectKey = "master:clientrule:select"
+	RedisAgenruleSelectKey   = "agen:rule:select"
 )
 
 type clientruleService struct {
@@ -84,7 +85,7 @@ func (c clientruleService) All(ctx context.Context) ([]dto.ClientruleData, error
 }
 
 func (c clientruleService) Select(ctx context.Context) ([]dto.ClientruleSelect, error) {
-	cached, found, err := connection.GetRedis(RedisClientruleAllKey)
+	cached, found, err := connection.GetRedis(RedisClientruleSelectKey)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (c clientruleService) Select(ctx context.Context) ([]dto.ClientruleSelect, 
 		})
 	}
 
-	go connection.SetRedis(RedisClientruleAllKey, clientruleSelect, 60*time.Minute)
+	go connection.SetRedis(RedisClientruleSelectKey, clientruleSelect, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Clientrule Select")
 	return clientruleSelect, nil
 }
@@ -178,5 +179,6 @@ func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, cli
 
 	go connection.DeleteRedis(RedisClientruleAllKey)
 	go connection.DeleteRedis(RedisClientruleSelectKey)
+	go connection.DeleteRedis(RedisAgenruleSelectKey)
 	return nil
 }
