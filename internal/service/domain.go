@@ -33,7 +33,7 @@ func NewDomainService(db *sql.DB, repo domain.DomainRepository) domain.DomainSer
 	}
 }
 func (d domainService) All(ctx context.Context) ([]dto.DomainData, error) {
-	cached, found, err := connection.GetRedis(RedisCurrAllKey)
+	cached, found, err := connection.GetRedis(RedisDomainAllKey)
 	if err != nil {
 		return nil, err
 	}
