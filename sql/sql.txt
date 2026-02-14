@@ -117,6 +117,8 @@ CREATE TABLE tbl_mst_member (
 	usernamemember varchar(30) NOT NULL,
 	passmember varchar(250) NULL,
 	namemember varchar(50) NULL,
+	hpmember varchar(30) DEFAULT ''::character varying NULL,
+	emailmember varchar(100) DEFAULT ''::character varying NULL,
     lastloginmember timestamp DEFAULT CURRENT_TIMESTAMP NULL,
     ipaddressmember varchar(20) DEFAULT ''::character varying NULL,
 	statusmember varchar(1) DEFAULT 'Y'::character varying NULL,

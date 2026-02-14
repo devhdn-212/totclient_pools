@@ -2,11 +2,14 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 	"gofibergocu/domain"
 	"gofibergocu/dto"
 	"gofibergocu/internal/config"
 	"gofibergocu/internal/connection"
+	"gofibergocu/internal/repository"
 	"gofibergocu/internal/util"
 	"strconv"
 	"time"
@@ -21,14 +24,18 @@ const (
 )
 
 type authService struct {
+	db                  *sql.DB
 	conf                *config.Config
 	adminRepository     domain.AdminsRepository
 	adminruleRepository domain.AdminruleRepository
 }
 
-func NewAuth(cnf *config.Config,
-	adminRepository domain.AdminsRepository, adminruleRepository domain.AdminruleRepository) domain.AuthService {
+func NewAuth(db *sql.DB,
+	cnf *config.Config,
+	adminRepository domain.AdminsRepository,
+	adminruleRepository domain.AdminruleRepository) domain.AuthService {
 	return authService{
+		db:                  db,
 		conf:                cnf,
 		adminRepository:     adminRepository,
 		adminruleRepository: adminruleRepository,
@@ -51,7 +58,34 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 	if errrule != nil {
 		return dto.AuthResponse{}, errors.New("Please contact Admin")
 	}
-	//go connection.DeleteRedis(RedisClient + user.Username)
+
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
+		return dto.AuthResponse{}, err
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	txExec := repository.NewGoquTxExecutor(tx)
+	txRepo := repository.NewAdminRepository(txExec)
+	flagupdate, errupdate := txRepo.FindByUsername(ctx, user.Username)
+	if errupdate != nil {
+		return dto.AuthResponse{}, errupdate
+	}
+	flagupdate.Username = user.Username
+	flagupdate.Ipaddress = req.Ipaddress
+	flagupdate.Lastlogin = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
+	if err = a.adminRepository.UpdateLogin(ctx, &flagupdate); err != nil {
+		fmt.Println(err)
+		return dto.AuthResponse{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return dto.AuthResponse{}, err
+	}
 
 	var clientRedis dto.AuthClientRedis
 	clientRedis.Username = user.Username

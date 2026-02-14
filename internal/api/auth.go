@@ -116,7 +116,6 @@ func (a authApi) Page(ctx *fiber.Ctx) error {
 	})
 }
 func (a authApi) Logout(ctx *fiber.Ctx) error {
-	fmt.Println("Tai")
 	token, ok := ctx.Locals("user").(*jwt.Token)
 	if !ok || token == nil {
 		return ctx.Status(fiber.StatusUnauthorized).

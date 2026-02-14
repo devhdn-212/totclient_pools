@@ -126,9 +126,7 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 			Idadmin:   req.Idadmin,
 			Name:      req.Name,
 			Status:    req.Status,
-			Lastlogin: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
 			Joindate:  sql.NullTime{Valid: true, Time: time.Now().In(loc)},
-			Ipaddress: req.Ipaddress,
 			Created:   client_admin,
 			CreatedAt: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
 		}
@@ -153,11 +151,10 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 			flag.Idadmin = req.Idadmin
 			flag.Name = req.Name
 			flag.Status = req.Status
-			flag.Ipaddress = req.Status
 			flag.Update = client_admin
 			flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
 
-			if err = a.repo.Update(ctx, &flag); err != nil {
+			if err = a.repo.Update(ctx, &flag, true); err != nil {
 				fmt.Println(err)
 				return err
 			}
@@ -169,11 +166,10 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 			flag.Idadmin = req.Idadmin
 			flag.Name = req.Name
 			flag.Status = req.Status
-			flag.Ipaddress = req.Status
 			flag.Update = client_admin
 			flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
 
-			if err = a.repo.Update(ctx, &flag); err != nil {
+			if err = a.repo.Update(ctx, &flag, false); err != nil {
 				return err
 			}
 			if err := tx.Commit(); err != nil {

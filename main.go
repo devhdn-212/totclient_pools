@@ -132,7 +132,7 @@ func main() {
 	companywalletService := service.NewCompanywalletService(dbConnection, companywalletRepository)
 	companyadminService := service.NewCompanyadminService(dbConnection, companyadminRepository)
 	customerService := service.NewCustomerService(dbConnection, customerRepository)
-	authService := service.NewAuth(cnf, adminRepository, adminruleRepository)
+	authService := service.NewAuth(dbConnection, cnf, adminRepository, adminruleRepository)
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
 	api.NewAdminruleApi(app, adminruleService, jwtMidd)

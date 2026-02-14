@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"gofibergocu/domain"
 	"gofibergocu/internal/config"
-	"time"
 
 	"github.com/doug-martin/goqu/v9"
 )
@@ -25,7 +24,9 @@ func (a adminRepository) FindAll(ctx context.Context) ([]domain.Admin, error) {
 	var res []domain.Admin
 	err := a.db.
 		From(config.DB_tbl_admin).
-		Order(goqu.C("lastlogin").Asc()).
+		Order(
+			goqu.L("COALESCE(lastlogin, createdateadmin)").Desc(),
+		).
 		ScanStructsContext(ctx, &res)
 	return res, err
 }
@@ -74,18 +75,29 @@ func (a adminRepository) Save(ctx context.Context, admin *domain.Admin) error {
 	return err
 }
 
-func (a adminRepository) Update(ctx context.Context, admin *domain.Admin) error {
-	sqlStr, args, err := a.db.
-		Update(config.DB_tbl_admin).
-		Set(goqu.Record{
+func (a adminRepository) Update(ctx context.Context, admin *domain.Admin, flagpass bool) error {
+	ds := a.db.Update(config.DB_tbl_admin)
+
+	if flagpass {
+		ds = ds.Set(goqu.Record{
 			"password":        admin.Pass,
 			"idadmin":         admin.Idadmin,
 			"name":            admin.Name,
 			"statuslogin":     admin.Status,
-			"ipaddress":       admin.Ipaddress,
 			"updateadmin":     admin.Username,
 			"updatedateadmin": admin.UpdateAt,
-		}).
+		})
+	} else {
+		ds = ds.Set(goqu.Record{
+			"idadmin":         admin.Idadmin,
+			"name":            admin.Name,
+			"statuslogin":     admin.Status,
+			"updateadmin":     admin.Username,
+			"updatedateadmin": admin.UpdateAt,
+		})
+	}
+
+	sqlStr, args, err := ds.
 		Where(goqu.C("username").Eq(admin.Username)).
 		ToSQL()
 	if err != nil {
@@ -101,18 +113,17 @@ func (a adminRepository) Update(ctx context.Context, admin *domain.Admin) error 
 	}
 	return nil
 }
-func (a adminRepository) UpdateNoPassword(ctx context.Context, admin *domain.Admin) error {
+
+func (a adminRepository) UpdateLogin(ctx context.Context, admin *domain.Admin) error {
 	sqlStr, args, err := a.db.
 		Update(config.DB_tbl_admin).
 		Set(goqu.Record{
-			"idadmin":         admin.Idadmin,
-			"name":            admin.Name,
-			"statuslogin":     admin.Status,
-			"ipaddress":       admin.Ipaddress,
-			"update":          admin.Username,
-			"updatedateadmin": time.Now(),
+			"ipaddress": admin.Ipaddress,
+			"lastlogin": admin.Lastlogin,
 		}).
-		Where(goqu.C("username").Eq(admin.Username)).
+		Where(
+			goqu.C("username").Eq(admin.Username),
+		).
 		ToSQL()
 	if err != nil {
 		return err
