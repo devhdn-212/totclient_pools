@@ -152,3 +152,19 @@ CREATE TABLE tbl_mst_member_wallet (
 	updatedatememberwallet timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_member_wallet_unique UNIQUE (idmemberwallet)
 );
+CREATE TABLE tbl_mst_company_walletbank (
+    idcompwalletbank varchar(150) NOT NULL,
+    idcompwallet varchar(100) NOT NULL,
+    idbank varchar(10) NOT NULL,
+    typecompwalletbank varchar(20) DEFAULT ''::character varying NULL,
+	norek varchar(50) DEFAULT ''::character varying NULL,
+	nmrekening varchar(100) DEFAULT ''::character varying NULL,
+	amountcompwalletbank_credit numeric(36, 18) NOT NULL DEFAULT 0,
+	amountcompwalletbank_debit numeric(36, 18) NOT NULL DEFAULT 0,
+	statuscompwalletbank varchar(1) DEFAULT 'Y'::character varying NULL,
+	createcompwalletbank varchar(30) DEFAULT ''::character varying NULL,
+	createdatecompwalletbank timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatecompwalletbank varchar(30) DEFAULT ''::character varying NULL,
+	updatedatecompwalletbank timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_company_walletbank_unique UNIQUE (idcompwalletbank)
+);
