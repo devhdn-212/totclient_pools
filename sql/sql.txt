@@ -128,3 +128,27 @@ CREATE TABLE tbl_mst_member (
 	updatedatemember timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_member_unique UNIQUE (idmember)
 );
+CREATE TABLE tbl_mst_member_bank (
+    idmemberbank varchar(150) NOT NULL,
+    idmember varchar(100) NOT NULL,
+    idbank varchar(10) NOT NULL,
+	norek varchar(50) DEFAULT ''::character varying NULL,
+	nmrekening varchar(100) DEFAULT ''::character varying NULL,
+	creatememberbank varchar(30) DEFAULT ''::character varying NULL,
+	createdatememberbank timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatememberbank varchar(30) DEFAULT ''::character varying NULL,
+	updatedatememberbank timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_member_bank_unique UNIQUE (idmemberbank)
+);
+CREATE TABLE tbl_mst_member_wallet (
+    idmemberwallet varchar(150) NOT NULL,
+    idmember varchar(100) NOT NULL,
+    idcurr varchar(20) NOT NULL,
+    amount_creditwallet numeric(36, 18) NOT NULL DEFAULT 0,
+    amount_debitwallet numeric(36, 18) NOT NULL DEFAULT 0,
+	creatememberwallet varchar(30) DEFAULT ''::character varying NULL,
+	createdatememberwallet timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatememberwallet varchar(30) DEFAULT ''::character varying NULL,
+	updatedatememberwallet timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_member_wallet_unique UNIQUE (idmemberwallet)
+);
