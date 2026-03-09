@@ -1,5 +1,17 @@
 -- MASTER
-
+CREATE TABLE public.tbl_counter (
+	idcounter int4 DEFAULT nextval('idcounter_seq'::regclass) NOT NULL,
+	nmcounter varchar(70) NULL,
+	counter int8 NOT NULL,
+	CONSTRAINT tbl_counter_pk PRIMARY KEY (idcounter)
+);
+CREATE SEQUENCE idcounter_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START 1
+	CACHE 1
+	NO CYCLE;
 CREATE TABLE tbl_admin (
 	username varchar(30) NOT NULL,
 	"password" varchar(250) NULL,
@@ -112,6 +124,16 @@ CREATE TABLE tbl_company_admin (
 );
 
 // AGEN schema sendiri berdasarkan idcompany
+CREATE TABLE tbl_mst_grouptrx (
+	idgroup varchar(4) NOT NULL,
+	nmgroup varchar(100) DEFAULT ''::character varying NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT tbl_mst_grouptrx_unique UNIQUE (idgroup)
+);
 CREATE TABLE tbl_mst_member (
     idmember varchar(100) NOT NULL,
 	usernamemember varchar(30) NOT NULL,
@@ -129,121 +151,129 @@ CREATE TABLE tbl_mst_member (
 	CONSTRAINT tbl_member_unique UNIQUE (idmember)
 );
 
-CREATE TABLE tbl_mst_member_wallet (
-    idmemberwallet varchar(150) NOT NULL,
-    idmember varchar(100) NOT NULL,
+
+
+CREATE TABLE tbl_account_balance_log (
+	idaccbalancelog varchar(150) NOT NULL,
+	idwallet varchar(150) DEFAULT ''::character varying NULL,
+	ref_idtrx varchar(150) NOT NULL,
+	ref_table varchar(150) NOT NULL,
+	typeaccbalancelog varchar(10) NOT NULL,
+	dateaccbalancelog date NOT NULL,
+	idcurr varchar(20) NOT NULL,
+	amount_credit numeric(36, 18) DEFAULT 0 NOT NULL,
+	amount_debit numeric(36, 18) DEFAULT 0 NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_account_balance_log_unique UNIQUE (idaccbalancelog)
+);
+CREATE INDEX tbl_ledger_company_idcompwalletbank_idx ON tbl_ledger_company USING btree (idcompwalletbank);
+
+CREATE TABLE tbl_wallet_member (
+    idwalletmember varchar(150) NOT NULL,
+    idmember varchar(150) DEFAULT ''::character varying NULL,
     idcurr varchar(20) NOT NULL,
-    idbank varchar(10) NOT NULL,
+    idbank varchar(10),
     account_number varchar(150) DEFAULT ''::character varying NULL,
     account_name varchar(150) DEFAULT ''::character varying NULL,
     networkcrypto varchar(20) DEFAULT ''::character varying NULL,
-    amount_credit numeric(36, 18) NOT NULL DEFAULT 0,
-    amount_debit numeric(36, 18) NOT NULL DEFAULT 0,
-	creatememberwallet varchar(30) DEFAULT ''::character varying NULL,
-	createdatememberwallet timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	updatememberwallet varchar(30) DEFAULT ''::character varying NULL,
-	updatedatememberwallet timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT tbl_member_wallet_unique UNIQUE (idmemberwallet)
+    status varchar(1) DEFAULT 'Y',
+    created_by varchar(30) DEFAULT ''::character varying NULL,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_by varchar(30) DEFAULT ''::character varying NULL,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL
+);
+CREATE TABLE tbl_wallet (
+    idwallet varchar(150) NOT NULL,
+    wallettype varchar(20) DEFAULT ''::character varying NULL,
+    idowner varchar(150) DEFAULT ''::character varying NULL,
+    idcurr varchar(20) NOT NULL,
+    idbank varchar(10),
+    account_number varchar(150) DEFAULT ''::character varying NULL,
+    account_name varchar(150) DEFAULT ''::character varying NULL,
+    networkcrypto varchar(20) DEFAULT ''::character varying NULL,
+    status varchar(1) DEFAULT 'Y',
+    created_by varchar(30) DEFAULT ''::character varying NULL,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_by varchar(30) DEFAULT ''::character varying NULL,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL
+);
+CREATE TABLE tbl_wallet_balance (
+    idwallet varchar(150) NOT NULL,
+    total_credit numeric(36,18) NOT NULL DEFAULT 0,
+    total_debit numeric(36,18) NOT NULL DEFAULT 0,
+    updated_by varchar(30),
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL
+);
+CREATE TABLE tbl_wallet_company_metadata (
+    idwallet varchar(150) NOT NULL,
+    category varchar(20) DEFAULT ''::character varying NULL,
+    note varchar(150) DEFAULT ''::character varying NULL,
+    effective_from timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    effective_to timestamp DEFAULT CURRENT_TIMESTAMP NULL
 );
 
-
-CREATE TABLE tbl_mst_company_walletbank (
-	idcompwalletbank varchar(150) NOT NULL,
-	idcurr varchar(20) NOT NULL,
-	idbank varchar(10) DEFAULT ''::character varying NULL,
-	categorycompwalletbank varchar(20) DEFAULT ''::character varying NULL,
-	account_number varchar(150) DEFAULT ''::character varying NULL,
-	account_name varchar(150) DEFAULT ''::character varying NULL,
-	networkcrypto varchar(20) DEFAULT ''::character varying NULL,
-	addressqris varchar(150) DEFAULT ''::character varying NULL,
-	amountcompwalletbank_credit numeric(36, 18) DEFAULT 0 NOT NULL,
-	amountcompwalletbank_debit numeric(36, 18) DEFAULT 0 NOT NULL,
-	statuscompwalletbank varchar(1) DEFAULT 'Y'::character varying NULL,
-	notecompwalletbank varchar(150) DEFAULT ''::character varying NULL,
-	effective_from timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	effective_to timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	createcompwalletbank varchar(30) DEFAULT ''::character varying NULL,
-	createdatecompwalletbank timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	updatecompwalletbank varchar(30) DEFAULT ''::character varying NULL,
-	updatedatecompwalletbank timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT tbl_mst_company_walletbank_unique UNIQUE (idcompwalletbank)
+CREATE TABLE tbl_wallet_transaction (
+    idtrx varchar(150) NOT NULL,
+    idowner varchar(150) DEFAULT ''::character varying NULL,
+    idgroup varchar(4) DEFAULT ''::character varying NULL,
+    typeact varchar(20) NOT NULL,
+    typetrx varchar(20) NOT NULL,
+    idcurr varchar(20) NOT NULL,
+    datetrx timestamp NOT NULL,
+    source_wallet_id varchar(150),
+    source_wallet_snapshot varchar(200) NULL,
+    destination_wallet_id varchar(150),
+    destination_wallet_snapshot varchar(200) NULL,
+    amount numeric(36,18) DEFAULT 0 NOT NULL,
+    admin_fee numeric(36,18) DEFAULT 0 NOT NULL,
+    rate_trx numeric(36,18) DEFAULT 0 NOT NULL,
+    amount_final numeric(36,18) DEFAULT 0 NOT NULL,
+    amountratefinal_trx numeric(36, 18) DEFAULT 0 NOT NULL,
+    balance_source_before numeric(36,18) DEFAULT 0 NOT NULL,
+    balance_destination_before numeric(36,18) DEFAULT 0 NOT NULL,
+    status varchar(20) DEFAULT 'DRAFT',
+    title varchar(150) DEFAULT ''::character varying NULL,
+    detail varchar(250) DEFAULT ''::character varying NULL,
+    note varchar(150) DEFAULT ''::character varying NULL,
+    approved_by varchar(30) NULL,
+    approved_at timestamp NULL,
+    created_by varchar(30) DEFAULT ''::character varying NULL,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_by varchar(30) DEFAULT ''::character varying NULL,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 );
 
-CREATE TABLE tbl_trx_company_walletbank (
-	idtrxcompwalletbank varchar(150) NOT NULL,
-	typetrx varchar(10) NOT NULL,
+CREATE TABLE tbl_wallet_external_transaction (
+	idtrx varchar(150) NOT NULL,
+	idmember varchar(150) DEFAULT ''::character varying NULL,
+	typeact varchar(20) NOT NULL,
+	typetrx varchar(20) NOT NULL,
 	idcurr varchar(20) NOT NULL,
-	datetrx date NOT NULL,
-	wallet_idcompwalletbank varchar(150) NULL,
-	wallet_snapshot varchar(200) NULL,
-	source_wallet_idcompwalletbank varchar(150) NULL,
-	source_wallet_snapshot varchar(200) NULL,
-	destination_wallet_idcompwalletbank varchar(150) NULL,
-	destination_wallet_snapshot varchar(200) NULL,
-	amount_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	balance_before_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	balance_dest_before_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	admin_fee numeric(36, 18) DEFAULT 0 NOT NULL,
-	rate_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	amountfinal_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	amountratefinal_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	status varchar(10) DEFAULT 'DRAFT'::character varying NOT NULL,
-	title varchar(150) DEFAULT ''::character varying NULL,
-	detail varchar(250) DEFAULT ''::character varying NULL,
-	note varchar(150) DEFAULT ''::character varying NULL,
-	approved_by varchar(30) NULL,
-	approved_at timestamp NULL,
-	createtrx varchar(30) DEFAULT ''::character varying NULL,
-	createdatetrx timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	updatetrx varchar(30) DEFAULT ''::character varying NULL,
-	updatedatetrx timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT tbl_trx_company_walletbank_unique UNIQUE (idtrxcompwalletbank)
-);
-CREATE TABLE tbl_trx_member (
-	idtrxmember varchar(150) NOT NULL,
-	typeact varchar(10) NOT NULL,
-	typetrx varchar(10) NOT NULL,
-	idcurr varchar(20) NOT NULL,
-	datetrx date NOT NULL,
+	datetrx timestamp NOT NULL,
 	source_wallet_id varchar(150) NULL,
 	source_wallet_snapshot varchar(200) NULL,
 	destination_wallet_id varchar(150) NULL,
 	destination_wallet_snapshot varchar(200) NULL,
-	amount_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	balance_source_before_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	balance_dest_before_trx numeric(36, 18) DEFAULT 0 NOT NULL,
+	amount numeric(36, 18) DEFAULT 0 NOT NULL,
 	admin_fee numeric(36, 18) DEFAULT 0 NOT NULL,
 	rate_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	amountfinal_trx numeric(36, 18) DEFAULT 0 NOT NULL,
+	amount_final numeric(36, 18) DEFAULT 0 NOT NULL,
 	amountratefinal_trx numeric(36, 18) DEFAULT 0 NOT NULL,
-	status varchar(10) DEFAULT 'DRAFT'::character varying NOT NULL,
+	balance_source_before numeric(36, 18) DEFAULT 0 NOT NULL,
+	balance_destination_before numeric(36, 18) DEFAULT 0 NOT NULL,
+	status varchar(20) DEFAULT 'DRAFT'::character varying NULL,
 	title varchar(150) DEFAULT ''::character varying NULL,
 	detail varchar(250) DEFAULT ''::character varying NULL,
 	note varchar(150) DEFAULT ''::character varying NULL,
 	approved_by varchar(30) NULL,
 	approved_at timestamp NULL,
-	createtrx varchar(30) DEFAULT ''::character varying NULL,
-	createdatetrx timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	updatetrx varchar(30) DEFAULT ''::character varying NULL,
-	updatedatetrx timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT tbl_trx_member_unique UNIQUE (idtrxmember)
+	created_by varchar(30) DEFAULT ''::character varying NULL,
+	created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_by varchar(30) DEFAULT ''::character varying NULL,
+	updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	idgroup varchar(4) DEFAULT ''::character varying NULL,
+	CONSTRAINT tbl_wallet_external_transaction_unique UNIQUE (idtrx)
 );
-
-
-CREATE TABLE tbl_ledger_company (
-	idledger varchar(150) NOT NULL,
-	ref_idtrx varchar(150) NOT NULL,
-	ref_table varchar(150) NOT NULL,
-	typeledger varchar(10) NOT NULL,
-	dateledger date NOT NULL,
-	idcurr varchar(20) NOT NULL,
-	amount_credit numeric(36, 18) DEFAULT 0 NOT NULL,
-	amount_debit numeric(36, 18) DEFAULT 0 NOT NULL,
-	idcompwalletbank varchar(150) DEFAULT ''::character varying NULL,
-	createledger varchar(30) DEFAULT ''::character varying NULL,
-	createdateledger timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	updateledger varchar(30) DEFAULT ''::character varying NULL,
-	updatedateledger timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT tbl_ledger_company_unique UNIQUE (idledger)
-);
-CREATE INDEX tbl_ledger_company_idcompwalletbank_idx ON tbl_ledger_company USING btree (idcompwalletbank);
