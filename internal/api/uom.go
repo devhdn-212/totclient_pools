@@ -55,7 +55,7 @@ func (ad *uomApi) Save(ctx *fiber.Ctx) error {
 	fails := util.Validate(req)
 
 	if len(fails) > 0 {
-		connection.Log.Warn("Validation failed for update Currency",
+		connection.Log.Warn("Validation failed for update uom",
 			zap.Any("validation_errors", fails),
 			zap.Any("body", req),
 		)
@@ -64,7 +64,7 @@ func (ad *uomApi) Save(ctx *fiber.Ctx) error {
 	}
 	datatoken := ctx.Locals("client_username").(string)
 	client_username := util.Parsing_final(datatoken)
-	flagpage := util.Validpage(client_username, "CURRENCY-SAVE")
+	flagpage := util.Validpage(client_username, "UOM-SAVE")
 	if !flagpage {
 		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"status":  fiber.StatusForbidden,

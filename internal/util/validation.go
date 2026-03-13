@@ -3,11 +3,12 @@ package util
 import (
 	"fmt"
 
+	validasicustom "github.com/devhdn-212/gofibergoqu_master/internal/util/validasicustom"
 	"github.com/go-playground/validator/v10"
 )
 
 func Validate[T any](data T) map[string]string {
-	err := validator.New().Struct(data)
+	err := validasicustom.Validate.Struct(data)
 	res := map[string]string{}
 	if err != nil {
 		for _, v := range err.(validator.ValidationErrors) {

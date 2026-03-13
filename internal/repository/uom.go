@@ -26,7 +26,7 @@ func (u *uomRepository) FindAll(ctx context.Context) ([]domain.Uom, error) {
 	var res []domain.Uom
 	err := u.db.
 		From(config.DB_tbl_uom).
-		Order(goqu.C("idcurr").Asc()).
+		Order(goqu.C("iduom").Asc()).
 		ScanStructsContext(ctx, &res)
 	return res, err
 }

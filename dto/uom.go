@@ -14,6 +14,6 @@ type UomSelect struct {
 type UomSave struct {
 	Type   string `json:"type" validate:"required"`
 	ID     string `json:"uom_id" validate:"required,min=1,max=10"`
-	Name   string `json:"uom_name" validate:"required,min=2,max=100,regexp=^[a-zA-Z0-9 _-]+$"`
+	Name   string `json:"uom_name" validate:"required,min=2,max=100,uomname"`
 	Status string `json:"uom_status" validate:"required,max=1"`
 }

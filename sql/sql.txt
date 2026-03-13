@@ -48,14 +48,15 @@ CREATE TABLE tbl_clientrule (
 	updatedateclientrule timestamp DEFAULT CURRENT_TIMESTAMP  NULL,
 	CONSTRAINT tbl_clientrule_unique UNIQUE (idclientrule)
 );
-CREATE TABLE tbl_mst_uom (
+
+CREATE TABLE public.tbl_mst_uom (
 	iduom varchar(10) NOT NULL,
 	nmuom varchar(100) DEFAULT ''::character varying NOT NULL,
 	status varchar(1) NOT NULL,
 	create_by varchar(30) DEFAULT ''::character varying NULL,
 	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	update_by varchar(30) DEFAULT ''::character varying NULL,
-	update_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_mst_uom_unique UNIQUE (iduom)
 );
 CREATE TABLE tbl_currency (
