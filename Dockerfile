@@ -10,8 +10,8 @@ FROM alpine:latest as goqurelease
 WORKDIR /app
 RUN apk add tzdata
 RUN mkdir -p ./frontend/public
-COPY --from=goqu /go/src/github.com/devhdn-212/github.com/master/app .
-COPY --from=goqu /go/src/github.com/devhdn-212/github.com/master/.env /app/.env
+COPY --from=goqu /go/src/github.com/devhdn-212/master/app .
+COPY --from=goqu /go/src/github.com/devhdn-212/master/.env /app/.env
 
 ENV TZ=Asia/Jakarta
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
