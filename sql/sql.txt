@@ -133,6 +133,7 @@ CREATE TABLE tbl_company_admin (
 	CONSTRAINT tbl_company_admin_unique UNIQUE (idcompadmin)
 );
 
+
 // AGEN schema sendiri berdasarkan idcompany
 CREATE TABLE tbl_mst_merek (
 	idmerek varchar(5) NOT NULL,

@@ -1,4 +1,4 @@
 running:
-	nodemon --exec go run main.go --signal SIGTERM
+	go run main.go
 build:
 	docker-compose up -d --build

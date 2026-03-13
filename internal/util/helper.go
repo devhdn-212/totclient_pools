@@ -1,6 +1,7 @@
 package util
 
 import (
+	"database/sql"
 	"math/rand"
 	"strconv"
 	s "strings"
@@ -51,4 +52,22 @@ func Decryption(dataencrypt string) string {
 func Parsing_final(datatoken string) string {
 	temp_decp := Decryption(datatoken)
 	return temp_decp
+}
+
+func NsToStr(ns sql.NullString) string {
+	if ns.Valid {
+		return ns.String
+	}
+	return ""
+}
+
+// Helper convert sql.NullTime → string dengan prefix (misal nama admin/creator)
+func NtToStr(nt sql.NullTime, prefix string, loc *time.Location) string {
+	if nt.Valid {
+		if prefix != "" {
+			return prefix + ", " + nt.Time.In(loc).Format("2006-01-02 15:04:05")
+		}
+		return nt.Time.In(loc).Format("2006-01-02 15:04:05")
+	}
+	return ""
 }
