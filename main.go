@@ -2,16 +2,17 @@ package main
 
 import (
 	"encoding/json"
-	"gofibergocu/dto"
-	"gofibergocu/internal/api"
-	"gofibergocu/internal/config"
-	"gofibergocu/internal/connection"
-	"gofibergocu/internal/repository"
-	"gofibergocu/internal/service"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/devhdn-212/gofibergoqu_master/dto"
+	"github.com/devhdn-212/gofibergoqu_master/internal/api"
+	"github.com/devhdn-212/gofibergoqu_master/internal/config"
+	"github.com/devhdn-212/gofibergoqu_master/internal/connection"
+	"github.com/devhdn-212/gofibergoqu_master/internal/repository"
+	"github.com/devhdn-212/gofibergoqu_master/internal/service"
 
 	jwtMid "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"

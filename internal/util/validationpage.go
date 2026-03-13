@@ -2,8 +2,9 @@ package util
 
 import (
 	"encoding/json"
-	"gofibergocu/internal/connection"
 	"strings"
+
+	"github.com/devhdn-212/gofibergoqu_master/internal/connection"
 )
 
 func Validpage(username, page string) bool {

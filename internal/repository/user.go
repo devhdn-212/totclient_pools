@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+
+	"github.com/devhdn-212/gofibergoqu_master/domain"
 	"github.com/doug-martin/goqu/v9"
-	"gofibergocu/domain"
 )
 
 type userRepository struct {

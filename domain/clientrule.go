@@ -3,7 +3,8 @@ package domain
 import (
 	"context"
 	"database/sql"
-	"gofibergocu/dto"
+
+	"github.com/devhdn-212/gofibergoqu_master/dto"
 )
 
 type Clientrule struct {

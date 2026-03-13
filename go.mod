@@ -1,4 +1,4 @@
-module gofibergocu
+module github.com/devhdn-212/gofibergoqu_master
 
 go 1.24.13
 

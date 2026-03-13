@@ -1,11 +1,12 @@
 package util
 
 import (
-	"gofibergocu/internal/config"
 	"math/rand"
 	"strconv"
 	s "strings"
 	"time"
+
+	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 
 	"golang.org/x/crypto/bcrypt"
 )

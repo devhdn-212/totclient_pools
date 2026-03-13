@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gofibergocu/domain"
-	"gofibergocu/dto"
-	"gofibergocu/internal/connection"
-	"gofibergocu/internal/repository"
-	"gofibergocu/internal/util"
 	"time"
+
+	"github.com/devhdn-212/gofibergoqu_master/domain"
+	"github.com/devhdn-212/gofibergoqu_master/dto"
+	"github.com/devhdn-212/gofibergoqu_master/internal/connection"
+	"github.com/devhdn-212/gofibergoqu_master/internal/repository"
+	"github.com/devhdn-212/gofibergoqu_master/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/lib/pq"

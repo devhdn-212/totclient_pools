@@ -7,9 +7,10 @@ import (
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 
-	"gofibergocu/internal/config"
 	"log"
 	"time"
+
+	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 )
 
 func GetDatabase(conf config.Database) *sql.DB {

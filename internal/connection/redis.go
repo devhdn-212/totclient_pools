@@ -8,9 +8,10 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"gofibergocu/internal/config"
 	"strconv"
 	"time"
+
+	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 )
 
 var (

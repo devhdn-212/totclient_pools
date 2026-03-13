@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"gofibergocu/domain"
 	"time"
+
+	"github.com/devhdn-212/gofibergoqu_master/domain"
 
 	"github.com/doug-martin/goqu/v9"
 )

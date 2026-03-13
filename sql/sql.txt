@@ -48,6 +48,16 @@ CREATE TABLE tbl_clientrule (
 	updatedateclientrule timestamp DEFAULT CURRENT_TIMESTAMP  NULL,
 	CONSTRAINT tbl_clientrule_unique UNIQUE (idclientrule)
 );
+CREATE TABLE tbl_mst_uom (
+	iduom varchar(10) NOT NULL,
+	nmuom varchar(100) DEFAULT ''::character varying NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT tbl_mst_uom_unique UNIQUE (iduom)
+);
 CREATE TABLE tbl_currency (
 	idcurr varchar(20) NOT NULL,
 	typecurr varchar(10) DEFAULT ''::character varying NOT NULL,
@@ -124,6 +134,16 @@ CREATE TABLE tbl_company_admin (
 );
 
 // AGEN schema sendiri berdasarkan idcompany
+CREATE TABLE tbl_mst_merek (
+	idmerek varchar(5) NOT NULL,
+	nmmerek varchar(100) DEFAULT ''::character varying NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT tbl_mst_merek_unique UNIQUE (idmerek)
+);
 CREATE TABLE tbl_mst_grouptrx (
 	idgroup varchar(4) NOT NULL,
 	nmgroup varchar(100) DEFAULT ''::character varying NOT NULL,
@@ -150,27 +170,6 @@ CREATE TABLE tbl_mst_member (
 	updatedatemember timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_member_unique UNIQUE (idmember)
 );
-
-
-
-CREATE TABLE tbl_account_balance_log (
-	idaccbalancelog varchar(150) NOT NULL,
-	idwallet varchar(150) DEFAULT ''::character varying NULL,
-	ref_idtrx varchar(150) NOT NULL,
-	ref_table varchar(150) NOT NULL,
-	typeaccbalancelog varchar(10) NOT NULL,
-	dateaccbalancelog date NOT NULL,
-	idcurr varchar(20) NOT NULL,
-	amount_credit numeric(36, 18) DEFAULT 0 NOT NULL,
-	amount_debit numeric(36, 18) DEFAULT 0 NOT NULL,
-	create_by varchar(30) DEFAULT ''::character varying NULL,
-	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	update_by varchar(30) DEFAULT ''::character varying NULL,
-	update_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT tbl_account_balance_log_unique UNIQUE (idaccbalancelog)
-);
-CREATE INDEX tbl_ledger_company_idcompwalletbank_idx ON tbl_ledger_company USING btree (idcompwalletbank);
-
 CREATE TABLE tbl_wallet_member (
     idwalletmember varchar(150) NOT NULL,
     idmember varchar(150) DEFAULT ''::character varying NULL,
@@ -277,3 +276,21 @@ CREATE TABLE tbl_wallet_external_transaction (
 	idgroup varchar(4) DEFAULT ''::character varying NULL,
 	CONSTRAINT tbl_wallet_external_transaction_unique UNIQUE (idtrx)
 );
+
+CREATE TABLE tbl_account_balance_log (
+	idaccbalancelog varchar(150) NOT NULL,
+	idwallet varchar(150) DEFAULT ''::character varying NULL,
+	ref_idtrx varchar(150) NOT NULL,
+	ref_table varchar(150) NOT NULL,
+	typeaccbalancelog varchar(10) NOT NULL,
+	dateaccbalancelog date NOT NULL,
+	idcurr varchar(20) NOT NULL,
+	amount_credit numeric(36, 18) DEFAULT 0 NOT NULL,
+	amount_debit numeric(36, 18) DEFAULT 0 NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_account_balance_log_unique UNIQUE (idaccbalancelog)
+);
+CREATE INDEX tbl_ledger_company_idcompwalletbank_idx ON tbl_ledger_company USING btree (idcompwalletbank);

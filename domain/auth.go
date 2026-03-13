@@ -2,7 +2,8 @@ package domain
 
 import (
 	"context"
-	"gofibergocu/dto"
+
+	"github.com/devhdn-212/gofibergoqu_master/dto"
 )
 
 type AuthService interface {

@@ -3,12 +3,13 @@ package api
 import (
 	"context"
 	"fmt"
-	"gofibergocu/domain"
-	"gofibergocu/dto"
-	"gofibergocu/internal/connection"
-	"gofibergocu/internal/util"
 	"net/http"
 	"time"
+
+	"github.com/devhdn-212/gofibergoqu_master/domain"
+	"github.com/devhdn-212/gofibergoqu_master/dto"
+	"github.com/devhdn-212/gofibergoqu_master/internal/connection"
+	"github.com/devhdn-212/gofibergoqu_master/internal/util"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
