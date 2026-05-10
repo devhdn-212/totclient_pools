@@ -2,26 +2,41 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
 )
 
 type userRepository struct {
-	db *goqu.Database
+	db DBExecutor
 }
 
-func NewUser(con *sql.DB) domain.UserRepository {
+func NewUser(db DBExecutor) domain.UserRepository {
 	return &userRepository{
-		db: goqu.New("default", con),
+		db: db,
 	}
 }
 func (u userRepository) FindByEmail(ctx context.Context, email string) (result domain.User, err error) {
-	dataset := u.db.From("tbl_users").
-		Where(
-			goqu.C("email").Eq(email))
+	// Query native PostgreSQL
+	query := `SELECT id, email, password, name, role, created_at, updated_at 
+	          FROM tbl_users 
+	          WHERE email = $1 LIMIT 1`
 
-	_, err = dataset.ScanStructContext(ctx, &result)
-	return
+	rows, err := u.db.Query(ctx, query, email)
+	if err != nil {
+		return result, err
+	}
+	defer rows.Close()
+
+	// Mapping otomatis menggunakan fitur CollectOneRow dari pgx v5
+	result, err = pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.User])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.User{}, nil
+		}
+		return result, err
+	}
+
+	return result, nil
 }

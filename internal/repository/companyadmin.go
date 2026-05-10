@@ -2,107 +2,126 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
 	"github.com/devhdn-212/gofibergoqu_master/internal/config"
-
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
 )
 
 type companyadminRepository struct {
-	db   GoquDB
-	exec DBExecutor
+	db DBExecutor
 }
 
-func NewCompanyadminRepository(exec *GoquExecutor) domain.CompanyadminRepository {
+func NewCompanyadminRepository(db DBExecutor) domain.CompanyadminRepository {
 	return &companyadminRepository{
-		db:   exec.DB,
-		exec: exec.Exec,
+		db: db,
 	}
 }
 
 func (c companyadminRepository) FindAll(ctx context.Context, idcompany string) ([]domain.Companyadmin, error) {
-	var res []domain.Companyadmin
-	err := c.db.
-		From(config.DB_tbl_companyadmin).
-		Where(
-			goqu.C("idcompany").Eq(idcompany),
-		).
-		Order(goqu.C("lastlogincompadmin").Desc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT * FROM ` + config.DB_tbl_companyadmin + ` 
+              WHERE idcompany = $1 
+              ORDER BY lastlogincompadmin DESC`
+
+	rows, err := c.db.Query(ctx, query, idcompany)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Mapping otomatis ke struct domain.Companyadmin
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Companyadmin])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c companyadminRepository) FindByID(ctx context.Context, idcompany, username string) (domain.Companyadmin, error) {
 	var compadmin domain.Companyadmin
+	query := `SELECT idcompadmin FROM ` + config.DB_tbl_companyadmin + ` 
+              WHERE idcompany = $1 AND usernamecompadmin = $2 LIMIT 1`
 
-	ds := c.db.From(config.DB_tbl_companyadmin).
-		Select(goqu.C("idcompadmin")).
-		Where(
-			goqu.C("idcompany").Eq(idcompany),
-			goqu.C("usernamecompadmin").Eq(username),
-		)
+	err := c.db.QueryRow(ctx, query, idcompany, username).Scan(&compadmin.ID)
 
-	sqlStr, args, err := ds.ToSQL()
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Companyadmin{}, nil
+		}
 		return compadmin, err
 	}
-
-	row := c.exec.QueryRowContext(ctx, sqlStr, args...)
-	err = row.Scan(
-		&compadmin.ID,
-	)
-	if err == sql.ErrNoRows {
-		return domain.Companyadmin{}, nil
-	}
-	return compadmin, err
+	return compadmin, nil
 }
 
 func (c companyadminRepository) Save(ctx context.Context, compadmin *domain.Companyadmin) error {
-	sqlStr, args, err := c.db.Insert(config.DB_tbl_companyadmin).Rows(compadmin).ToSQL()
-	if err != nil {
-		return err
-	}
-	_, err = c.exec.ExecContext(ctx, sqlStr, args...)
+	query := `INSERT INTO ` + config.DB_tbl_companyadmin + ` 
+                (idcompadmin, idcompany, idclientrule, usernamecompadmin, passcompadmin, 
+                 namecompadmin, compadminstatus, createcompadmin, createdatecompadmin) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+
+	_, err := c.db.Exec(ctx, query,
+		compadmin.ID,
+		compadmin.IDCompany,
+		compadmin.IDClientrule,
+		compadmin.Username,
+		compadmin.Pass,
+		compadmin.Name,
+		compadmin.Status,
+		compadmin.Created,
+		compadmin.CreatedAt,
+	)
 	return err
 }
 
 func (c companyadminRepository) Update(ctx context.Context, compadmin *domain.Companyadmin, flagpass bool) error {
-	ds := c.db.Update(config.DB_tbl_companyadmin)
+	var query string
+	var args []any
 
 	if flagpass {
-		ds = ds.Set(goqu.Record{
-			"idclientrule":        compadmin.IDClientrule,
-			"passcompadmin":       compadmin.Pass,
-			"namecompadmin":       compadmin.Name,
-			"compadminstatus":     compadmin.Status,
-			"updatecompadmin":     compadmin.Update,
-			"updatedatecompadmin": compadmin.UpdateAt,
-		})
+		query = `UPDATE ` + config.DB_tbl_companyadmin + ` SET 
+                    idclientrule = $1, 
+                    passcompadmin = $2, 
+                    namecompadmin = $3, 
+                    compadminstatus = $4, 
+                    updatecompadmin = $5, 
+                    updatedatecompadmin = $6 
+                  WHERE idcompadmin = $7`
+		args = []any{
+			compadmin.IDClientrule,
+			compadmin.Pass,
+			compadmin.Name,
+			compadmin.Status,
+			compadmin.Update,
+			compadmin.UpdateAt,
+			compadmin.ID,
+		}
 	} else {
-		ds = ds.Set(goqu.Record{
-			"idclientrule":        compadmin.IDClientrule,
-			"namecompadmin":       compadmin.Name,
-			"compadminstatus":     compadmin.Status,
-			"updatecompadmin":     compadmin.Update,
-			"updatedatecompadmin": compadmin.UpdateAt,
-		})
+		query = `UPDATE ` + config.DB_tbl_companyadmin + ` SET 
+                    idclientrule = $1, 
+                    namecompadmin = $2, 
+                    compadminstatus = $3, 
+                    updatecompadmin = $4, 
+                    updatedatecompadmin = $5 
+                  WHERE idcompadmin = $6`
+		args = []any{
+			compadmin.IDClientrule,
+			compadmin.Name,
+			compadmin.Status,
+			compadmin.Update,
+			compadmin.UpdateAt,
+			compadmin.ID,
+		}
 	}
 
-	sqlStr, args, err := ds.
-		Where(goqu.C("idcompadmin").Eq(compadmin.ID)).
-		ToSQL()
+	res, err := c.db.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
-	res, err := c.exec.ExecContext(ctx, sqlStr, args...)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
+
+	if res.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -15,8 +14,9 @@ import (
 	"github.com/devhdn-212/gofibergoqu_master/internal/repository"
 	"github.com/devhdn-212/gofibergoqu_master/internal/util"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -25,13 +25,13 @@ const (
 )
 
 type authService struct {
-	db                  *sql.DB
+	db                  *pgxpool.Pool
 	conf                *config.Config
 	adminRepository     domain.AdminsRepository
 	adminruleRepository domain.AdminruleRepository
 }
 
-func NewAuth(db *sql.DB,
+func NewAuth(db *pgxpool.Pool,
 	cnf *config.Config,
 	adminRepository domain.AdminsRepository,
 	adminruleRepository domain.AdminruleRepository) domain.AuthService {
@@ -43,6 +43,7 @@ func NewAuth(db *sql.DB,
 	}
 }
 func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthResponse, error) {
+	// 1. Cari user berdasarkan username
 	user, err := a.adminRepository.FindByUsername(ctx, req.Username)
 	if err != nil {
 		return dto.AuthResponse{}, err
@@ -50,56 +51,57 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 	if user.Username == "" {
 		return dto.AuthResponse{}, errors.New("Username / Password Not Found")
 	}
+
+	// 2. Verifikasi Password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Pass), []byte(req.Password))
 	if err != nil {
 		return dto.AuthResponse{}, errors.New("Username / Password Not Found")
 	}
 
+	// 3. Ambil Rule (Hak Akses)
 	rule, errrule := a.adminruleRepository.GetRule(ctx, user.Idadmin)
 	if errrule != nil {
 		return dto.AuthResponse{}, errors.New("Please contact Admin")
 	}
 
-	tx, err := a.db.BeginTx(ctx, nil)
+	// 4. Update Last Login menggunakan Transaksi PGX
+	tx, err := a.db.Begin(ctx)
 	if err != nil {
 		return dto.AuthResponse{}, err
 	}
+	defer tx.Rollback(ctx)
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-	loc, _ := time.LoadLocation("Asia/Jakarta")
-	txExec := repository.NewGoquTxExecutor(tx)
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewAdminRepository(txExec)
-	flagupdate, errupdate := txRepo.FindByUsername(ctx, user.Username)
-	if errupdate != nil {
-		return dto.AuthResponse{}, errupdate
-	}
-	flagupdate.Username = user.Username
-	flagupdate.Ipaddress = req.Ipaddress
-	flagupdate.Lastlogin = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
-	if err = a.adminRepository.UpdateLogin(ctx, &flagupdate); err != nil {
-		fmt.Println(err)
-		return dto.AuthResponse{}, err
-	}
-	if err := tx.Commit(); err != nil {
+
+	// Update data login
+	user.Ipaddress = req.Ipaddress
+	user.Lastlogin = sql.NullTime{Valid: true, Time: util.GetNowJakarta()}
+
+	// Gunakan txRepo agar masuk dalam scope transaksi
+	if err = txRepo.UpdateLogin(ctx, &user); err != nil {
 		return dto.AuthResponse{}, err
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return dto.AuthResponse{}, err
+	}
+
+	// 5. Simpan Data ke Redis
 	var clientRedis dto.AuthClientRedis
 	clientRedis.Username = user.Username
 	clientRedis.IDrule = user.Idadmin
 	clientRedis.Rule = rule
 
-	dataclient := user.Username
-	dataclient_encr, keymap := util.Encryption(dataclient)
+	// Enkripsi username untuk payload token
+	dataclient_encr, keymap := util.Encryption(user.Username)
 	dataclient_encr_final := dataclient_encr + "|" + strconv.Itoa(keymap)
 
 	go connection.SetRedis(RedisClient+user.Username, clientRedis, 1440*time.Minute)
 
+	// 6. Generate JWT Token (v5)
 	claim := jwt.MapClaims{
+		"username":    user.Username, // Tambahkan username plain untuk middleware
 		"clien_admin": dataclient_encr_final,
 		"jti":         uuid.NewString(),
 		"iss":         a.conf.Jwt.Issuer,
@@ -107,11 +109,13 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 		"iat":         time.Now().Unix(),
 		"exp":         time.Now().Add(time.Duration(a.conf.Jwt.Exp) * time.Minute).Unix(),
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
 	tokenstr, err := token.SignedString([]byte(a.conf.Jwt.Key))
 	if err != nil {
 		return dto.AuthResponse{}, errors.New("auth failed")
 	}
+
 	return dto.AuthResponse{Token: tokenstr}, nil
 
 }

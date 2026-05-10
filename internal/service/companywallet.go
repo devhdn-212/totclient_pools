@@ -17,7 +17,8 @@ import (
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -25,11 +26,11 @@ const (
 )
 
 type companywalletService struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	repo domain.CompanywalletRepository
 }
 
-func NewCompanywalletService(db *sql.DB, repo domain.CompanywalletRepository) domain.CompanywalletService {
+func NewCompanywalletService(db *pgxpool.Pool, repo domain.CompanywalletRepository) domain.CompanywalletService {
 	return &companywalletService{
 		db:   db,
 		repo: repo,
@@ -55,16 +56,16 @@ func (c companywalletService) All(ctx context.Context, idcomp string) ([]dto.Com
 		log.Error(err)
 		return nil, err
 	}
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+
 	var compwalletData []dto.CompanywalletData
 	for _, v := range curr {
 		var createdAt, updatedAt string
 		if v.CreatedAt.Valid {
-			createdAt = v.Created + ", " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
 			if v.Update != "" {
-				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
+				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 			} else {
 				updatedAt = ""
 			}
@@ -87,49 +88,50 @@ func (c companywalletService) All(ctx context.Context, idcomp string) ([]dto.Com
 }
 
 func (c companywalletService) Save(ctx context.Context, req dto.CompanywalletSave, client_admin string) error {
-	tx, err := c.db.BeginTx(ctx, nil)
+	// Start transaction pgx v5
+	tx, err := c.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	// Defer rollback
+	defer tx.Rollback(ctx)
 
-	txExec := repository.NewGoquTxExecutor(tx)
+	// Executor transaksi native pgx
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewCompanywalletRepository(txExec)
+
 	flag, err := txRepo.FindByID(ctx, req.ID, req.IDcomp, req.IDcurr)
 	if err != nil {
 		return err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := util.GetNowJakarta()
+
 	if req.Type == "New" {
 		if flag.ID != "" {
 			return errors.New("Duplicate Entry")
 		}
+
 		raw := strings.ReplaceAll(uuid.NewString(), "-", "")
 		date := time.Now().Format("060102")
 		walletCode := fmt.Sprintf("%s-%s-%s", req.IDcomp, date, raw)
+
 		compwallet := domain.Companywallet{
 			ID:        walletCode,
 			IDcompany: req.IDcomp,
 			IDcurr:    req.IDcurr,
 			Status:    req.Status,
 			Created:   client_admin,
-			CreatedAt: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
+			CreatedAt: sql.NullTime{Valid: true, Time: now},
 		}
+
 		err = txRepo.Save(ctx, &compwallet)
 		if err != nil {
-			var pqErr *pq.Error
-			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				return util.ErrDuplicate
 			}
-			return err
-		}
-		if err = tx.Commit(); err != nil {
 			return err
 		}
 	} else {
@@ -142,15 +144,17 @@ func (c companywalletService) Save(ctx context.Context, req dto.CompanywalletSav
 		flag.IDcurr = req.IDcurr
 		flag.Status = req.Status
 		flag.Update = client_admin
-		flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
+		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
-		if err = c.repo.Update(ctx, &flag); err != nil {
-			fmt.Println("Error update : ", err)
+		// Gunakan txRepo agar berada dalam scope transaksi yang sama
+		if err = txRepo.Update(ctx, &flag); err != nil {
 			return err
 		}
-		if err := tx.Commit(); err != nil {
-			return err
-		}
+	}
+
+	// Commit transaksi
+	if err = tx.Commit(ctx); err != nil {
+		return err
 	}
 
 	go connection.DeleteRedis(RedisCompanywalletKey + req.IDcomp)

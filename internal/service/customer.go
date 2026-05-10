@@ -13,9 +13,9 @@ import (
 	"github.com/devhdn-212/gofibergoqu_master/internal/repository"
 	"github.com/devhdn-212/gofibergoqu_master/internal/util"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -24,11 +24,11 @@ const (
 )
 
 type customerService struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	repo domain.CustomerRepository
 }
 
-func NewCustomerService(db *sql.DB, repo domain.CustomerRepository) domain.CustomerService {
+func NewCustomerService(db *pgxpool.Pool, repo domain.CustomerRepository) domain.CustomerService {
 	return &customerService{
 		db:   db,
 		repo: repo,
@@ -58,10 +58,11 @@ func (c customerService) Index(ctx context.Context) ([]dto.CustomerData, error) 
 	for _, v := range customers {
 		var createdAt, updatedAt string
 		if v.CreatedAt.Valid {
-			createdAt = v.CreatedAt.Time.Format("2006-01-02 15:04:05")
+			// Gunakan helper LocJakarta
+			createdAt = v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
-			updatedAt = v.UpdateAt.Time.Format("2006-01-02 15:04:05")
+			updatedAt = v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		customerData = append(customerData, dto.CustomerData{
 			ID:        v.ID,
@@ -77,19 +78,15 @@ func (c customerService) Index(ctx context.Context) ([]dto.CustomerData, error) 
 	return customerData, nil
 }
 func (c customerService) Create(ctx context.Context, req dto.CreateCustomerRequest) (err error) {
-	tx, err := c.db.BeginTx(ctx, nil)
+	tx, err := c.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(ctx)
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
-	txExec := repository.NewGoquTxExecutor(tx)
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewCustomerRepository(txExec)
+
 	flag, err := txRepo.FindByCode(ctx, req.Code)
 	if err != nil {
 		return err
@@ -97,69 +94,74 @@ func (c customerService) Create(ctx context.Context, req dto.CreateCustomerReque
 	if flag.Code != "" {
 		return errors.New("code already exists")
 	}
+
 	customer := domain.Customer{
 		ID:        uuid.NewString(),
 		Code:      req.Code,
 		Name:      req.Name,
-		CreatedAt: sql.NullTime{Valid: true, Time: time.Now()},
+		CreatedAt: sql.NullTime{Valid: true, Time: util.GetNowJakarta()},
 	}
+
 	err = txRepo.Save(ctx, &customer)
 	if err != nil {
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return util.ErrDuplicate
 		}
 		return err
 	}
-	if err = tx.Commit(); err != nil {
+
+	if err = tx.Commit(ctx); err != nil {
 		return err
 	}
+
 	go connection.DeleteRedis(RedisCustomerAllKey)
 	return nil
 }
 func (c customerService) Update(ctx context.Context, req dto.UpdateCustomerRequest) error {
-	tx, err := c.db.BeginTx(ctx, nil)
+	tx, err := c.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback(ctx)
 
-	flag, err := c.repo.FindByID(ctx, req.ID)
+	txExec := repository.NewPGXTxExecutor(tx)
+	txRepo := repository.NewCustomerRepository(txExec)
+
+	flag, err := txRepo.FindByID(ctx, req.ID)
 	if err != nil {
 		return err
 	}
 	if flag.ID == "" {
 		return errors.New("customer id not found")
 	}
-	flag.Name = req.Name
-	flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now()}
 
-	if err = c.repo.Update(ctx, &flag); err != nil {
+	flag.Name = req.Name
+	flag.UpdateAt = sql.NullTime{Valid: true, Time: util.GetNowJakarta()}
+
+	if err = txRepo.Update(ctx, &flag); err != nil {
 		return err
 	}
-	if err := tx.Commit(); err != nil {
+
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
+
 	go connection.DeleteRedis(RedisCustomerAllKey)
 	go connection.DeleteRedis(RedisCustomerDetail + req.ID)
 	return nil
 }
 func (c customerService) Delete(ctx context.Context, id string) error {
-	tx, err := c.db.BeginTx(ctx, nil)
+	tx, err := c.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback(ctx)
 
-	flag, err := c.repo.FindByID(ctx, id)
+	txExec := repository.NewPGXTxExecutor(tx)
+	txRepo := repository.NewCustomerRepository(txExec)
+
+	flag, err := txRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -167,12 +169,14 @@ func (c customerService) Delete(ctx context.Context, id string) error {
 		return errors.New("customer id not found")
 	}
 
-	if err = c.repo.Delete(ctx, id); err != nil {
+	if err = txRepo.Delete(ctx, id); err != nil {
 		return err
 	}
-	if err := tx.Commit(); err != nil {
+
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
+
 	go connection.DeleteRedis(RedisCustomerAllKey)
 	go connection.DeleteRedis(RedisCustomerDetail + id)
 	return nil
@@ -182,10 +186,10 @@ func (c customerService) Show(ctx context.Context, id string) (dto.CustomerData,
 
 	cached, found, err := connection.GetRedis(redisdetail)
 	if err == nil && found {
-		var dto dto.CustomerData
-		if err := json.Unmarshal([]byte(cached), &dto); err == nil {
-			log.Info("Returning data from Redis - Customer/%s", id)
-			return dto, nil
+		var data dto.CustomerData
+		if err := json.Unmarshal([]byte(cached), &data); err == nil {
+			connection.Log.Info("Returning data from Redis - Customer/" + id)
+			return data, nil
 		}
 	}
 
@@ -204,6 +208,6 @@ func (c customerService) Show(ctx context.Context, id string) (dto.CustomerData,
 	}
 
 	_ = connection.SetRedis(redisdetail, result, 60*time.Minute)
-	log.Info("Returning data Database - Customer/$s", id)
+	connection.Log.Info("Returning data Database - Customer/" + id)
 	return result, nil
 }

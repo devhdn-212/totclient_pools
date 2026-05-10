@@ -2,89 +2,95 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
 	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
 )
 
 type companyRepository struct {
-	db   GoquDB
-	exec DBExecutor
+	db DBExecutor
 }
 
-func NewCompanyRepository(exec *GoquExecutor) domain.CompanyRepository {
+func NewCompanyRepository(db DBExecutor) domain.CompanyRepository {
 	return &companyRepository{
-		db:   exec.DB,
-		exec: exec.Exec,
+		db: db,
 	}
 }
 func (c companyRepository) FindAll(ctx context.Context) ([]domain.Company, error) {
-	var res []domain.Company
-	err := c.db.
-		From(config.DB_tbl_company).
-		Order(goqu.C("idcompany").Asc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT * FROM ` + config.DB_tbl_company + ` ORDER BY idcompany ASC`
+
+	rows, err := c.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Mapping otomatis menggunakan pgx v5
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Company])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c companyRepository) FindByID(ctx context.Context, id string) (domain.Company, error) {
 	var company domain.Company
+	query := `SELECT idcompany FROM ` + config.DB_tbl_company + ` WHERE idcompany = $1 LIMIT 1`
 
-	ds := c.db.From(config.DB_tbl_company).
-		Select(goqu.C("idcompany")).
-		Where(
-			goqu.C("idcompany").Eq(id),
-		)
+	err := c.db.QueryRow(ctx, query, id).Scan(&company.ID)
 
-	sqlStr, args, err := ds.ToSQL()
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Company{}, nil
+		}
 		return company, err
 	}
-
-	row := c.exec.QueryRowContext(ctx, sqlStr, args...)
-	err = row.Scan(
-		&company.ID,
-	)
-	if err == sql.ErrNoRows {
-		return domain.Company{}, nil
-	}
-	return company, err
+	return company, nil
 }
 
 func (c companyRepository) Save(ctx context.Context, company *domain.Company) error {
-	sqlStr, args, err := c.db.Insert(config.DB_tbl_company).Rows(company).ToSQL()
-	if err != nil {
-		return err
-	}
-	_, err = c.exec.ExecContext(ctx, sqlStr, args...)
+	query := `INSERT INTO ` + config.DB_tbl_company + ` 
+                (idcompany, idcurrdef, compname, compstatus, createcomp, createdatecomp) 
+              VALUES ($1, $2, $3, $4, $5, $6)`
+
+	_, err := c.db.Exec(ctx, query,
+		company.ID,
+		company.IDcurrdef,
+		company.Name,
+		company.Status,
+		company.Created, // Pastikan field ini ada di struct domain.Company
+		company.CreatedAt,
+	)
 	return err
 }
 
 func (c companyRepository) Update(ctx context.Context, company *domain.Company) error {
-	sqlStr, args, err := c.db.
-		Update(config.DB_tbl_company).
-		Set(goqu.Record{
-			"idcurrdef":      company.IDcurrdef,
-			"compname":       company.Name,
-			"compstatus":     company.Status,
-			"updatecomp":     company.Update,
-			"updatedatecomp": company.UpdateAt,
-		}).
-		Where(goqu.C("idcompany").Eq(company.ID)).
-		ToSQL()
+	query := `UPDATE ` + config.DB_tbl_company + ` SET 
+                idcurrdef = $1, 
+                compname = $2, 
+                compstatus = $3, 
+                updatecomp = $4, 
+                updatedatecomp = $5 
+              WHERE idcompany = $6`
+
+	res, err := c.db.Exec(ctx, query,
+		company.IDcurrdef,
+		company.Name,
+		company.Status,
+		company.Update,
+		company.UpdateAt,
+		company.ID,
+	)
 	if err != nil {
 		return err
 	}
-	res, err := c.exec.ExecContext(ctx, sqlStr, args...)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
+
+	if res.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 	return nil
 }

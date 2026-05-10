@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
@@ -15,7 +14,8 @@ import (
 	"github.com/devhdn-212/gofibergoqu_master/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -23,11 +23,11 @@ const (
 )
 
 type adminService struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	repo domain.AdminsRepository
 }
 
-func NewAdminService(db *sql.DB, repo domain.AdminsRepository) domain.AdminService {
+func NewAdminService(db *pgxpool.Pool, repo domain.AdminsRepository) domain.AdminService {
 	return &adminService{
 		db:   db,
 		repo: repo,
@@ -53,23 +53,23 @@ func (a adminService) All(ctx context.Context) ([]dto.AdminData, error) {
 		log.Error(err)
 		return nil, err
 	}
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+
 	var adminData []dto.AdminData
 	for _, v := range admins {
 		var joindate, lastlogin, createdAt, updatedAt string
 
 		if v.Joindate.Valid {
-			joindate = v.Joindate.Time.In(loc).Format("2006-01-02")
+			joindate = v.Joindate.Time.In(util.LocJakarta).Format("2006-01-02")
 		}
 		if v.Lastlogin.Valid {
-			lastlogin = v.Lastlogin.Time.In(loc).Format("2006-01-02 15:04:05")
+			lastlogin = v.Lastlogin.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.CreatedAt.Valid {
-			createdAt = v.Created + ", " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
 			if v.Update != "" {
-				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
+				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 			} else {
 				updatedAt = ""
 			}
@@ -94,89 +94,78 @@ func (a adminService) All(ctx context.Context) ([]dto.AdminData, error) {
 }
 
 func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin string) error {
-	tx, err := a.db.BeginTx(ctx, nil)
+	tx, err := a.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(ctx)
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
-
-	txExec := repository.NewGoquTxExecutor(tx)
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewAdminRepository(txExec)
+
 	flag, err := txRepo.FindByUsername(ctx, req.Username)
 	if err != nil {
 		return err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
-	now := time.Now().In(loc)
-	fmt.Println("Go time:", now)
-	fmt.Println("Location:", now.Location())
+	// Set lokasi ke Asia/Jakarta
+	now := util.GetNowJakarta()
+
 	haspass, _ := util.HashPassword(req.Pass)
+
 	if req.Type == "New" {
 		if flag.Username != "" {
 			return errors.New("Username already exists")
 		}
+
 		admin := domain.Admin{
-			Username:  req.Username,
-			Pass:      haspass,
-			Idadmin:   req.Idadmin,
-			Name:      req.Name,
-			Status:    req.Status,
-			Joindate:  sql.NullTime{Valid: true, Time: time.Now().In(loc)},
+			Username: req.Username,
+			Pass:     haspass,
+			Idadmin:  req.Idadmin,
+			Name:     req.Name,
+			Status:   req.Status,
+			// Input waktu dengan timezone JKT
+			Lastlogin: sql.NullTime{Valid: true, Time: now},
+			Joindate:  sql.NullTime{Valid: true, Time: now},
+			Ipaddress: req.Ipaddress,
 			Created:   client_admin,
-			CreatedAt: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
+			CreatedAt: sql.NullTime{Valid: true, Time: now},
 		}
+
 		err = txRepo.Save(ctx, &admin)
 		if err != nil {
-			var pqErr *pq.Error
-			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				return util.ErrDuplicate
 			}
-			return err
-		}
-		if err = tx.Commit(); err != nil {
 			return err
 		}
 	} else {
 		if flag.Username == "" {
 			return errors.New("Username not found")
 		}
-		if req.Pass != "" {
-			flag.Username = req.Username
-			flag.Pass = haspass
-			flag.Idadmin = req.Idadmin
-			flag.Name = req.Name
-			flag.Status = req.Status
-			flag.Update = client_admin
-			flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
 
-			if err = a.repo.Update(ctx, &flag, true); err != nil {
-				fmt.Println(err)
-				return err
-			}
-			if err := tx.Commit(); err != nil {
+		flag.Name = req.Name
+		flag.Status = req.Status
+		flag.Ipaddress = req.Ipaddress
+		flag.Update = client_admin
+		// Update waktu dengan timezone JKT
+		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
+
+		if req.Pass != "" {
+			flag.Pass = haspass
+			if err = txRepo.Update(ctx, &flag); err != nil {
 				return err
 			}
 		} else {
-			flag.Username = req.Username
-			flag.Idadmin = req.Idadmin
-			flag.Name = req.Name
-			flag.Status = req.Status
-			flag.Update = client_admin
-			flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
-
-			if err = a.repo.Update(ctx, &flag, false); err != nil {
-				return err
-			}
-			if err := tx.Commit(); err != nil {
+			if err = txRepo.UpdateLogin(ctx, &flag); err != nil {
 				return err
 			}
 		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
 	}
 
 	go connection.DeleteRedis(RedisAdminAllKey)

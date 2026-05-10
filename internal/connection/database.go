@@ -1,40 +1,53 @@
 package connection
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"log"
 	"time"
 
 	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 )
 
-func GetDatabase(conf config.Database) *sql.DB {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s search_path=%s sslmode=disable Timezone=Asia/Jakarta",
-		conf.Host,
-		conf.Port,
+func GetDatabase(conf config.Database) *pgxpool.Pool {
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?search_path=%s&sslmode=disable&timezone=Asia/Jakarta",
 		conf.User,
 		conf.Pass,
+		conf.Host,
+		conf.Port,
 		conf.Name,
-		conf.Schema)
-	db, err := sql.Open("postgres", dsn)
+		conf.Schema,
+	)
+
+	// 2. Parsing konfigurasi pool
+	configPool, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		Log.Fatal("Failed to connect to database", zap.Error(err))
-	} else {
-		Log.Info("Successfully connected to database")
+		Log.Fatal("Gagal parsing config database", zap.Error(err))
 	}
 
-	db.SetMaxIdleConns(10)
-	db.SetMaxOpenConns(100)
-	db.SetConnMaxIdleTime(5 * time.Minute)
-	db.SetConnMaxLifetime(60 * time.Minute)
-	err = db.Ping()
+	// 3. Pengaturan Connection Pool (Mirip dengan sql.DB)
+	configPool.MaxConns = 100                     // SetMaxOpenConns
+	configPool.MinConns = 10                      // SetMaxIdleConns (pendekatan terdekat)
+	configPool.MaxConnIdleTime = 5 * time.Minute  // SetConnMaxIdleTime
+	configPool.MaxConnLifetime = 60 * time.Minute // SetConnMaxLifetime
+
+	// 4. Membuat koneksi pool
+	// Context background digunakan karena ini inisialisasi awal
+	dbPool, err := pgxpool.NewWithConfig(context.Background(), configPool)
 	if err != nil {
-		log.Fatal("Failed to ping database", zap.Error(err))
+		Log.Fatal("Gagal membuat pool database", zap.Error(err))
 	}
-	return db
+
+	// 5. Verifikasi koneksi dengan Ping
+	err = dbPool.Ping(context.Background())
+	if err != nil {
+		Log.Fatal("Gagal ping database", zap.Error(err))
+	}
+
+	Log.Info("Berhasil terhubung ke database dengan pgxpool")
+
+	return dbPool
 }

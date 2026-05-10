@@ -14,7 +14,8 @@ import (
 	"github.com/devhdn-212/gofibergoqu_master/internal/repository"
 	"github.com/devhdn-212/gofibergoqu_master/internal/util"
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -23,11 +24,11 @@ const (
 )
 
 type uomService struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	repo domain.UomRepository
 }
 
-func NewUomService(db *sql.DB, repo domain.UomRepository) domain.UomService {
+func NewUomService(db *pgxpool.Pool, repo domain.UomRepository) domain.UomService {
 	return &uomService{
 		db:   db,
 		repo: repo,
@@ -53,14 +54,14 @@ func (u *uomService) All(ctx context.Context) ([]dto.UomData, error) {
 		log.Error(err)
 		return nil, err
 	}
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+
 	for _, v := range curr {
 		record = append(record, dto.UomData{
 			ID:      v.ID,
 			Name:    v.Name,
 			Status:  v.Status,
-			Created: util.NtToStr(v.CreatedAt, v.Created, loc),
-			Update:  util.NtToStr(v.UpdateAt, v.Update, loc),
+			Created: util.NtToStr(v.CreatedAt, v.Created, util.LocJakarta),
+			Update:  util.NtToStr(v.UpdateAt, v.Update, util.LocJakarta),
 		})
 	}
 	go connection.SetRedis(RedisUomAllKey, record, 24*time.Hour)
@@ -98,46 +99,44 @@ func (u *uomService) Select(ctx context.Context) ([]dto.UomSelect, error) {
 
 // Save implements [domain.UomService].
 func (u *uomService) Save(ctx context.Context, req dto.UomSave, client string) error {
-	tx, err := u.db.BeginTx(ctx, nil)
+	// Start Transaction native pgx v5
+	tx, err := u.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	// Defer rollback jika terjadi panic atau error sebelum commit
+	defer tx.Rollback(ctx)
 
-	txExec := repository.NewGoquTxExecutor(tx)
+	// Executor transaksi native pgx
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewUomRepository(txExec)
+
 	flag, err := txRepo.FindByID(ctx, req.ID)
 	if err != nil {
 		return err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := util.GetNowJakarta()
+
 	if req.Type == "New" {
 		if flag.ID != "" {
 			return errors.New("Duplicate Entry")
 		}
 
-		curr := domain.Uom{
+		uom := domain.Uom{
 			ID:        req.ID,
 			Name:      req.Name,
 			Status:    req.Status,
 			Created:   client,
-			CreatedAt: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
+			CreatedAt: sql.NullTime{Valid: true, Time: now},
 		}
-		err = txRepo.Save(ctx, &curr)
+		err = txRepo.Save(ctx, &uom)
 		if err != nil {
-			var pqErr *pq.Error
-			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				return util.ErrDuplicate
 			}
-			return err
-		}
-		if err = tx.Commit(); err != nil {
 			return err
 		}
 	} else {
@@ -149,15 +148,18 @@ func (u *uomService) Save(ctx context.Context, req dto.UomSave, client string) e
 		flag.Name = req.Name
 		flag.Status = req.Status
 		flag.Update = client
-		flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
+		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
-		if err = u.repo.Update(ctx, &flag); err != nil {
-			fmt.Println(err)
+		// Gunakan txRepo agar tetap dalam satu scope transaksi
+		if err = txRepo.Update(ctx, &flag); err != nil {
+			fmt.Println("Error update UOM: ", err)
 			return err
 		}
-		if err := tx.Commit(); err != nil {
-			return err
-		}
+	}
+
+	// Commit transaksi
+	if err = tx.Commit(ctx); err != nil {
+		return err
 	}
 
 	go connection.DeleteRedis(RedisUomAllKey)

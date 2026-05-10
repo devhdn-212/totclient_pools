@@ -2,88 +2,94 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
 	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
 )
 
 type domainRepository struct {
-	db   GoquDB
-	exec DBExecutor
+	db DBExecutor
 }
 
-func NewDomainRepository(exec *GoquExecutor) domain.DomainRepository {
+func NewDomainRepository(db DBExecutor) domain.DomainRepository {
 	return &domainRepository{
-		db:   exec.DB,
-		exec: exec.Exec,
+		db: db,
 	}
 }
 func (d domainRepository) FindAll(ctx context.Context) ([]domain.Domain, error) {
-	var res []domain.Domain
-	err := d.db.
-		From(config.DB_tbl_domain).
-		Order(goqu.C("createdatedomain").Asc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT * FROM ` + config.DB_tbl_domain + ` ORDER BY createdatedomain ASC`
+
+	rows, err := d.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Mapping otomatis menggunakan pgx v5
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Domain])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 func (d domainRepository) FindByID(ctx context.Context, id string) (domain.Domain, error) {
 	var dm domain.Domain
+	query := `SELECT iddomain FROM ` + config.DB_tbl_domain + ` WHERE iddomain = $1 LIMIT 1`
 
-	ds := d.db.From(config.DB_tbl_domain).
-		Select(goqu.C("iddomain")).
-		Where(
-			goqu.C("iddomain").Eq(id),
-		)
+	err := d.db.QueryRow(ctx, query, id).Scan(&dm.ID)
 
-	sqlStr, args, err := ds.ToSQL()
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Domain{}, nil
+		}
 		return dm, err
 	}
-
-	row := d.exec.QueryRowContext(ctx, sqlStr, args...)
-	err = row.Scan(
-		&dm.ID,
-	)
-	if err == sql.ErrNoRows {
-		return domain.Domain{}, nil
-	}
-	return dm, err
+	return dm, nil
 }
 
 func (d domainRepository) Save(ctx context.Context, dm *domain.Domain) error {
-	sqlStr, args, err := d.db.Insert(config.DB_tbl_domain).Rows(dm).ToSQL()
-	if err != nil {
-		return err
-	}
-	_, err = d.exec.ExecContext(ctx, sqlStr, args...)
+	query := `INSERT INTO ` + config.DB_tbl_domain + ` 
+                (iddomain, tipedomain, nmdomain, statusdomain, createdomain, createdatedomain) 
+              VALUES ($1, $2, $3, $4, $5, $6)`
+
+	_, err := d.db.Exec(ctx, query,
+		dm.ID,
+		dm.Type,
+		dm.Name,
+		dm.Status,
+		dm.Created,
+		dm.CreatedAt,
+	)
 	return err
 }
 
 func (d domainRepository) Update(ctx context.Context, dm *domain.Domain) error {
-	sqlStr, args, err := d.db.
-		Update(config.DB_tbl_domain).
-		Set(goqu.Record{
-			"tipedomain":       dm.Type,
-			"nmdomain":         dm.Name,
-			"statusdomain":     dm.Status,
-			"updatedomain":     dm.Update,
-			"updatedatedomain": dm.UpdateAt,
-		}).
-		Where(goqu.C("iddomain").Eq(dm.ID)).
-		ToSQL()
+	query := `UPDATE ` + config.DB_tbl_domain + ` SET 
+                tipedomain = $1, 
+                nmdomain = $2, 
+                statusdomain = $3, 
+                updatedomain = $4, 
+                updatedatedomain = $5 
+              WHERE iddomain = $6`
+
+	res, err := d.db.Exec(ctx, query,
+		dm.Type,
+		dm.Name,
+		dm.Status,
+		dm.Update,
+		dm.UpdateAt,
+		dm.ID,
+	)
 	if err != nil {
 		return err
 	}
-	res, err := d.exec.ExecContext(ctx, sqlStr, args...)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
+
+	if res.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 	return nil
 }

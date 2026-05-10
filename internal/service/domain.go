@@ -15,7 +15,8 @@ import (
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -23,11 +24,11 @@ const (
 )
 
 type domainService struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	repo domain.DomainRepository
 }
 
-func NewDomainService(db *sql.DB, repo domain.DomainRepository) domain.DomainService {
+func NewDomainService(db *pgxpool.Pool, repo domain.DomainRepository) domain.DomainService {
 	return &domainService{
 		db:   db,
 		repo: repo,
@@ -52,16 +53,16 @@ func (d domainService) All(ctx context.Context) ([]dto.DomainData, error) {
 		log.Error(err)
 		return nil, err
 	}
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+
 	var domainData []dto.DomainData
 	for _, v := range dm {
 		var createdAt, updatedAt string
 		if v.CreatedAt.Valid {
-			createdAt = v.Created + ", " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
 			if v.Update != "" {
-				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
+				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 			} else {
 				updatedAt = ""
 			}
@@ -82,25 +83,23 @@ func (d domainService) All(ctx context.Context) ([]dto.DomainData, error) {
 }
 
 func (d domainService) Save(ctx context.Context, req dto.DomainSave, client string) error {
-	tx, err := d.db.BeginTx(ctx, nil)
+	tx, err := d.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	defer tx.Rollback(ctx)
 
-	txExec := repository.NewGoquTxExecutor(tx)
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewDomainRepository(txExec)
+
 	flag, err := txRepo.FindByID(ctx, req.ID)
 	if err != nil {
 		return err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := util.GetNowJakarta()
+
 	if req.Type == "New" {
 		if flag.ID != "" {
 			return errors.New("Duplicate Entry")
@@ -112,17 +111,14 @@ func (d domainService) Save(ctx context.Context, req dto.DomainSave, client stri
 			Name:      req.Name,
 			Status:    req.Status,
 			Created:   client,
-			CreatedAt: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
+			CreatedAt: sql.NullTime{Valid: true, Time: now},
 		}
 		err = txRepo.Save(ctx, &dm)
 		if err != nil {
-			var pqErr *pq.Error
-			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				return util.ErrDuplicate
 			}
-			return err
-		}
-		if err = tx.Commit(); err != nil {
 			return err
 		}
 	} else {
@@ -130,20 +126,20 @@ func (d domainService) Save(ctx context.Context, req dto.DomainSave, client stri
 			return errors.New("Domain not found")
 		}
 
-		flag.ID = req.ID
 		flag.Type = req.Typedomain
 		flag.Name = req.Name
 		flag.Status = req.Status
 		flag.Update = client
-		flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
+		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
-		if err = d.repo.Update(ctx, &flag); err != nil {
-			log.Error(err)
+		// Gunakan txRepo agar perubahan terikat pada transaksi
+		if err = txRepo.Update(ctx, &flag); err != nil {
 			return err
 		}
-		if err := tx.Commit(); err != nil {
-			return err
-		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
 	}
 
 	go connection.DeleteRedis(RedisDomainAllKey)

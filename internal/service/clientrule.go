@@ -15,7 +15,8 @@ import (
 	"github.com/devhdn-212/gofibergoqu_master/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -25,11 +26,11 @@ const (
 )
 
 type clientruleService struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	repo domain.ClientruleRepository
 }
 
-func NewClientruleService(db *sql.DB, repo domain.ClientruleRepository) domain.ClientruleService {
+func NewClientruleService(db *pgxpool.Pool, repo domain.ClientruleRepository) domain.ClientruleService {
 	return &clientruleService{
 		db:   db,
 		repo: repo,
@@ -55,17 +56,17 @@ func (c clientruleService) All(ctx context.Context) ([]dto.ClientruleData, error
 		log.Error(err)
 		return nil, err
 	}
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+
 	var clientruleData []dto.ClientruleData
 	for _, v := range clr {
 		var createdAt, updatedAt string
 
 		if v.CreatedAt.Valid {
-			createdAt = v.Created + ", " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
 			if v.Update != "" {
-				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
+				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 			} else {
 				updatedAt = ""
 			}
@@ -119,18 +120,15 @@ func (c clientruleService) Select(ctx context.Context) ([]dto.ClientruleSelect, 
 }
 
 func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, client string) error {
-	tx, err := c.db.BeginTx(ctx, nil)
+	tx, err := c.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	// Defer rollback
+	defer tx.Rollback(ctx)
 
-	txExec := repository.NewGoquTxExecutor(tx)
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewClientruleRepository(txExec)
 	flag, err := txRepo.FindByID(ctx, req.ID)
 	if err != nil {
@@ -151,13 +149,13 @@ func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, cli
 		}
 		err = txRepo.Save(ctx, &clientrule)
 		if err != nil {
-			var pqErr *pq.Error
-			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				return util.ErrDuplicate
 			}
 			return err
 		}
-		if err = tx.Commit(); err != nil {
+		if err := tx.Commit(ctx); err != nil {
 			return err
 		}
 	} else {
@@ -173,7 +171,7 @@ func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, cli
 			fmt.Println(err)
 			return err
 		}
-		if err := tx.Commit(); err != nil {
+		if err := tx.Commit(ctx); err != nil {
 			return err
 		}
 	}

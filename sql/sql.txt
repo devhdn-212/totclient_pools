@@ -49,7 +49,7 @@ CREATE TABLE tbl_clientrule (
 	CONSTRAINT tbl_clientrule_unique UNIQUE (idclientrule)
 );
 
-CREATE TABLE public.tbl_mst_uom (
+CREATE TABLE tbl_mst_uom (
 	iduom varchar(10) NOT NULL,
 	nmuom varchar(100) DEFAULT ''::character varying NOT NULL,
 	status varchar(1) NOT NULL,
@@ -134,18 +134,228 @@ CREATE TABLE tbl_company_admin (
 	CONSTRAINT tbl_company_admin_unique UNIQUE (idcompadmin)
 );
 
-
 // AGEN schema sendiri berdasarkan idcompany
 CREATE TABLE tbl_mst_merek (
-	idmerek varchar(5) NOT NULL,
+	idmerek varchar(10) NOT NULL,
 	nmmerek varchar(100) DEFAULT ''::character varying NOT NULL,
 	status varchar(1) NOT NULL,
 	create_by varchar(30) DEFAULT ''::character varying NULL,
 	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	update_by varchar(30) DEFAULT ''::character varying NULL,
-	update_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_mst_merek_unique UNIQUE (idmerek)
 );
+CREATE TABLE tbl_mst_supplier (
+	idsupplier varchar(20) NOT NULL,
+	nmsupplier varchar(100) DEFAULT ''::character varying NOT NULL,
+	hp1 varchar(25) DEFAULT ''::character varying NOT NULL,
+	hp2 varchar(25) DEFAULT ''::character varying NOT NULL,
+	email varchar(150) DEFAULT ''::character varying NOT NULL,
+	tempo_pembayaran VARCHAR(50) DEFAULT ''::character varying NOT NULL,
+	tipe_transaksi VARCHAR(20) DEFAULT ''::character varying NOT NULL,
+	idbank varchar(10) NOT NULL,
+	norek varchar(50) DEFAULT ''::character varying NOT NULL, 
+	nmrek varchar(100) DEFAULT ''::character varying NOT NULL, 
+	alamat TEXT NOT NULL DEFAULT '',
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_supplier_unique UNIQUE (idsupplier)
+);
+CREATE TABLE tbl_mst_gudang (
+	idgudang varchar(10) NOT NULL,
+	nmgudang varchar(100) DEFAULT ''::character varying NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_gudang_unique UNIQUE (idgudang)
+);
+
+CREATE TABLE tbl_item_category (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    parent_id BIGINT NULL,
+    level INT NOT NULL DEFAULT 1,
+    path TEXT NOT NULL,
+    status varchar(1) NOT NULL,
+    create_by VARCHAR(30) DEFAULT '',
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_by VARCHAR(30) DEFAULT '',
+    update_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+
+    CONSTRAINT fk_item_category_parent
+        FOREIGN KEY (parent_id)
+        REFERENCES tbl_item_category(id)
+        ON DELETE SET NULL,
+	
+    CONSTRAINT uq_item_category_name_parent
+        UNIQUE (name, parent_id),
+	
+    CONSTRAINT chk_no_self_parent
+        CHECK (id IS NULL OR parent_id IS NULL OR id <> parent_id)
+);
+
+CREATE INDEX idx_item_category_parent ON tbl_item_category(parent_id);
+CREATE INDEX idx_item_category_active ON tbl_item_category(status);
+CREATE INDEX idx_item_category_path ON tbl_item_category(path);
+
+-- 1. Fungsi untuk Level dan Path Awal
+CREATE OR REPLACE FUNCTION db_bbca.trg_item_category_logic()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_parent_path TEXT;
+    v_parent_level INT;
+BEGIN
+    IF NEW.parent_id IS NULL THEN
+        NEW.level := 1;
+        NEW.path := ''; -- JANGAN diisi Name
+    ELSE
+        -- Ambil path parent (isinya angka, misal '1/5')
+        SELECT path, level INTO v_parent_path, v_parent_level 
+        FROM db_bbca.tbl_item_category WHERE id = NEW.parent_id;
+        
+        NEW.level := v_parent_level + 1;
+        NEW.path := v_parent_path; 
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Fungsi untuk Menambahkan ID ke Path (Suffix)
+CREATE OR REPLACE FUNCTION db_bbca.trg_item_category_path_suffix()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update path: jika kosong jadi 'ID', jika ada isinya jadi 'parent_path/ID'
+    EXECUTE format(
+        'UPDATE %I.%I SET path = CASE WHEN path = '''' THEN id::TEXT ELSE path || ''/'' || id::TEXT END WHERE id = $1', 
+        TG_TABLE_SCHEMA, 
+        TG_TABLE_NAME
+    ) USING NEW.id;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Pasang trigger sebelum INSERT dan UPDATE
+CREATE TRIGGER trg_1_before_upsert 
+BEFORE INSERT OR UPDATE OF parent_id ON db_bbca.tbl_item_category 
+FOR EACH ROW EXECUTE FUNCTION db_bbca.trg_item_category_logic();
+
+CREATE TRIGGER trg_2_after_insert 
+AFTER INSERT ON db_bbca.tbl_item_category 
+FOR EACH ROW EXECUTE FUNCTION db_bbca.trg_item_category_path_suffix();
+
+CREATE OR REPLACE FUNCTION db_bbca.trg_item_category_status_sync()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Jika status berubah dari Y (Aktif) ke N (Tidak Aktif)
+    IF OLD.status = 'Y' AND NEW.status = 'N' THEN
+        -- Nonaktifkan semua sub-kategori di bawahnya berdasarkan PATH
+        -- Contoh: Makanan (path: 12) jadi N, maka semua path '12/%' ikut jadi N
+        EXECUTE format(
+            'UPDATE %I.%I SET status = ''N'' WHERE path LIKE $1 || ''/%%'' OR path = $1', 
+            TG_TABLE_SCHEMA, TG_TABLE_NAME
+        ) USING OLD.path;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Pasang Trigger
+CREATE TRIGGER trg_3_status_sync
+AFTER UPDATE OF status ON db_bbca.tbl_item_category
+FOR EACH ROW EXECUTE FUNCTION db_bbca.trg_item_category_status_sync();
+
+-- 1. Fungsi Utama untuk Hitung Path dan Level
+CREATE OR REPLACE FUNCTION db_bbca.fn_recursive_category_update()
+RETURNS TRIGGER AS $$
+DECLARE
+    parent_path TEXT;
+    parent_level INT;
+BEGIN
+    -- Jika tidak punya parent (Root)
+    IF NEW.parent_id IS NULL THEN
+        NEW.path := NEW.id::text;
+        NEW.level := 1;
+    ELSE
+        -- Ambil path dan level dari parent-nya
+        SELECT path, level INTO parent_path, parent_level 
+        FROM db_bbca.tbl_item_category 
+        WHERE id = NEW.parent_id;
+        
+        NEW.path := parent_path || '/' || NEW.id;
+        NEW.level := parent_level + 1;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Trigger BEFORE untuk menjamin data Path & Level selalu benar sebelum disimpan
+-- Hapus dulu jika sudah ada nama yang sama
+DROP TRIGGER IF EXISTS trg_item_category_path_logic ON db_bbca.tbl_item_category;
+
+CREATE TRIGGER trg_item_category_path_logic
+BEFORE INSERT OR UPDATE OF parent_id ON db_bbca.tbl_item_category
+FOR EACH ROW
+EXECUTE FUNCTION db_bbca.fn_recursive_category_update();
+
+
+ITEM-260300001
+CREATE TABLE tbl_mst_item (
+    iditem VARCHAR(20) PRIMARY KEY,
+    iditemcategory INT NOT NULL,
+
+    item_type VARCHAR(20) NOT NULL
+        CHECK (item_type IN ('STOCK','NON_STOCK','SERVICE')),
+
+    nmitem VARCHAR(100) NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    status VARCHAR(1) NOT NULL
+        CHECK (status IN ('Y','N')),
+
+    create_by VARCHAR(30) DEFAULT '',
+    create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_by VARCHAR(30) DEFAULT '',
+    update_at TIMESTAMP
+);
+CREATE TABLE tbl_mst_item_stock (
+    iditemstock BIGSERIAL PRIMARY KEY,
+
+    iditem VARCHAR(20) NOT NULL,
+    iduom VARCHAR(10) NOT NULL,
+
+    total_in NUMERIC(36,18) NOT NULL DEFAULT 0 CHECK (total_in >= 0),
+    total_out NUMERIC(36,18) NOT NULL DEFAULT 0 CHECK (total_out >= 0),
+	reorder_min_qty NUMERIC(36,18) NOT NULL DEFAULT 0 CHECK (reorder_min_qty >= 0),
+    reorder_max_qty NUMERIC(36,18) NOT NULL DEFAULT 0 CHECK (reorder_max_qty >= 0),
+
+    create_by VARCHAR(30) DEFAULT '',
+    create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_by VARCHAR(30) DEFAULT '',
+    update_at TIMESTAMP,
+
+    -- Relasi ke master item
+    CONSTRAINT fk_item_stock_item
+        FOREIGN KEY (iditem)
+        REFERENCES tbl_mst_item(iditem)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    -- 1 item + 1 uom hanya boleh 1 row
+    CONSTRAINT uq_item_uom UNIQUE (iditem, iduom)
+);
+-- sering dipakai untuk lookup
+CREATE INDEX idx_item_stock_item ON tbl_mst_item_stock (iditem);
+-- kalau nanti sering filter per uom
+CREATE INDEX idx_item_stock_uom ON tbl_mst_item_stock (iduom);
+
+
+
+
 CREATE TABLE tbl_mst_grouptrx (
 	idgroup varchar(4) NOT NULL,
 	nmgroup varchar(100) DEFAULT ''::character varying NOT NULL,
@@ -175,6 +385,21 @@ CREATE TABLE tbl_mst_member (
 CREATE TABLE tbl_wallet_member (
     idwalletmember varchar(150) NOT NULL,
     idmember varchar(150) DEFAULT ''::character varying NULL,
+    idcurr varchar(20) NOT NULL,
+    idbank varchar(10),
+    account_number varchar(150) DEFAULT ''::character varying NULL,
+    account_name varchar(150) DEFAULT ''::character varying NULL,
+    networkcrypto varchar(20) DEFAULT ''::character varying NULL,
+    status varchar(1) DEFAULT 'Y',
+    created_by varchar(30) DEFAULT ''::character varying NULL,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_by varchar(30) DEFAULT ''::character varying NULL,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP NULL
+);
+CREATE TABLE tbl_mst_item (
+    iditem varchar(150) NOT NULL,
+    itemtype varchar(20) DEFAULT ''::character varying NULL,
+    idowner varchar(150) DEFAULT ''::character varying NULL,
     idcurr varchar(20) NOT NULL,
     idbank varchar(10),
     account_number varchar(150) DEFAULT ''::character varying NULL,

@@ -2,86 +2,82 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 /*
 ========================
-LOW LEVEL SQL EXECUTOR
+LOW LEVEL PGX EXECUTOR
 ========================
 */
 
+// DBExecutor disesuaikan dengan signature metode milik pgx
 type DBExecutor interface {
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-type SQLExecutor struct {
-	DB *sql.DB
-	Tx *sql.Tx
+type PGXExecutor struct {
+	// Pool digunakan untuk koneksi standar, Tx untuk transaksi
+	Pool *pgxpool.Pool
+	Tx   pgx.Tx
 }
 
-func NewSQLExecutor(db *sql.DB) DBExecutor {
-	return &SQLExecutor{DB: db}
+// NewPGXExecutor inisialisasi dengan pgxpool
+func NewPGXExecutor(pool *pgxpool.Pool) DBExecutor {
+	return &PGXExecutor{Pool: pool}
 }
 
-func NewSQLTxExecutor(tx *sql.Tx) DBExecutor {
-	return &SQLExecutor{Tx: tx}
+// NewPGXTxExecutor inisialisasi dengan transaksi pgx
+func NewPGXTxExecutor(tx pgx.Tx) DBExecutor {
+	return &PGXExecutor{Tx: tx}
 }
 
-func (e *SQLExecutor) ExecContext(ctx context.Context, q string, args ...any) (sql.Result, error) {
+func (e *PGXExecutor) Exec(ctx context.Context, q string, args ...any) (pgconn.CommandTag, error) {
 	if e.Tx != nil {
-		return e.Tx.ExecContext(ctx, q, args...)
+		return e.Tx.Exec(ctx, q, args...)
 	}
-	return e.DB.ExecContext(ctx, q, args...)
+	return e.Pool.Exec(ctx, q, args...)
 }
 
-func (e *SQLExecutor) QueryContext(ctx context.Context, q string, args ...any) (*sql.Rows, error) {
+func (e *PGXExecutor) Query(ctx context.Context, q string, args ...any) (pgx.Rows, error) {
 	if e.Tx != nil {
-		return e.Tx.QueryContext(ctx, q, args...)
+		return e.Tx.Query(ctx, q, args...)
 	}
-	return e.DB.QueryContext(ctx, q, args...)
+	return e.Pool.Query(ctx, q, args...)
 }
 
-func (e *SQLExecutor) QueryRowContext(ctx context.Context, q string, args ...any) *sql.Row {
+func (e *PGXExecutor) QueryRow(ctx context.Context, q string, args ...any) pgx.Row {
 	if e.Tx != nil {
-		return e.Tx.QueryRowContext(ctx, q, args...)
+		return e.Tx.QueryRow(ctx, q, args...)
 	}
-	return e.DB.QueryRowContext(ctx, q, args...)
+	return e.Pool.QueryRow(ctx, q, args...)
 }
 
 /*
 ========================
-GOQU DATASET PROVIDER
+REPOSITORI WRAPPER
 ========================
 */
 
-// ⬅️ INI YANG BENAR
-type GoquDB interface {
-	From(table ...interface{}) *goqu.SelectDataset
-	Insert(table interface{}) *goqu.InsertDataset
-	Update(table interface{}) *goqu.UpdateDataset
-	Delete(table interface{}) *goqu.DeleteDataset
+// Karena goqu dihapus, kita tidak perlu GoquDB interface lagi.
+// Kita buat struct sederhana untuk membungkus executor.
+type BaseRepository struct {
+	DB DBExecutor
 }
 
-type GoquExecutor struct {
-	DB   GoquDB
-	Exec DBExecutor
-}
-
-func NewGoquExecutor(db *sql.DB) *GoquExecutor {
-	return &GoquExecutor{
-		DB:   goqu.New("default", db),
-		Exec: NewSQLExecutor(db),
+func NewRepository(db *pgxpool.Pool) *BaseRepository {
+	return &BaseRepository{
+		DB: NewPGXExecutor(db),
 	}
 }
 
-func NewGoquTxExecutor(tx *sql.Tx) *GoquExecutor {
-	return &GoquExecutor{
-		DB:   goqu.NewTx("default", tx),
-		Exec: NewSQLTxExecutor(tx),
+func NewTxRepository(tx pgx.Tx) *BaseRepository {
+	return &BaseRepository{
+		DB: NewPGXTxExecutor(tx),
 	}
 }

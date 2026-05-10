@@ -2,103 +2,108 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
 	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
 )
 
 type companywalletRepository struct {
-	db   GoquDB
-	exec DBExecutor
+	db DBExecutor
 }
 
-func NewCompanywalletRepository(exec *GoquExecutor) domain.CompanywalletRepository {
+func NewCompanywalletRepository(db DBExecutor) domain.CompanywalletRepository {
 	return &companywalletRepository{
-		db:   exec.DB,
-		exec: exec.Exec,
+		db: db,
 	}
 }
 
 func (c companywalletRepository) FindAll(ctx context.Context, id string) ([]domain.Companywallet, error) {
-	var res []domain.Companywallet
-	err := c.db.From(config.DB_tbl_companywallet).
-		Where(
-			goqu.C("idcompany").Eq(id),
-		).
-		Order(goqu.C("amountcompwallet").Desc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT * FROM ` + config.DB_tbl_companywallet + ` 
+              WHERE idcompany = $1 
+              ORDER BY amountcompwallet DESC`
+
+	rows, err := c.db.Query(ctx, query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Mapping otomatis menggunakan pgx v5
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Companywallet])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c companywalletRepository) FindByID(ctx context.Context, id, idcomp, idcurr string) (domain.Companywallet, error) {
 	var compwallet domain.Companywallet
+	var query string
+	var args []any
 
-	ds := c.db.From(config.DB_tbl_companywallet).
-		Select(goqu.C("idcompwallet"))
+	// Logika dinamis diganti ke SQL native
 	if id != "" {
-		ds = ds.Where(
-			goqu.C("idcompwallet").Eq(id),
-			goqu.C("idcompany").Eq(idcomp),
-		)
+		query = `SELECT idcompwallet FROM ` + config.DB_tbl_companywallet + ` 
+                 WHERE idcompwallet = $1 AND idcompany = $2 LIMIT 1`
+		args = []any{id, idcomp}
 	} else {
-		ds = ds.Where(
-			goqu.C("idcompany").Eq(idcomp),
-			goqu.C("idcurr").Eq(idcurr),
-		)
+		query = `SELECT idcompwallet FROM ` + config.DB_tbl_companywallet + ` 
+                 WHERE idcompany = $1 AND idcurr = $2 LIMIT 1`
+		args = []any{idcomp, idcurr}
 	}
 
-	sqlStr, args, err := ds.ToSQL()
-	/*log.Printf("SQL: %\ns", sqlStr)
-	log.Printf("ARGS: %+v\n", args)*/
+	err := c.db.QueryRow(ctx, query, args...).Scan(&compwallet.ID)
+
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Companywallet{}, nil
+		}
 		return compwallet, err
 	}
-
-	row := c.exec.QueryRowContext(ctx, sqlStr, args...)
-	err = row.Scan(
-		&compwallet.ID,
-	)
-	if err == sql.ErrNoRows {
-		return domain.Companywallet{}, nil
-	}
-	return compwallet, err
+	return compwallet, nil
 }
 
 func (c companywalletRepository) Save(ctx context.Context, companywallet *domain.Companywallet) error {
-	sqlStr, args, err := c.db.Insert(config.DB_tbl_companywallet).Rows(companywallet).ToSQL()
-	if err != nil {
-		return err
-	}
-	_, err = c.exec.ExecContext(ctx, sqlStr, args...)
+	query := `INSERT INTO ` + config.DB_tbl_companywallet + ` 
+                (idcompwallet, idcompany, idcurr, amountcompwallet, compwalletstatus, createcompwallet, createdatecompwallet) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7)`
+
+	_, err := c.db.Exec(ctx, query,
+		companywallet.ID,
+		companywallet.IDcompany,
+		companywallet.IDcurr,
+		companywallet.Amount, // Pastikan nama field di struct sesuai
+		companywallet.Status,
+		companywallet.Created,
+		companywallet.CreatedAt,
+	)
 	return err
 }
 
 func (c companywalletRepository) Update(ctx context.Context, companywallet *domain.Companywallet) error {
-	sqlStr, args, err := c.db.
-		Update(config.DB_tbl_companywallet).
-		Set(goqu.Record{
-			"compwalletstatus":     companywallet.Status,
-			"updatecompwallet":     companywallet.Update,
-			"updatedatecompwallet": companywallet.UpdateAt,
-		}).
-		Where(
-			goqu.C("idcompwallet").Eq(companywallet.ID),
-			goqu.C("idcompany").Eq(companywallet.IDcompany),
-		).
-		ToSQL()
+	query := `UPDATE ` + config.DB_tbl_companywallet + ` SET 
+                compwalletstatus = $1, 
+                updatecompwallet = $2, 
+                updatedatecompwallet = $3 
+              WHERE idcompwallet = $4 AND idcompany = $5`
+
+	res, err := c.db.Exec(ctx, query,
+		companywallet.Status,
+		companywallet.Update,
+		companywallet.UpdateAt,
+		companywallet.ID,
+		companywallet.IDcompany,
+	)
 	if err != nil {
 		return err
 	}
-	res, err := c.exec.ExecContext(ctx, sqlStr, args...)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
+
+	if res.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 	return nil
 }

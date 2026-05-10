@@ -2,118 +2,118 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
 	"github.com/devhdn-212/gofibergoqu_master/internal/config"
-
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
 )
 
 type adminruleRepository struct {
-	db   GoquDB
-	exec DBExecutor
+	db DBExecutor
 }
 
-func NewAdminruleRepository(exec *GoquExecutor) domain.AdminruleRepository {
+func NewAdminruleRepository(db DBExecutor) domain.AdminruleRepository {
 	return &adminruleRepository{
-		db:   exec.DB,
-		exec: exec.Exec,
+		db: db,
 	}
 }
 func (a adminruleRepository) FindAll(ctx context.Context) ([]domain.Adminrule, error) {
-	var res []domain.Adminrule
-	err := a.db.
-		From(config.DB_tbl_adminrule).
-		Order(goqu.C("idadminrole").Asc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT * FROM ` + config.DB_tbl_adminrule + ` ORDER BY idadminrole ASC`
+
+	rows, err := a.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Adminrule])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 func (a adminruleRepository) FindSelect(ctx context.Context) ([]domain.Adminrule, error) {
-	var res []domain.Adminrule
-	err := a.db.
-		From(config.DB_tbl_adminrule).
-		Select("idadminrole", "nmadminrole").
-		Order(goqu.C("idadminrole").Asc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT idadminrole, nmadminrole FROM ` + config.DB_tbl_adminrule + ` ORDER BY idadminrole ASC`
+
+	rows, err := a.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Adminrule])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 func (a adminruleRepository) FindByID(ctx context.Context, id string) (domain.Adminrule, error) {
 	var c domain.Adminrule
+	query := `SELECT idadminrole FROM ` + config.DB_tbl_adminrule + ` WHERE idadminrole = $1 LIMIT 1`
 
-	ds := a.db.From(config.DB_tbl_adminrule).
-		Select("idadminrole").
-		Where(
-			goqu.C("idadminrole").Eq(id),
-		)
+	err := a.db.QueryRow(ctx, query, id).Scan(&c.ID)
 
-	sqlStr, args, err := ds.ToSQL()
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Adminrule{}, nil
+		}
 		return c, err
 	}
-
-	row := a.exec.QueryRowContext(ctx, sqlStr, args...)
-	err = row.Scan(
-		&c.ID,
-	)
-	if err == sql.ErrNoRows {
-		return domain.Adminrule{}, nil
-	}
-	return c, err
+	return c, nil
 }
 func (a adminruleRepository) GetRule(ctx context.Context, id string) (string, error) {
-	var c domain.Adminrule
+	var rule string
+	query := `SELECT ruleadmin FROM ` + config.DB_tbl_adminrule + ` WHERE idadminrole = $1 LIMIT 1`
 
-	ds := a.db.From(config.DB_tbl_adminrule).
-		Select("ruleadmin").
-		Where(
-			goqu.C("idadminrole").Eq(id),
-		)
+	err := a.db.QueryRow(ctx, query, id).Scan(&rule)
 
-	sqlStr, args, err := ds.ToSQL()
 	if err != nil {
-		return c.Rule, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		return "", err
 	}
-
-	row := a.exec.QueryRowContext(ctx, sqlStr, args...)
-	err = row.Scan(
-		&c.Rule,
-	)
-	if err == sql.ErrNoRows {
-		return c.Rule, nil
-	}
-	return c.Rule, err
+	return rule, nil
 }
 func (a adminruleRepository) Save(ctx context.Context, adminrule *domain.Adminrule) error {
-	sqlStr, args, err := a.db.Insert(config.DB_tbl_adminrule).Rows(adminrule).ToSQL()
-	if err != nil {
-		return err
-	}
-	_, err = a.exec.ExecContext(ctx, sqlStr, args...)
+	query := `INSERT INTO ` + config.DB_tbl_adminrule + ` 
+                (idadminrole, nmadminrole, ruleadmin, createdadminrole, createddateadminrole) 
+              VALUES ($1, $2, $3, $4, $5)`
+
+	_, err := a.db.Exec(ctx, query,
+		adminrule.ID,
+		adminrule.Name,
+		adminrule.Rule,
+		adminrule.Created,
+		adminrule.CreatedAt,
+	)
 	return err
 }
 
 func (a adminruleRepository) Update(ctx context.Context, adminrule *domain.Adminrule) error {
-	sqlStr, args, err := a.db.
-		Update(config.DB_tbl_adminrule).
-		Set(goqu.Record{
-			"nmadminrole":         adminrule.Name,
-			"ruleadmin":           adminrule.Rule,
-			"updateadminrole":     adminrule.Update,
-			"updatedateadminrole": adminrule.UpdateAt,
-		}).
-		Where(goqu.C("idadminrole").Eq(adminrule.ID)).
-		ToSQL()
+	query := `UPDATE ` + config.DB_tbl_adminrule + ` SET 
+                nmadminrole = $1, 
+                ruleadmin = $2, 
+                updateadminrole = $3, 
+                updatedateadminrole = $4 
+              WHERE idadminrole = $5`
+
+	res, err := a.db.Exec(ctx, query,
+		adminrule.Name,
+		adminrule.Rule,
+		adminrule.Update,
+		adminrule.UpdateAt,
+		adminrule.ID,
+	)
 	if err != nil {
 		return err
 	}
-	res, err := a.exec.ExecContext(ctx, sqlStr, args...)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
+
+	if res.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 	return nil
 }

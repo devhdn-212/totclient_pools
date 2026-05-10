@@ -17,7 +17,8 @@ import (
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -25,11 +26,11 @@ const (
 )
 
 type companyadminService struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	repo domain.CompanyadminRepository
 }
 
-func NewCompanyadminService(db *sql.DB, repo domain.CompanyadminRepository) domain.CompanyadminService {
+func NewCompanyadminService(db *pgxpool.Pool, repo domain.CompanyadminRepository) domain.CompanyadminService {
 	return &companyadminService{
 		db:   db,
 		repo: repo,
@@ -54,19 +55,19 @@ func (c companyadminService) All(ctx context.Context, idcompany string) ([]dto.C
 		log.Error(err)
 		return nil, err
 	}
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+
 	var compadminData []dto.CompanyadminData
 	for _, v := range rescompadmin {
 		var lastlogin, createdAt, updatedAt string
 		if v.Lastlogin.Valid {
-			lastlogin = v.Lastlogin.Time.In(loc).Format("2006-01-02 15:04:05")
+			lastlogin = v.Lastlogin.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.CreatedAt.Valid {
-			createdAt = v.Created + ", " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
 			if v.Update != "" {
-				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
+				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 			} else {
 				updatedAt = ""
 			}
@@ -92,33 +93,34 @@ func (c companyadminService) All(ctx context.Context, idcompany string) ([]dto.C
 }
 
 func (c companyadminService) Save(ctx context.Context, req dto.CompanyadminSave, client string) error {
-	tx, err := c.db.BeginTx(ctx, nil)
+	tx, err := c.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	defer tx.Rollback(ctx)
 
-	txExec := repository.NewGoquTxExecutor(tx)
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewCompanyadminRepository(txExec)
+
+	// Cek apakah data sudah ada dalam transaksi yang sama
 	flag, err := txRepo.FindByID(ctx, req.IDcompany, req.Username)
 	if err != nil {
 		return err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
 	haspass, _ := util.HashPassword(req.Pass)
+	now := util.GetNowJakarta()
+
 	if req.Type == "New" {
 		if flag.ID != "" {
 			return errors.New("Duplicate Entry")
 		}
+
 		raw := strings.ReplaceAll(uuid.NewString(), "-", "")
 		date := time.Now().Format("0601")
 		idcompadmin := fmt.Sprintf("%s-%s-admin-%s", strings.ToLower(req.IDcompany), date, raw)
+
 		comp := domain.Companyadmin{
 			ID:           idcompadmin,
 			IDCompany:    req.IDcompany,
@@ -128,55 +130,43 @@ func (c companyadminService) Save(ctx context.Context, req dto.CompanyadminSave,
 			Name:         req.Name,
 			Status:       req.Status,
 			Created:      client,
-			CreatedAt:    sql.NullTime{Valid: true, Time: time.Now().In(loc)},
+			CreatedAt:    sql.NullTime{Valid: true, Time: now},
 		}
+
 		err = txRepo.Save(ctx, &comp)
 		if err != nil {
-			var pqErr *pq.Error
-			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				return util.ErrDuplicate
 			}
-			return err
-		}
-		if err = tx.Commit(); err != nil {
 			return err
 		}
 	} else {
 		if flag.ID == "" {
 			return errors.New("Username not found")
 		}
+
+		flag.ID = req.ID
+		flag.IDClientrule = req.IDrule
+		flag.Name = req.Name
+		flag.Status = req.Status
+		flag.Update = client
+		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
+
+		updatePass := false
 		if req.Pass != "" {
-			flag.ID = req.ID
-			flag.IDClientrule = req.IDrule
 			flag.Pass = haspass
-			flag.Name = req.Name
-			flag.Status = req.Status
-			flag.Update = client
-			flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
-
-			if err = c.repo.Update(ctx, &flag, true); err != nil {
-				fmt.Println(err)
-				return err
-			}
-			if err := tx.Commit(); err != nil {
-				return err
-			}
-		} else {
-			flag.ID = req.ID
-			flag.IDClientrule = req.IDrule
-			flag.Name = req.Name
-			flag.Status = req.Status
-			flag.Update = client
-			flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
-
-			if err = c.repo.Update(ctx, &flag, false); err != nil {
-				fmt.Println(err)
-				return err
-			}
-			if err := tx.Commit(); err != nil {
-				return err
-			}
+			updatePass = true
 		}
+
+		// Gunakan txRepo agar perubahan terikat pada transaksi
+		if err = txRepo.Update(ctx, &flag, updatePass); err != nil {
+			return err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return err
 	}
 
 	go connection.DeleteRedis(RedisCompanyadminKey + strings.ToLower(req.IDcompany))

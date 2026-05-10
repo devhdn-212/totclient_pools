@@ -2,98 +2,109 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
 	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
 )
 
 type clientruleRepository struct {
-	db   GoquDB
-	exec DBExecutor
+	db DBExecutor
 }
 
-func NewClientruleRepository(exec *GoquExecutor) domain.ClientruleRepository {
+func NewClientruleRepository(db DBExecutor) domain.ClientruleRepository {
 	return &clientruleRepository{
-		db:   exec.DB,
-		exec: exec.Exec,
+		db: db,
 	}
 }
 func (c clientruleRepository) FindAll(ctx context.Context) ([]domain.Clientrule, error) {
-	var res []domain.Clientrule
-	err := c.db.
-		From(config.DB_tbl_clientrule).
-		Order(goqu.C("idclientrule").Asc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT * FROM ` + config.DB_tbl_clientrule + ` ORDER BY idclientrule ASC`
+
+	rows, err := c.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Mapping otomatis ke struct domain.Clientrule
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Clientrule])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c clientruleRepository) FindSelect(ctx context.Context) ([]domain.Clientrule, error) {
-	var res []domain.Clientrule
-	err := c.db.
-		From(config.DB_tbl_clientrule).
-		Select("idclientrule", "nmclientrule").
-		Order(goqu.C("idclientrule").Asc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT idclientrule, nmclientrule FROM ` + config.DB_tbl_clientrule + ` ORDER BY idclientrule ASC`
+
+	rows, err := c.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Clientrule])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c clientruleRepository) FindByID(ctx context.Context, id string) (domain.Clientrule, error) {
 	var cr domain.Clientrule
+	query := `SELECT idclientrule FROM ` + config.DB_tbl_clientrule + ` WHERE idclientrule = $1 LIMIT 1`
 
-	ds := c.db.From(config.DB_tbl_clientrule).
-		Select("idclientrule").
-		Where(
-			goqu.C("idclientrule").Eq(id),
-		)
+	err := c.db.QueryRow(ctx, query, id).Scan(&cr.ID)
 
-	sqlStr, args, err := ds.ToSQL()
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Clientrule{}, nil
+		}
 		return cr, err
 	}
-
-	row := c.exec.QueryRowContext(ctx, sqlStr, args...)
-	err = row.Scan(
-		&cr.ID,
-	)
-	if err == sql.ErrNoRows {
-		return domain.Clientrule{}, nil
-	}
-	return cr, err
+	return cr, nil
 }
 
 func (c clientruleRepository) Save(ctx context.Context, clientrule *domain.Clientrule) error {
-	sqlStr, args, err := c.db.Insert(config.DB_tbl_clientrule).Rows(clientrule).ToSQL()
-	if err != nil {
-		return err
-	}
-	_, err = c.exec.ExecContext(ctx, sqlStr, args...)
+	query := `INSERT INTO ` + config.DB_tbl_clientrule + ` 
+                (idclientrule, nmclientrule, ruleclient, createclientrule, createdateclientrule) 
+              VALUES ($1, $2, $3, $4, $5)`
+
+	_, err := c.db.Exec(ctx, query,
+		clientrule.ID,
+		clientrule.Name,
+		clientrule.Rule,
+		clientrule.Created, // Sesuaikan dengan field di struct domain Anda
+		clientrule.CreatedAt,
+	)
 	return err
 }
 
 func (c clientruleRepository) Update(ctx context.Context, clientrule *domain.Clientrule) error {
-	sqlStr, args, err := c.db.
-		Update(config.DB_tbl_clientrule).
-		Set(goqu.Record{
-			"nmclientrule":         clientrule.Name,
-			"ruleclient":           clientrule.Rule,
-			"updateclientrule":     clientrule.Update,
-			"updatedateclientrule": clientrule.UpdateAt,
-		}).
-		Where(goqu.C("idclientrule").Eq(clientrule.ID)).
-		ToSQL()
+	query := `UPDATE ` + config.DB_tbl_clientrule + ` SET 
+                nmclientrule = $1, 
+                ruleclient = $2, 
+                updateclientrule = $3, 
+                updatedateclientrule = $4 
+              WHERE idclientrule = $5`
+
+	res, err := c.db.Exec(ctx, query,
+		clientrule.Name,
+		clientrule.Rule,
+		clientrule.Update,
+		clientrule.UpdateAt,
+		clientrule.ID,
+	)
 	if err != nil {
 		return err
 	}
-	res, err := c.exec.ExecContext(ctx, sqlStr, args...)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
+
+	if res.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 	return nil
 }

@@ -2,95 +2,106 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
 	"github.com/devhdn-212/gofibergoqu_master/internal/config"
 
-	"github.com/doug-martin/goqu/v9"
+	"github.com/jackc/pgx/v5"
 )
 
 type currRepository struct {
-	db   GoquDB
-	exec DBExecutor
+	db DBExecutor
 }
 
-func NewCurrRepository(exec *GoquExecutor) domain.CurrencyRepository {
+func NewCurrRepository(db DBExecutor) domain.CurrencyRepository {
 	return &currRepository{
-		db:   exec.DB,
-		exec: exec.Exec,
+		db: db,
 	}
 }
 func (c currRepository) FindAll(ctx context.Context) ([]domain.Currency, error) {
-	var res []domain.Currency
-	err := c.db.
-		From(config.DB_tbl_currency).
-		Order(goqu.C("idcurr").Asc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT * FROM ` + config.DB_tbl_currency + ` ORDER BY idcurr ASC`
+
+	rows, err := c.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Mapping otomatis menggunakan pgx v5
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Currency])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 func (c currRepository) FindSelect(ctx context.Context) ([]domain.Currency, error) {
-	var res []domain.Currency
-	err := c.db.
-		From(config.DB_tbl_currency).
-		Select("idcurr").
-		Order(goqu.C("idcurr").Asc()).
-		ScanStructsContext(ctx, &res)
-	return res, err
+	query := `SELECT idcurr FROM ` + config.DB_tbl_currency + ` ORDER BY idcurr ASC`
+
+	rows, err := c.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Currency])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 func (c currRepository) FindByID(ctx context.Context, id string) (domain.Currency, error) {
 	var curr domain.Currency
+	query := `SELECT idcurr FROM ` + config.DB_tbl_currency + ` WHERE idcurr = $1 LIMIT 1`
 
-	ds := c.db.From(config.DB_tbl_currency).
-		Select(goqu.C("idcurr")).
-		Where(
-			goqu.C("idcurr").Eq(id),
-		)
+	err := c.db.QueryRow(ctx, query, id).Scan(&curr.ID)
 
-	sqlStr, args, err := ds.ToSQL()
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Currency{}, nil
+		}
 		return curr, err
 	}
-
-	row := c.exec.QueryRowContext(ctx, sqlStr, args...)
-	err = row.Scan(
-		&curr.ID,
-	)
-	if err == sql.ErrNoRows {
-		return domain.Currency{}, nil
-	}
-	return curr, err
+	return curr, nil
 }
 func (c currRepository) Save(ctx context.Context, cur *domain.Currency) error {
-	sqlStr, args, err := c.db.Insert(config.DB_tbl_currency).Rows(cur).ToSQL()
-	if err != nil {
-		return err
-	}
-	_, err = c.exec.ExecContext(ctx, sqlStr, args...)
+	query := `INSERT INTO ` + config.DB_tbl_currency + ` 
+                (idcurr, typecurr, status, createcurr, createdatecurr) 
+              VALUES ($1, $2, $3, $4, $5)`
+
+	_, err := c.db.Exec(ctx, query,
+		cur.ID,
+		cur.Type,
+		cur.Status,
+		cur.Created,
+		cur.CreatedAt,
+	)
 	return err
 }
 
 func (c currRepository) Update(ctx context.Context, cur *domain.Currency) error {
-	sqlStr, args, err := c.db.
-		Update(config.DB_tbl_currency).
-		Set(goqu.Record{
-			"typecurr":       cur.Type,
-			"status":         cur.Status,
-			"updatecurr":     cur.Update,
-			"updatedatecurr": cur.UpdateAt,
-		}).
-		Where(goqu.C("idcurr").Eq(cur.ID)).
-		ToSQL()
+	query := `UPDATE ` + config.DB_tbl_currency + ` SET 
+                typecurr = $1, 
+                status = $2, 
+                updatecurr = $3, 
+                updatedatecurr = $4 
+              WHERE idcurr = $5`
+
+	res, err := c.db.Exec(ctx, query,
+		cur.Type,
+		cur.Status,
+		cur.Update,
+		cur.UpdateAt,
+		cur.ID,
+	)
 	if err != nil {
 		return err
 	}
-	res, err := c.exec.ExecContext(ctx, sqlStr, args...)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
+
+	if res.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 	return nil
 }

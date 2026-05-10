@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/devhdn-212/gofibergoqu_master/domain"
@@ -15,7 +14,8 @@ import (
 	"github.com/devhdn-212/gofibergoqu_master/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -24,11 +24,11 @@ const (
 )
 
 type bankService struct {
-	db   *sql.DB
+	db   *pgxpool.Pool
 	repo domain.BankRepository
 }
 
-func NewBankService(db *sql.DB, repo domain.BankRepository) domain.BankService {
+func NewBankService(db *pgxpool.Pool, repo domain.BankRepository) domain.BankService {
 	return &bankService{
 		db:   db,
 		repo: repo,
@@ -54,16 +54,16 @@ func (b bankService) All(ctx context.Context) ([]dto.BankData, error) {
 		log.Error(err)
 		return nil, err
 	}
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+
 	var bankData []dto.BankData
 	for _, v := range bank {
 		var createdAt, updatedAt string
 		if v.CreatedAt.Valid {
-			createdAt = v.Created + ", " + v.CreatedAt.Time.In(loc).Format("2006-01-02 15:04:05")
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
 		if v.UpdateAt.Valid {
 			if v.Update != "" {
-				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(loc).Format("2006-01-02 15:04:05")
+				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 			} else {
 				updatedAt = ""
 			}
@@ -115,25 +115,26 @@ func (b bankService) Select(ctx context.Context) ([]dto.BankSelect, error) {
 }
 
 func (b bankService) Save(ctx context.Context, req dto.BankSave, client_admin string) error {
-	tx, err := b.db.BeginTx(ctx, nil)
+	// Start transaction pgx
+	tx, err := b.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	// Defer rollback
+	defer tx.Rollback(ctx)
 
-	txExec := repository.NewGoquTxExecutor(tx)
+	// Executor transaksi
+	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewBankRepository(txExec)
+
 	flag, err := txRepo.FindByID(ctx, req.ID)
 	if err != nil {
 		return err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := util.GetNowJakarta()
+
 	if req.Type == "New" {
 		if flag.ID != "" {
 			return errors.New("Duplicate Entry")
@@ -145,22 +146,19 @@ func (b bankService) Save(ctx context.Context, req dto.BankSave, client_admin st
 			Name:      req.Name,
 			Status:    req.Status,
 			Created:   client_admin,
-			CreatedAt: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
+			CreatedAt: sql.NullTime{Valid: true, Time: now},
 		}
 		err = txRepo.Save(ctx, &bank)
 		if err != nil {
-			var pqErr *pq.Error
-			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				return util.ErrDuplicate
 			}
 			return err
 		}
-		if err = tx.Commit(); err != nil {
-			return err
-		}
 	} else {
 		if flag.ID == "" {
-			return errors.New("Currency not found")
+			return errors.New("Bank not found")
 		}
 
 		flag.ID = req.ID
@@ -168,15 +166,17 @@ func (b bankService) Save(ctx context.Context, req dto.BankSave, client_admin st
 		flag.Name = req.Name
 		flag.Status = req.Status
 		flag.Update = client_admin
-		flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
+		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
-		if err = b.repo.Update(ctx, &flag); err != nil {
-			fmt.Println(err)
+		// Pakai txRepo biar masuk ke transaksi yang sama
+		if err = txRepo.Update(ctx, &flag); err != nil {
 			return err
 		}
-		if err := tx.Commit(); err != nil {
-			return err
-		}
+	}
+
+	// Commit
+	if err := tx.Commit(ctx); err != nil {
+		return err
 	}
 
 	go connection.DeleteRedis(RedisBankKey)

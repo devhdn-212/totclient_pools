@@ -29,13 +29,18 @@ func main() {
 	connection.SetLogger(logger)
 
 	cnf := config.Get()
-	dbConnection := connection.GetDatabase(cnf.Database)
+	// 3. Koneksi Database (pgxpool)
+	dbPool := connection.GetDatabase(cnf.Database)
+	defer dbPool.Close()
+
+	// 4. Inisialisasi & Health Check Redis
 	if err := connection.InitRedis(cnf.Redis); err != nil {
-		panic(err)
+		logger.Fatal("Failed to init Redis", zap.Error(err))
 	}
 	defer connection.RDB.Close()
+
 	if !connection.RedisHealth() {
-		panic("Redis is not healthy")
+		logger.Fatal("Redis is not healthy")
 	}
 
 	app := fiber.New()
@@ -111,31 +116,31 @@ func main() {
 				JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "missing token, please login"))
 		},
 	})
-	goquExec := repository.NewGoquExecutor(dbConnection)
-	adminRepository := repository.NewAdminRepository(goquExec)
-	adminruleRepository := repository.NewAdminruleRepository(goquExec)
-	clientruleRepository := repository.NewClientruleRepository(goquExec)
-	currRepository := repository.NewCurrRepository(goquExec)
-	uomRepository := repository.NewUomRepository(goquExec)
-	bankRepository := repository.NewBankRepository(goquExec)
-	domainRepository := repository.NewDomainRepository(goquExec)
-	companyRepository := repository.NewCompanyRepository(goquExec)
-	companywalletRepository := repository.NewCompanywalletRepository(goquExec)
-	companyadminRepository := repository.NewCompanyadminRepository(goquExec)
-	customerRepository := repository.NewCustomerRepository(goquExec)
+	pgxExec := repository.NewPGXExecutor(dbPool)
+	adminRepository := repository.NewAdminRepository(pgxExec)
+	adminruleRepository := repository.NewAdminruleRepository(pgxExec)
+	clientruleRepository := repository.NewClientruleRepository(pgxExec)
+	currRepository := repository.NewCurrRepository(pgxExec)
+	uomRepository := repository.NewUomRepository(pgxExec)
+	bankRepository := repository.NewBankRepository(pgxExec)
+	domainRepository := repository.NewDomainRepository(pgxExec)
+	companyRepository := repository.NewCompanyRepository(pgxExec)
+	companywalletRepository := repository.NewCompanywalletRepository(pgxExec)
+	companyadminRepository := repository.NewCompanyadminRepository(pgxExec)
+	customerRepository := repository.NewCustomerRepository(pgxExec)
 
-	adminService := service.NewAdminService(dbConnection, adminRepository)
-	adminruleService := service.NewAdminruleService(dbConnection, adminruleRepository)
-	clinetruleService := service.NewClientruleService(dbConnection, clientruleRepository)
-	currService := service.NewCurrService(dbConnection, currRepository)
-	uomService := service.NewUomService(dbConnection, uomRepository)
-	bankService := service.NewBankService(dbConnection, bankRepository)
-	domainService := service.NewDomainService(dbConnection, domainRepository)
-	companyService := service.NewCompanyService(dbConnection, companyRepository)
-	companywalletService := service.NewCompanywalletService(dbConnection, companywalletRepository)
-	companyadminService := service.NewCompanyadminService(dbConnection, companyadminRepository)
-	customerService := service.NewCustomerService(dbConnection, customerRepository)
-	authService := service.NewAuth(dbConnection, cnf, adminRepository, adminruleRepository)
+	adminService := service.NewAdminService(dbPool, adminRepository)
+	adminruleService := service.NewAdminruleService(dbPool, adminruleRepository)
+	clinetruleService := service.NewClientruleService(dbPool, clientruleRepository)
+	currService := service.NewCurrService(dbPool, currRepository)
+	uomService := service.NewUomService(dbPool, uomRepository)
+	bankService := service.NewBankService(dbPool, bankRepository)
+	domainService := service.NewDomainService(dbPool, domainRepository)
+	companyService := service.NewCompanyService(dbPool, companyRepository)
+	companywalletService := service.NewCompanywalletService(dbPool, companywalletRepository)
+	companyadminService := service.NewCompanyadminService(dbPool, companyadminRepository)
+	customerService := service.NewCustomerService(dbPool, customerRepository)
+	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
 	api.NewAdminruleApi(app, adminruleService, jwtMidd)
@@ -166,7 +171,7 @@ func main() {
 	logger.Info("Running cleanup tasks...")
 
 	// Your cleanup tasks go here
-	dbConnection.Close()
+	dbPool.Close()
 	logger.Info("Shutdown complete")
 }
 
