@@ -46,7 +46,12 @@ func (c clientruleRepository) FindSelect(ctx context.Context) ([]domain.Clientru
 	}
 	defer rows.Close()
 
-	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Clientrule])
+	// Mapping manual per baris
+	res, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.Clientrule, error) {
+		var cr domain.Clientrule
+		err := row.Scan(&cr.ID, &cr.Name)
+		return cr, err
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -43,10 +43,12 @@ func (a adminruleRepository) FindSelect(ctx context.Context) ([]domain.Adminrule
 	}
 	defer rows.Close()
 
-	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Adminrule])
-	if err != nil {
-		return nil, err
-	}
+	// Mapping manual per baris
+	res, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.Adminrule, error) {
+		var ar domain.Adminrule
+		err := row.Scan(&ar.ID, &ar.Name)
+		return ar, err
+	})
 
 	return res, nil
 }

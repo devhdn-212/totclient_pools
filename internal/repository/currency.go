@@ -45,10 +45,12 @@ func (c currRepository) FindSelect(ctx context.Context) ([]domain.Currency, erro
 	}
 	defer rows.Close()
 
-	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Currency])
-	if err != nil {
-		return nil, err
-	}
+	// Mapping manual per baris
+	res, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.Currency, error) {
+		var curr domain.Currency
+		err := row.Scan(&curr.ID)
+		return curr, err
+	})
 
 	return res, nil
 }

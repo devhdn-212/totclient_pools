@@ -43,7 +43,7 @@ func (a adminRepository) FindByUsername(ctx context.Context, username string) (d
 	query := `SELECT 
                 username, password, idadmin, name, statuslogin, 
                 lastlogin, joindate, ipaddress, timezone, 
-                createdadmin, createddateadmin, updateadmin, updatedateadmin 
+                createadmin, createdateadmin, updateadmin, updatedateadmin 
               FROM ` + config.DB_tbl_admin + ` 
               WHERE username = $1 LIMIT 1`
 

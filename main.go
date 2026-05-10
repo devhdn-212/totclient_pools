@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/signal"
@@ -172,6 +173,14 @@ func main() {
 
 	// Your cleanup tasks go here
 	dbPool.Close()
+	// Berikan timeout untuk shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := app.ShutdownWithContext(ctx); err != nil {
+		logger.Error("Server forced to shutdown", zap.Error(err))
+	}
+
 	logger.Info("Shutdown complete")
 }
 

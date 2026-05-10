@@ -89,9 +89,8 @@ func (a adminruleService) Select(ctx context.Context) ([]dto.AdminruleSelect, er
 	if err != nil {
 		return nil, err
 	}
-
+	var data []dto.AdminruleSelect
 	if found {
-		var data []dto.AdminruleSelect
 		if err := json.Unmarshal([]byte(cached), &data); err == nil {
 			connection.Log.Info("Returning data from Redis - Adminrule Select")
 			return data, nil
@@ -104,17 +103,17 @@ func (a adminruleService) Select(ctx context.Context) ([]dto.AdminruleSelect, er
 		log.Error(err)
 		return nil, err
 	}
-	var adminruleSelect []dto.AdminruleSelect
+
 	for _, v := range admins {
-		adminruleSelect = append(adminruleSelect, dto.AdminruleSelect{
+		data = append(data, dto.AdminruleSelect{
 			ID:   v.ID,
 			Name: v.Name,
 		})
 	}
 
-	go connection.SetRedis(RedisAdminruleSelectKey, adminruleSelect, 60*time.Minute)
+	go connection.SetRedis(RedisAdminruleSelectKey, data, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Adminrule Select")
-	return adminruleSelect, nil
+	return data, nil
 }
 func (a adminruleService) Save(ctx context.Context, req dto.AdminruleSave, client_admin string) error {
 	tx, err := a.db.Begin(ctx)
