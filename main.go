@@ -8,12 +8,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/devhdn-212/gofibergoqu_master/dto"
-	"github.com/devhdn-212/gofibergoqu_master/internal/api"
-	"github.com/devhdn-212/gofibergoqu_master/internal/config"
-	"github.com/devhdn-212/gofibergoqu_master/internal/connection"
-	"github.com/devhdn-212/gofibergoqu_master/internal/repository"
-	"github.com/devhdn-212/gofibergoqu_master/internal/service"
+	"github.com/devhdn-212/gofibermaster_api/dto"
+	"github.com/devhdn-212/gofibermaster_api/internal/api"
+	"github.com/devhdn-212/gofibermaster_api/internal/config"
+	"github.com/devhdn-212/gofibermaster_api/internal/connection"
+	"github.com/devhdn-212/gofibermaster_api/internal/repository"
+	"github.com/devhdn-212/gofibermaster_api/internal/service"
 
 	jwtMid "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"

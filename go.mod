@@ -1,4 +1,4 @@
-module github.com/devhdn-212/gofibergoqu_master
+module github.com/devhdn-212/gofibermaster_api
 
 go 1.25.0
 

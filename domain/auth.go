@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	"github.com/devhdn-212/gofibergoqu_master/dto"
+	"github.com/devhdn-212/gofibermaster_api/dto"
 )
 
 type AuthService interface {

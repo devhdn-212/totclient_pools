@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/devhdn-212/gofibergoqu_master/domain"
+	"github.com/devhdn-212/gofibermaster_api/domain"
 	"github.com/jackc/pgx/v5"
 )
 

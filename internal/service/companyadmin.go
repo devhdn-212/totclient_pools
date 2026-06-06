@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devhdn-212/gofibergoqu_master/domain"
-	"github.com/devhdn-212/gofibergoqu_master/dto"
-	"github.com/devhdn-212/gofibergoqu_master/internal/connection"
-	"github.com/devhdn-212/gofibergoqu_master/internal/repository"
-	"github.com/devhdn-212/gofibergoqu_master/internal/util"
+	"github.com/devhdn-212/gofibermaster_api/domain"
+	"github.com/devhdn-212/gofibermaster_api/dto"
+	"github.com/devhdn-212/gofibermaster_api/internal/connection"
+	"github.com/devhdn-212/gofibermaster_api/internal/repository"
+	"github.com/devhdn-212/gofibermaster_api/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"

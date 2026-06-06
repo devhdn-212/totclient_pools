@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/devhdn-212/gofibergoqu_master/internal/config"
+	"github.com/devhdn-212/gofibermaster_api/internal/config"
 )
 
 var (

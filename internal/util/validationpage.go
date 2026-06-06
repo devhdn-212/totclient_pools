@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/devhdn-212/gofibergoqu_master/internal/connection"
+	"github.com/devhdn-212/gofibermaster_api/internal/connection"
 )
 
 func Validpage(username, page string) bool {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/devhdn-212/gofibergoqu_master/dto"
+	"github.com/devhdn-212/gofibermaster_api/dto"
 )
 
 type Companyadmin struct {
