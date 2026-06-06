@@ -8,14 +8,14 @@ import (
 )
 
 type Bank struct {
-	ID        string       `db:"idbank"`
-	Type      string       `db:"typebank"`
-	Name      string       `db:"nmbank"`
-	Status    string       `db:"bankstatus"`
-	Created   string       `db:"createbank"`
-	CreatedAt sql.NullTime `db:"createdatebank"`
-	Update    string       `db:"updatebank"`
-	UpdateAt  sql.NullTime `db:"updatedatebank"`
+	ID        string         `db:"idbank"`
+	Type      string         `db:"typebank"`
+	Name      string         `db:"nmbank"`
+	Status    string         `db:"bankstatus"`
+	Created   string         `db:"createbank"`
+	CreatedAt sql.NullTime   `db:"createdatebank"`
+	Update    sql.NullString `db:"updatebank"`
+	UpdateAt  sql.NullTime   `db:"updatedatebank"`
 }
 
 type BankRepository interface {

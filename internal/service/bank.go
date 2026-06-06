@@ -61,12 +61,10 @@ func (b bankService) All(ctx context.Context) ([]dto.BankData, error) {
 		if v.CreatedAt.Valid {
 			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
-		if v.UpdateAt.Valid {
-			if v.Update != "" {
-				updatedAt = v.Update + ", " + v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
-			} else {
-				updatedAt = ""
-			}
+		if v.UpdateAt.Valid && v.Update.Valid && v.Update.String != "" {
+			updatedAt = v.Update.String + ", " + v.UpdateAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
+		} else {
+			updatedAt = ""
 		}
 
 		bankData = append(bankData, dto.BankData{
@@ -165,7 +163,8 @@ func (b bankService) Save(ctx context.Context, req dto.BankSave, client_admin st
 		flag.Type = req.Type_bank
 		flag.Name = req.Name
 		flag.Status = req.Status
-		flag.Update = client_admin
+		// FIX: Mapping string primitif ke sql.NullString agar bisa di-compile dan di-update ke DB
+		flag.Update = sql.NullString{Valid: client_admin != "", String: client_admin}
 		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
 		// Pakai txRepo biar masuk ke transaksi yang sama
