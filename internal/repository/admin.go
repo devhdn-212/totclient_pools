@@ -21,7 +21,7 @@ func NewAdminRepository(db DBExecutor) domain.AdminsRepository {
 }
 func (a adminRepository) FindAll(ctx context.Context) ([]domain.Admin, error) {
 	// Menggunakan ORDER BY sesuai logika awal
-	query := `SELECT * FROM ` + config.DB_tbl_admin + ` ORDER BY lastlogin ASC`
+	query := `SELECT * FROM ` + config.DB_tbl_admin + ` ORDER BY lastlogin DESC`
 
 	rows, err := a.db.Query(ctx, query)
 	if err != nil {
@@ -118,21 +118,12 @@ func (a adminRepository) Update(ctx context.Context, admin *domain.Admin) error 
 
 func (a adminRepository) UpdateLogin(ctx context.Context, admin *domain.Admin) error {
 	query := `UPDATE ` + config.DB_tbl_admin + ` SET 
-                idadmin = $1, 
-                name = $2, 
-                statuslogin = $3, 
-                ipaddress = $4, 
-                updateadmin = $5, 
-                updatedateadmin = $6 
-              WHERE username = $7`
-
+                lastlogin = $1, 
+                ipaddress = $2  
+              WHERE username = $3`
 	res, err := a.db.Exec(ctx, query,
-		admin.Idadmin,
-		admin.Name,
-		admin.Status,
+		admin.Lastlogin,
 		admin.Ipaddress,
-		admin.Username,
-		time.Now(),
 		admin.Username,
 	)
 	if err != nil {

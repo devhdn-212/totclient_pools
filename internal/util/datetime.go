@@ -21,7 +21,12 @@ func init() {
 
 // GetNowJakarta adalah helper untuk mendapatkan waktu saat ini langsung dalam zona Jakarta
 func GetNowJakarta() time.Time {
-	return time.Now().In(LocJakarta)
+	loc, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		return time.Now()
+	}
+	// Kirim langsung, pgx akan strip timezone info, simpan angka mentah
+	return time.Now().In(loc)
 }
 
 // FormatToJakarta membantu merubah time.Time mentah ke zona Jakarta

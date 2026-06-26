@@ -73,10 +73,10 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 
 	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewAdminRepository(txExec)
-
+	now := util.GetNowJakarta()
 	// Update data login
 	user.Ipaddress = req.Ipaddress
-	user.Lastlogin = sql.NullTime{Valid: true, Time: util.GetNowJakarta()}
+	user.Lastlogin = sql.NullTime{Valid: true, Time: now}
 
 	// Gunakan txRepo agar masuk dalam scope transaksi
 	if err = txRepo.UpdateLogin(ctx, &user); err != nil {
@@ -86,6 +86,8 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 	if err := tx.Commit(ctx); err != nil {
 		return dto.AuthResponse{}, err
 	}
+
+	go connection.DeleteRedis("master:admin:all")
 
 	// 5. Simpan Data ke Redis
 	var clientRedis dto.AuthClientRedis

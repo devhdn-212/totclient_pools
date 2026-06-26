@@ -135,7 +135,7 @@ func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, cli
 		return err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := util.GetNowJakarta()
 	if req.Type == "New" {
 		if flag.ID != "" {
 			return errors.New("ID already exists")
@@ -145,7 +145,7 @@ func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, cli
 			Name:      req.Name,
 			Rule:      req.Rule,
 			Created:   client,
-			CreatedAt: sql.NullTime{Valid: true, Time: time.Now().In(loc)},
+			CreatedAt: sql.NullTime{Valid: true, Time: now},
 		}
 		err = txRepo.Save(ctx, &clientrule)
 		if err != nil {
@@ -165,7 +165,7 @@ func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, cli
 		flag.Name = req.Name
 		flag.Rule = req.Rule
 		flag.Update = client
-		flag.UpdateAt = sql.NullTime{Valid: true, Time: time.Now().In(loc)}
+		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
 		if err = c.repo.Update(ctx, &flag); err != nil {
 			fmt.Println(err)
