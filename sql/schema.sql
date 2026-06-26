@@ -139,3 +139,332 @@ CREATE TABLE public.tbl_mst_uom (
 	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_mst_uom_unique UNIQUE (iduom)
 );
+
+
+
+CREATE TABLE db_bbca.tbl_account_balance_log (
+	idaccbalancelog varchar(150) NOT NULL,
+	ref_idtrx varchar(150) NOT NULL,
+	ref_table varchar(150) NOT NULL,
+	typeaccbalancelog varchar(10) NOT NULL,
+	dateaccbalancelog date NOT NULL,
+	idcurr varchar(20) NOT NULL,
+	amount_credit numeric(36, 18) DEFAULT 0 NOT NULL,
+	amount_debit numeric(36, 18) DEFAULT 0 NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	idwallet varchar(150) DEFAULT ''::character varying NULL,
+	CONSTRAINT tbl_ledger_company_unique UNIQUE (idaccbalancelog)
+);
+CREATE INDEX tbl_ledger_company_idcompwalletbank_idx ON db_bbca.tbl_account_balance_log USING btree (idwallet);
+
+
+
+
+CREATE TABLE db_bbca.tbl_mst_grouptrx (
+	idgroup varchar(4) NOT NULL,
+	nmgroup varchar(100) DEFAULT ''::character varying NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_grouptrx_unique UNIQUE (idgroup)
+);
+
+
+
+
+CREATE TABLE db_bbca.tbl_mst_gudang (
+	idgudang varchar(10) NOT NULL,
+	nmgudang varchar(100) DEFAULT ''::character varying NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_gudang_unique UNIQUE (idgudang)
+);
+
+
+
+CREATE TABLE db_bbca.tbl_mst_item (
+	iditem varchar(20) NOT NULL,
+	iditemcategory int4 NOT NULL,
+	item_type varchar(20) NOT NULL,
+	nmitem varchar(100) DEFAULT ''::character varying NOT NULL,
+	description text DEFAULT ''::text NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz NULL,
+	CONSTRAINT tbl_mst_item_item_type_check CHECK (((item_type)::text = ANY ((ARRAY['STOCK'::character varying, 'NON_STOCK'::character varying, 'SERVICE'::character varying])::text[]))),
+	CONSTRAINT tbl_mst_item_pkey PRIMARY KEY (iditem),
+	CONSTRAINT tbl_mst_item_status_check CHECK (((status)::text = ANY ((ARRAY['Y'::character varying, 'N'::character varying])::text[])))
+);
+
+
+
+
+CREATE TABLE db_bbca.tbl_mst_member (
+	idmember varchar(150) NOT NULL,
+	usernamemember varchar(30) NOT NULL,
+	passmember varchar(250) NULL,
+	namemember varchar(50) NULL,
+	hpmember varchar(30) DEFAULT ''::character varying NULL,
+	emailmember varchar(100) DEFAULT ''::character varying NULL,
+	lastloginmember timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	ipaddressmember varchar(20) DEFAULT ''::character varying NULL,
+	statusmember varchar(1) DEFAULT 'Y'::character varying NULL,
+	createmember varchar(30) DEFAULT ''::character varying NULL,
+	createdatemember timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updatemember varchar(30) DEFAULT ''::character varying NULL,
+	updatedatemember timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_member_unique UNIQUE (idmember)
+);
+
+
+
+
+CREATE TABLE db_bbca.tbl_mst_merek (
+	idmerek varchar(10) NOT NULL,
+	nmmerek varchar(100) DEFAULT ''::character varying NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_merek_unique UNIQUE (idmerek)
+);
+
+
+-- db_bbca.tbl_mst_supplier definition
+
+-- Drop table
+
+-- DROP TABLE db_bbca.tbl_mst_supplier;
+
+CREATE TABLE db_bbca.tbl_mst_supplier (
+	idsupplier varchar(20) NOT NULL,
+	nmsupplier varchar(100) DEFAULT ''::character varying NOT NULL,
+	hp1 varchar(25) DEFAULT ''::character varying NOT NULL,
+	hp2 varchar(25) DEFAULT ''::character varying NOT NULL,
+	email varchar(150) DEFAULT ''::character varying NOT NULL,
+	tempo_pembayaran varchar(50) DEFAULT ''::character varying NOT NULL,
+	tipe_transaksi varchar(20) DEFAULT ''::character varying NOT NULL,
+	idbank varchar(10) NOT NULL,
+	norek varchar(50) DEFAULT ''::character varying NOT NULL,
+	nmrek varchar(100) DEFAULT ''::character varying NOT NULL,
+	alamat text DEFAULT ''::text NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_supplier_unique UNIQUE (idsupplier)
+);
+
+
+
+
+CREATE TABLE db_bbca.tbl_wallet (
+	idwallet varchar(150) NOT NULL,
+	wallettype varchar(20) DEFAULT ''::character varying NULL,
+	idowner varchar(150) DEFAULT ''::character varying NULL,
+	idcurr varchar(20) NOT NULL,
+	idbank varchar(10) NULL,
+	account_number varchar(150) DEFAULT ''::character varying NULL,
+	account_name varchar(150) DEFAULT ''::character varying NULL,
+	networkcrypto varchar(20) DEFAULT ''::character varying NULL,
+	status varchar(1) DEFAULT 'Y'::character varying NULL,
+	created_by varchar(30) DEFAULT ''::character varying NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_by varchar(30) DEFAULT ''::character varying NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_wallet_unique UNIQUE (idwallet)
+);
+
+
+
+
+CREATE TABLE db_bbca.tbl_wallet_balance (
+	idwallet varchar(150) NOT NULL,
+	total_credit numeric(36, 18) DEFAULT 0 NOT NULL,
+	total_debit numeric(36, 18) DEFAULT 0 NOT NULL,
+	updated_by varchar(30) NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_wallet_balance_unique UNIQUE (idwallet)
+);
+
+
+
+
+CREATE TABLE db_bbca.tbl_wallet_company_metadata (
+	idwallet varchar(150) NOT NULL,
+	category varchar(20) DEFAULT ''::character varying NULL,
+	note varchar(150) DEFAULT ''::character varying NULL,
+	effective_from timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	effective_to timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_company_wallet_metadata_unique UNIQUE (idwallet)
+);
+
+
+
+
+CREATE TABLE db_bbca.tbl_wallet_external_transaction (
+	idtrx varchar(150) NOT NULL,
+	idmember varchar(150) DEFAULT ''::character varying NULL,
+	typeact varchar(20) NOT NULL,
+	typetrx varchar(20) NOT NULL,
+	idcurr varchar(20) NOT NULL,
+	datetrx timestamptz NOT NULL,
+	source_wallet_id varchar(150) NULL,
+	source_wallet_snapshot varchar(200) NULL,
+	destination_wallet_id varchar(150) NULL,
+	destination_wallet_snapshot varchar(200) NULL,
+	amount numeric(36, 18) DEFAULT 0 NOT NULL,
+	admin_fee numeric(36, 18) DEFAULT 0 NOT NULL,
+	rate_trx numeric(36, 18) DEFAULT 0 NOT NULL,
+	amount_final numeric(36, 18) DEFAULT 0 NOT NULL,
+	amountratefinal_trx numeric(36, 18) DEFAULT 0 NOT NULL,
+	balance_source_before numeric(36, 18) DEFAULT 0 NOT NULL,
+	balance_destination_before numeric(36, 18) DEFAULT 0 NOT NULL,
+	status varchar(20) DEFAULT 'DRAFT'::character varying NULL,
+	title varchar(150) DEFAULT ''::character varying NULL,
+	detail varchar(250) DEFAULT ''::character varying NULL,
+	note varchar(150) DEFAULT ''::character varying NULL,
+	approved_by varchar(30) NULL,
+	approved_at timestamptz NULL,
+	created_by varchar(30) DEFAULT ''::character varying NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_by varchar(30) DEFAULT ''::character varying NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_wallet_external_transaction_unique UNIQUE (idtrx)
+);
+
+
+-- db_bbca.tbl_wallet_member definition
+
+-- Drop table
+
+-- DROP TABLE db_bbca.tbl_wallet_member;
+
+CREATE TABLE db_bbca.tbl_wallet_member (
+	idwalletmember varchar(150) NOT NULL,
+	idmember varchar(150) DEFAULT ''::character varying NULL,
+	idcurr varchar(20) NOT NULL,
+	idbank varchar(10) NULL,
+	account_number varchar(150) DEFAULT ''::character varying NULL,
+	account_name varchar(150) DEFAULT ''::character varying NULL,
+	networkcrypto varchar(20) DEFAULT ''::character varying NULL,
+	status varchar(1) DEFAULT 'Y'::character varying NULL,
+	created_by varchar(30) DEFAULT ''::character varying NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_by varchar(30) DEFAULT ''::character varying NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_wallet_member_unique UNIQUE (idwalletmember)
+);
+
+
+-- db_bbca.tbl_wallet_transaction definition
+
+-- Drop table
+
+-- DROP TABLE db_bbca.tbl_wallet_transaction;
+
+CREATE TABLE db_bbca.tbl_wallet_transaction (
+	idtrx varchar(150) NOT NULL,
+	idowner varchar(150) DEFAULT ''::character varying NULL,
+	typeact varchar(20) NOT NULL,
+	typetrx varchar(20) NOT NULL,
+	idcurr varchar(20) NOT NULL,
+	datetrx timestamptz NOT NULL,
+	source_wallet_id varchar(150) NULL,
+	source_wallet_snapshot varchar(200) NULL,
+	destination_wallet_id varchar(150) NULL,
+	destination_wallet_snapshot varchar(200) NULL,
+	amount numeric(36, 18) DEFAULT 0 NOT NULL,
+	admin_fee numeric(36, 18) DEFAULT 0 NOT NULL,
+	rate_trx numeric(36, 18) DEFAULT 0 NOT NULL,
+	amount_final numeric(36, 18) DEFAULT 0 NOT NULL,
+	amountratefinal_trx numeric(36, 18) DEFAULT 0 NOT NULL,
+	balance_source_before numeric(36, 18) DEFAULT 0 NOT NULL,
+	balance_destination_before numeric(36, 18) DEFAULT 0 NOT NULL,
+	status varchar(20) DEFAULT 'DRAFT'::character varying NULL,
+	title varchar(150) DEFAULT ''::character varying NULL,
+	detail varchar(250) DEFAULT ''::character varying NULL,
+	note varchar(150) DEFAULT ''::character varying NULL,
+	approved_by varchar(30) NULL,
+	approved_at timestamp NULL,
+	created_by varchar(30) DEFAULT ''::character varying NULL,
+	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_by varchar(30) DEFAULT ''::character varying NULL,
+	updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	idgroup varchar(4) DEFAULT ''::character varying NULL,
+	CONSTRAINT tbl_wallet_transaction_unique UNIQUE (idtrx)
+);
+
+
+
+
+CREATE TABLE db_bbca.tbl_item_category (
+	id bigserial NOT NULL,
+	"name" varchar(100) NOT NULL,
+	parent_id int8 NULL,
+	"level" int4 DEFAULT 1 NOT NULL,
+	"path" text DEFAULT ''::text NOT NULL,
+	status varchar(1) NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT chk_no_self_parent CHECK (((id IS NULL) OR (parent_id IS NULL) OR (id <> parent_id))),
+	CONSTRAINT tbl_item_category_pkey PRIMARY KEY (id),
+	CONSTRAINT uq_item_category_name_parent UNIQUE (name, parent_id),
+	CONSTRAINT fk_item_category_parent FOREIGN KEY (parent_id) REFERENCES db_bbca.tbl_item_category(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_item_category_active ON db_bbca.tbl_item_category USING btree (status);
+CREATE INDEX idx_item_category_parent ON db_bbca.tbl_item_category USING btree (parent_id);
+CREATE INDEX idx_item_category_path ON db_bbca.tbl_item_category USING btree (path);
+
+-- Table Triggers
+
+create trigger trg_after_insert_fix after
+insert
+    on
+    db_bbca.tbl_item_category for each row execute function db_bbca.trg_fix_category();
+create trigger trg_3_status_sync after
+update
+    of status on
+    db_bbca.tbl_item_category for each row execute function db_bbca.trg_item_category_status_sync();
+create trigger trg_item_category_path_logic before
+insert
+    or
+update
+    of parent_id on
+    db_bbca.tbl_item_category for each row execute function db_bbca.fn_recursive_category_update();
+
+
+
+
+CREATE TABLE db_bbca.tbl_mst_item_stock (
+	iditemstock bigserial NOT NULL,
+	iditem varchar(20) NOT NULL,
+	iduom varchar(10) NOT NULL,
+	total_in numeric(36, 18) DEFAULT 0 NOT NULL,
+	total_out numeric(36, 18) DEFAULT 0 NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz NULL,
+	CONSTRAINT tbl_mst_item_stock_pkey PRIMARY KEY (iditemstock),
+	CONSTRAINT tbl_mst_item_stock_total_in_check CHECK ((total_in >= (0)::numeric)),
+	CONSTRAINT tbl_mst_item_stock_total_out_check CHECK ((total_out >= (0)::numeric)),
+	CONSTRAINT uq_item_uom UNIQUE (iditem, iduom),
+	CONSTRAINT fk_item_stock_item FOREIGN KEY (iditem) REFERENCES db_bbca.tbl_mst_item(iditem) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+CREATE INDEX idx_item_stock_item ON db_bbca.tbl_mst_item_stock USING btree (iditem);
+CREATE INDEX idx_item_stock_uom ON db_bbca.tbl_mst_item_stock USING btree (iduom);
