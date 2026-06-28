@@ -80,6 +80,12 @@ func (ad *uomApi) Save(ctx *fiber.Ctx) error {
 			zap.String("error", err.Error()),
 			zap.String("record", string(recordJson)),
 		)
+
+		// cek duplicate entry
+		if err.Error() == "Duplicate Entry" {
+			return ctx.Status(http.StatusConflict).
+				JSON(dto.CreateResponseError(http.StatusConflict, "Duplicate Entry"))
+		}
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
