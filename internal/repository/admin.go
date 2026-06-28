@@ -75,7 +75,7 @@ func (a adminRepository) FindByUsername(ctx context.Context, username string) (d
 func (a adminRepository) Save(ctx context.Context, admin *domain.Admin) error {
 	// Gunakan mapping manual atau pastikan urutan kolom sesuai
 	query := `INSERT INTO ` + config.DB_tbl_admin + ` 
-                (username, password, idadmin, name, statuslogin, ipaddress, createdadmin, createddateadmin) 
+                (username, password, idadmin, name, statuslogin, ipaddress, createadmin, createdateadmin) 
               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err := a.db.Exec(ctx, query,
@@ -115,7 +115,34 @@ func (a adminRepository) Update(ctx context.Context, admin *domain.Admin) error 
 	}
 	return nil
 }
+func (a adminRepository) UpdateNotPassword(ctx context.Context, admin *domain.Admin) error {
+	query := `UPDATE ` + config.DB_tbl_admin + ` SET 
+                idadmin = $1, 
+                name = $2, 
+                statuslogin = $3, 
+                ipaddress = $4, 
+                updateadmin = $5, 
+                updatedateadmin = $6 
+              WHERE username = $7`
 
+	res, err := a.db.Exec(ctx, query,
+		admin.Idadmin,
+		admin.Name,
+		admin.Status,
+		admin.Ipaddress,
+		admin.Username,
+		admin.UpdateAt,
+		admin.Username,
+	)
+	if err != nil {
+		return err
+	}
+
+	if res.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
 func (a adminRepository) UpdateLogin(ctx context.Context, admin *domain.Admin) error {
 	query := `UPDATE ` + config.DB_tbl_admin + ` SET 
                 lastlogin = $1, 

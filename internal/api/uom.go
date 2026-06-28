@@ -82,7 +82,7 @@ func (ad *uomApi) Save(ctx *fiber.Ctx) error {
 		)
 
 		// cek duplicate entry
-		if err.Error() == "Duplicate Entry" {
+		if err.Error() == "duplicate entry" {
 			return ctx.Status(http.StatusConflict).
 				JSON(dto.CreateResponseError(http.StatusConflict, "Duplicate Entry"))
 		}

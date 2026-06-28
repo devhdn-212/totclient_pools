@@ -102,7 +102,7 @@ func (d domainService) Save(ctx context.Context, req dto.DomainSave, client stri
 
 	if req.Type == "New" {
 		if flag.ID != "" {
-			return errors.New("Duplicate Entry")
+			return util.ErrDuplicate
 		}
 
 		dm := domain.Domain{

@@ -136,7 +136,7 @@ func (a adminruleService) Save(ctx context.Context, req dto.AdminruleSave, clien
 
 	if req.Type == "New" {
 		if flag.ID != "" {
-			return errors.New("ID already exists")
+			return util.ErrDuplicate
 		}
 		adminrule := domain.Adminrule{
 			ID:        req.ID,

@@ -27,6 +27,7 @@ type AdminsRepository interface {
 	FindByUsername(ctx context.Context, username string) (Admin, error)
 	Save(ctx context.Context, admin *Admin) error
 	Update(ctx context.Context, admin *Admin) error
+	UpdateNotPassword(ctx context.Context, admin *Admin) error
 	UpdateLogin(ctx context.Context, admin *Admin) error
 }
 type AdminService interface {

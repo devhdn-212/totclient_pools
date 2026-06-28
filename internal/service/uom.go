@@ -121,7 +121,7 @@ func (u *uomService) Save(ctx context.Context, req dto.UomSave, client string) e
 
 	if req.Type == "New" {
 		if flag.ID != "" {
-			return errors.New("Duplicate Entry")
+			return util.ErrDuplicate
 		}
 
 		uom := domain.Uom{

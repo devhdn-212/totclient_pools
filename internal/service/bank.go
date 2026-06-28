@@ -135,7 +135,7 @@ func (b bankService) Save(ctx context.Context, req dto.BankSave, client_admin st
 
 	if req.Type == "New" {
 		if flag.ID != "" {
-			return errors.New("Duplicate Entry")
+			return util.ErrDuplicate
 		}
 
 		bank := domain.Bank{

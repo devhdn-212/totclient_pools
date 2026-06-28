@@ -138,7 +138,7 @@ func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, cli
 	now := util.GetNowJakarta()
 	if req.Type == "New" {
 		if flag.ID != "" {
-			return errors.New("ID already exists")
+			return util.ErrDuplicate
 		}
 		clientrule := domain.Clientrule{
 			ID:        req.ID,

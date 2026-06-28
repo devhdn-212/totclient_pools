@@ -115,7 +115,7 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 
 	if req.Type == "New" {
 		if flag.Username != "" {
-			return errors.New("Username already exists")
+			return util.ErrDuplicate
 		}
 
 		admin := domain.Admin{
@@ -149,7 +149,6 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 		flag.Status = req.Status
 		flag.Ipaddress = req.Ipaddress
 		flag.Update = client_admin
-		// Update waktu dengan timezone JKT
 		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
 		if req.Pass != "" {
@@ -158,7 +157,7 @@ func (a adminService) Save(ctx context.Context, req dto.AdminSave, client_admin 
 				return err
 			}
 		} else {
-			if err = txRepo.UpdateLogin(ctx, &flag); err != nil {
+			if err = txRepo.UpdateNotPassword(ctx, &flag); err != nil {
 				return err
 			}
 		}
