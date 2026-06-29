@@ -67,6 +67,12 @@ CREATE TABLE public.tbl_clientrule (
 
 
 
+-- public.tbl_company definition
+
+-- Drop table
+
+-- DROP TABLE public.tbl_company;
+
 CREATE TABLE public.tbl_company (
 	idcompany varchar(10) NOT NULL,
 	idcurrdef varchar(20) NOT NULL,
@@ -75,12 +81,18 @@ CREATE TABLE public.tbl_company (
 	amountcomp numeric(36, 18) DEFAULT 0 NOT NULL,
 	compstatus varchar(1) DEFAULT 'Y'::character varying NULL,
 	createcomp varchar(30) DEFAULT ''::character varying NULL,
-	createdatecomp timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	createdatecomp timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	updatecomp varchar(30) DEFAULT ''::character varying NULL,
-	updatedatecomp timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	updatedatecomp timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_company_unique UNIQUE (idcompany)
 );
 
+
+-- public.tbl_company_admin definition
+
+-- Drop table
+
+-- DROP TABLE public.tbl_company_admin;
 
 CREATE TABLE public.tbl_company_admin (
 	idcompadmin varchar(64) NOT NULL,
@@ -89,16 +101,22 @@ CREATE TABLE public.tbl_company_admin (
 	usernamecompadmin varchar(30) NOT NULL,
 	namecompadmin varchar(50) NULL,
 	passcompadmin varchar(250) NULL,
-	lastlogincompadmin timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	lastlogincompadmin timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	ipaddresscompadmin varchar(20) DEFAULT ''::character varying NULL,
 	compadminstatus varchar(1) DEFAULT 'Y'::character varying NULL,
 	createcompadmin varchar(30) DEFAULT ''::character varying NULL,
-	createdatecompadmin timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	createdatecompadmin timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	updatecompadmin varchar(30) DEFAULT ''::character varying NULL,
-	updatedatecompadmin timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	updatedatecompadmin timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_company_admin_unique UNIQUE (idcompadmin)
 );
 
+
+-- public.tbl_company_wallet definition
+
+-- Drop table
+
+-- DROP TABLE public.tbl_company_wallet;
 
 CREATE TABLE public.tbl_company_wallet (
 	idcompwallet varchar(64) NOT NULL,
@@ -107,9 +125,9 @@ CREATE TABLE public.tbl_company_wallet (
 	amountcompwallet numeric(36, 18) DEFAULT 0 NOT NULL,
 	compwalletstatus varchar(1) DEFAULT 'Y'::character varying NULL,
 	createcompwallet varchar(30) DEFAULT ''::character varying NULL,
-	createdatecompwallet timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	createdatecompwallet timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	updatecompwallet varchar(30) DEFAULT ''::character varying NULL,
-	updatedatecompwallet timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	updatedatecompwallet timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_company_wallet_unique UNIQUE (idcompwallet)
 );
 
