@@ -92,7 +92,7 @@ func (c customerService) Create(ctx context.Context, req dto.CreateCustomerReque
 		return err
 	}
 	if flag.Code != "" {
-		return errors.New("code already exists")
+		return util.ErrDuplicate
 	}
 
 	customer := domain.Customer{

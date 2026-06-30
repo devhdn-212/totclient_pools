@@ -103,7 +103,7 @@ func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_ad
 
 	if req.Type == "New" {
 		if flag.ID != "" {
-			return errors.New("Duplicate Entry")
+			return util.ErrDuplicate
 		}
 		comp := domain.Company{
 			ID:        req.ID,

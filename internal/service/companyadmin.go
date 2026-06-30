@@ -114,7 +114,7 @@ func (c companyadminService) Save(ctx context.Context, req dto.CompanyadminSave,
 
 	if req.Type == "New" {
 		if flag.ID != "" {
-			return errors.New("Duplicate Entry")
+			return util.ErrDuplicate
 		}
 
 		raw := strings.ReplaceAll(uuid.NewString(), "-", "")
