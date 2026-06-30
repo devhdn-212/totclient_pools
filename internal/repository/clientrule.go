@@ -20,7 +20,7 @@ func NewClientruleRepository(db DBExecutor) domain.ClientruleRepository {
 	}
 }
 func (c clientruleRepository) FindAll(ctx context.Context) ([]domain.Clientrule, error) {
-	query := `SELECT * FROM ` + config.DB_tbl_clientrule + ` ORDER BY idclientrule ASC`
+	query := `SELECT * FROM ` + config.DB_tbl_clientrule + ` ORDER BY updatedateclientrule DESC`
 
 	rows, err := c.db.Query(ctx, query)
 	if err != nil {
