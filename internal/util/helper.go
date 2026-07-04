@@ -7,7 +7,7 @@ import (
 	s "strings"
 	"time"
 
-	"github.com/devhdn-212/gofibermaster_api/internal/config"
+	"github.com/devhdn-212/totmaster_api/internal/config"
 
 	"golang.org/x/crypto/bcrypt"
 )

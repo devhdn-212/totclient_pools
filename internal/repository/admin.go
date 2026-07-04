@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/devhdn-212/gofibermaster_api/domain"
-	"github.com/devhdn-212/gofibermaster_api/internal/config"
+	"github.com/devhdn-212/totmaster_api/domain"
+	"github.com/devhdn-212/totmaster_api/internal/config"
 	"github.com/jackc/pgx/v5"
 )
 

@@ -4,9 +4,15 @@ CREATE TABLE public.tbl_counter (
 	counter int8 NOT NULL,
 	CONSTRAINT tbl_counter_pk PRIMARY KEY (idcounter)
 );
+CREATE SEQUENCE public.idcounter_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START 1
+	CACHE 1
+	NO CYCLE;
 
-
-CREATE TABLE public.tbl_admin (
+CREATE TABLE tbl_admin (
 	username varchar(30) NOT NULL,
 	"password" varchar(250) NULL,
 	idadmin varchar(30) NULL,
@@ -136,12 +142,11 @@ CREATE TABLE public.tbl_company_wallet (
 CREATE TABLE public.tbl_currency (
 	idcurr varchar(20) NOT NULL,
 	typecurr varchar(10) DEFAULT ''::character varying NOT NULL,
-	status varchar(1) NOT NULL,
+	statuscurr varchar(1) NOT NULL,
 	createcurr varchar(30) DEFAULT ''::character varying NULL,
 	createdatecurr timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	updatecurr varchar(30) DEFAULT ''::character varying NULL,
 	updatedatecurr timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
-	CONSTRAINT tbl_currency_status_check CHECK (((status)::bpchar = ANY (ARRAY['Y'::bpchar, 'N'::bpchar]))),
 	CONSTRAINT tbl_currency_unique UNIQUE (idcurr)
 );
 

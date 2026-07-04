@@ -1,4 +1,4 @@
-module github.com/devhdn-212/gofibermaster_api
+module github.com/devhdn-212/totmaster_api
 
 go 1.25.0
 

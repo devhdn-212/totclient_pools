@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/devhdn-212/gofibermaster_api/dto"
+	"github.com/devhdn-212/totmaster_api/dto"
 )
 
 type Bank struct {

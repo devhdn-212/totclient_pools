@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/devhdn-212/gofibermaster_api/domain"
-	"github.com/devhdn-212/gofibermaster_api/dto"
-	"github.com/devhdn-212/gofibermaster_api/internal/connection"
-	"github.com/devhdn-212/gofibermaster_api/internal/util"
+	"github.com/devhdn-212/totmaster_api/domain"
+	"github.com/devhdn-212/totmaster_api/dto"
+	"github.com/devhdn-212/totmaster_api/internal/connection"
+	"github.com/devhdn-212/totmaster_api/internal/util"
 
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
