@@ -129,6 +129,7 @@ func main() {
 	companyRepository := repository.NewCompanyRepository(pgxExec)
 	companywalletRepository := repository.NewCompanywalletRepository(pgxExec)
 	companyadminRepository := repository.NewCompanyadminRepository(pgxExec)
+	companyconftotoRepository := repository.NewCompanyconftotoRepository(pgxExec)
 	customerRepository := repository.NewCustomerRepository(pgxExec)
 
 	adminService := service.NewAdminService(dbPool, adminRepository)
@@ -142,6 +143,7 @@ func main() {
 	companyService := service.NewCompanyService(dbPool, companyRepository)
 	companywalletService := service.NewCompanywalletService(dbPool, companywalletRepository)
 	companyadminService := service.NewCompanyadminService(dbPool, companyadminRepository)
+	companyconftotoService := service.NewCompanyconftotoService(dbPool, companyconftotoRepository)
 	customerService := service.NewCustomerService(dbPool, customerRepository)
 	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
 
@@ -156,6 +158,7 @@ func main() {
 	api.NewCompanyApi(app, companyService, groupcompanyService, currService, clinetruleService, jwtMidd)
 	api.NewCompanywalletApi(app, companywalletService, jwtMidd)
 	api.NewCompanyadminApi(app, companyadminService, jwtMidd)
+	api.NewCompanyconftotoApi(app, companyconftotoService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 

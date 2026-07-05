@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/devhdn-212/totmaster_api/domain"
@@ -13,6 +14,7 @@ import (
 	"github.com/devhdn-212/totmaster_api/internal/connection"
 	"github.com/devhdn-212/totmaster_api/internal/repository"
 	"github.com/devhdn-212/totmaster_api/internal/util"
+	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -104,10 +106,15 @@ func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_ad
 
 	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewCompanyRepository(txExec)
+	txRepoConfToto := repository.NewCompanyconftotoRepository(txExec)
 
 	flag, err := txRepo.FindByID(ctx, req.ID)
+	flag_conf, err_conf := txRepoConfToto.FindByID(ctx, req.ID)
 	if err != nil {
 		return err
+	}
+	if err_conf != nil {
+		return err_conf
 	}
 
 	now := util.GetNowJakarta()
@@ -138,6 +145,29 @@ func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_ad
 			}
 			return err
 		}
+		if flag.Activetoto == "Y" {
+			if flag_conf.IDcompconftoto == "" { // TOTO ACTIVE
+				fmt.Println("==CREATE CONF TOTO==")
+				raw := strings.ReplaceAll(uuid.NewString(), "-", "")
+				date := time.Now().Format("0601")
+				idconf := fmt.Sprintf("%s-%s-conftoto-%s", strings.ToLower(req.ID), date, raw)
+				compconf := domain.Companyconftoto{
+					IDcompconftoto: idconf,
+					IDcompany:      req.ID,
+					CreateBy:       client_admin,
+					CreateAt:       sql.NullTime{Valid: true, Time: now},
+				}
+				err = txRepoConfToto.Save(ctx, &compconf)
+				if err != nil {
+					var pgErr *pgconn.PgError
+					if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+						return util.ErrDuplicate
+					}
+					return err
+				}
+				fmt.Println("==END CREATE CONF TOTO==")
+			}
+		}
 	} else {
 		if flag.ID == "" {
 			return fmt.Errorf("Company %w", util.ErrNotFound)
@@ -155,9 +185,31 @@ func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_ad
 		flag.Update = client_admin
 		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
-		// Perbaikan: gunakan txRepo agar masuk dalam transaksi
 		if err = txRepo.Update(ctx, &flag); err != nil {
 			return err
+		}
+		if flag.Activetoto == "Y" {
+			if flag_conf.IDcompconftoto == "" { // TOTO ACTIVE
+				fmt.Println("==CREATE CONF TOTO==")
+				raw := strings.ReplaceAll(uuid.NewString(), "-", "")
+				date := time.Now().Format("0601")
+				idconf := fmt.Sprintf("%s-%s-conftoto-%s", strings.ToLower(req.ID), date, raw)
+				compconf := domain.Companyconftoto{
+					IDcompconftoto: idconf,
+					IDcompany:      req.ID,
+					CreateBy:       client_admin,
+					CreateAt:       sql.NullTime{Valid: true, Time: now},
+				}
+				err = txRepoConfToto.Save(ctx, &compconf)
+				if err != nil {
+					var pgErr *pgconn.PgError
+					if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+						return util.ErrDuplicate
+					}
+					return err
+				}
+				fmt.Println("==END CREATE CONF TOTO==")
+			}
 		}
 	}
 

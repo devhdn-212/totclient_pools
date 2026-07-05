@@ -2,7 +2,7 @@ package domain
 
 import (
 	"context"
-	"time"
+	"database/sql"
 
 	"github.com/devhdn-212/totmaster_api/dto"
 
@@ -84,17 +84,17 @@ type Companyconftoto struct {
 	ShioMaxWin              decimal.Decimal `db:"shio_max_win"`
 	ShioParent              int             `db:"shio_parent"`
 	CreateBy                string          `db:"create_by"`
-	CreateAt                time.Time       `db:"create_at"`
+	CreateAt                sql.NullTime    `db:"create_at"`
 	UpdateBy                string          `db:"update_by"`
-	UpdateAt                time.Time       `db:"update_at"`
+	UpdateAt                sql.NullTime    `db:"update_at"`
 }
 type CompanyconftotoRepository interface {
 	FindAll(ctx context.Context, idcomp string) ([]Companyconftoto, error)
-	FindByID(ctx context.Context, idcomp, id string) (Companyconftoto, error)
-	SaveAngka(ctx context.Context, compconftoto *Companyconftoto) error
-	UpdateAngka(ctx context.Context, compconftoto *Companyconftoto) error
+	FindByID(ctx context.Context, idcomp string) (Companyconftoto, error)
+	Save(ctx context.Context, compconftoto *Companyconftoto) error
+	Update(ctx context.Context, compconftoto *Companyconftoto) error
 }
 type CompanyconftotoService interface {
-	All(ctx context.Context) ([]dto.CompanyconftotoData, error)
-	Save(ctx context.Context, req dto.CompanyconftotoSaveAngka, client string) error
+	All(ctx context.Context, idcomp string) ([]dto.CompanyconftotoData, error)
+	Save(ctx context.Context, req dto.CompanyconftotoSave, client string) error
 }

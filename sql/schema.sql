@@ -215,7 +215,17 @@ CREATE TABLE public.tbl_company_wallet (
 	CONSTRAINT tbl_company_wallet_unique UNIQUE (idcompwallet)
 );
 
-
+CREATE TABLE db_tot.tbl_trx_log (
+	idlog int8 NOT NULL,
+	datetimelog timestamptz NOT NULL,
+	yearlog int4 NOT NULL,
+	idcompany varchar(50) NULL,
+	username varchar(100) NULL,
+	pagelog varchar(50) NULL,
+	tipelog varchar(50) NULL,
+	notebefore text NULL,
+	noteafter text NULL
+);
 
 CREATE TABLE public.tbl_currency (
 	idcurr varchar(20) NOT NULL,
