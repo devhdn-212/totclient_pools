@@ -15,69 +15,40 @@ import (
 	"go.uber.org/zap"
 )
 
-type companyApi struct {
-	companyService      domain.CompanyService
+type groupcompanyApi struct {
 	groupcompanyService domain.GroupcompanyService
-	currService         domain.CurrencyService
-	clientruleService   domain.ClientruleService
 }
 
-func NewCompanyApi(app *fiber.App,
-	companyService domain.CompanyService,
+func NewGroupcompanyApi(app *fiber.App,
 	groupcompanyService domain.GroupcompanyService,
-	currService domain.CurrencyService,
-	clientruleService domain.ClientruleService,
 	authmidle fiber.Handler) {
-	ad := companyApi{
-		companyService:      companyService,
+	ad := groupcompanyApi{
 		groupcompanyService: groupcompanyService,
-		currService:         currService,
-		clientruleService:   clientruleService,
 	}
-	company := app.Group("/api/company", authmidle)
-	company.Post("", ad.Index)
-	company.Post("/save", ad.Save)
+	groupcompany := app.Group("/api/groupcompany", authmidle)
+	groupcompany.Post("", ad.Index)
+	groupcompany.Post("/save", ad.Save)
 }
-func (co *companyApi) Index(ctx *fiber.Ctx) error {
+func (co *groupcompanyApi) Index(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
 
-	resselectgroup, errselectgroup := co.groupcompanyService.Select(c)
-	if errselectgroup != nil {
-		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error - Group Company"))
-	}
-
-	resselectrule, errselectrule := co.clientruleService.Select(c)
-	if errselectrule != nil {
-		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error - Rule"))
-	}
-
-	resselect, errselect := co.currService.Select(c)
-	if errselect != nil {
-		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error - Currency"))
-	}
-	res, err := co.companyService.All(c)
+	res, err := co.groupcompanyService.All(c)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
 	return ctx.JSON(fiber.Map{
-		"status":    fiber.StatusOK,
-		"message":   "success",
-		"listcurr":  resselect,
-		"listrule":  resselectrule,
-		"listgroup": resselectgroup,
-		"record":    res,
+		"status":  fiber.StatusOK,
+		"message": "success",
+		"record":  res,
 	})
 }
-func (co *companyApi) Save(ctx *fiber.Ctx) error {
+func (co *groupcompanyApi) Save(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
 
-	var req dto.CompanySave
+	var req dto.GroupcompanySave
 	if err := ctx.BodyParser(&req); err != nil {
 		connection.Log.Error("Failed to parse request body",
 			zap.String("endpoint", "Create Admin"),
@@ -89,7 +60,7 @@ func (co *companyApi) Save(ctx *fiber.Ctx) error {
 	fails := util.Validate(req)
 
 	if len(fails) > 0 {
-		connection.Log.Warn("Validation failed for update Company",
+		connection.Log.Warn("Validation failed for update Groupcompany",
 			zap.Any("validation_errors", fails),
 			zap.Any("body", req),
 		)
@@ -98,7 +69,7 @@ func (co *companyApi) Save(ctx *fiber.Ctx) error {
 	}
 	datatoken := ctx.Locals("client_username").(string)
 	client_username := util.Parsing_final(datatoken)
-	flagpage := util.Validpage(client_username, "COMPANY-SAVE")
+	flagpage := util.Validpage(client_username, "GROUPCOMPANY-SAVE")
 	if !flagpage {
 		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"status":  fiber.StatusForbidden,
@@ -106,10 +77,10 @@ func (co *companyApi) Save(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err := co.companyService.Save(c, req, client_username)
+	err := co.groupcompanyService.Save(c, req, client_username)
 	if err != nil {
 		recordJson, _ := json.Marshal(req)
-		connection.Log.Error("Failed to create / update Company",
+		connection.Log.Error("Failed to create / update Groupcompany",
 			zap.String("id", req.ID),
 			zap.String("error", err.Error()),
 			zap.String("record", string(recordJson)),
@@ -122,7 +93,7 @@ func (co *companyApi) Save(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-	connection.Log.Info("Company create / update successfully",
+	connection.Log.Info("Groupcompany create / update successfully",
 		zap.String("id", req.ID),
 	)
 

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/devhdn-212/totmaster_api/domain"
@@ -55,7 +56,7 @@ func (c companyService) All(ctx context.Context) ([]dto.CompanyData, error) {
 
 	var compData []dto.CompanyData
 	for _, v := range curr {
-		var createdAt, updatedAt string
+		var createdAt, updatedAt, endjoin string
 		if v.CreatedAt.Valid {
 			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
 		}
@@ -66,15 +67,25 @@ func (c companyService) All(ctx context.Context) ([]dto.CompanyData, error) {
 				updatedAt = ""
 			}
 		}
+		if v.Endjoin.Valid {
+			endjoin = v.Endjoin.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
+		}
 
 		compData = append(compData, dto.CompanyData{
-			ID:        v.ID,
-			IDcurrdef: v.IDcurrdef,
-			Name:      v.Name,
-			Endjoin:   createdAt,
-			Status:    v.Status,
-			Created:   createdAt,
-			Update:    updatedAt,
+			ID:          v.ID,
+			IDgroupcomp: v.IDgroupcomp,
+			Nmgroupcomp: v.Nmgroupcomp.String,
+			IDcurrdef:   v.IDcurrdef,
+			Name:        v.Name,
+			TelegramID:  v.TelegramID,
+			URLapitoto:  v.URLapitoto,
+			URLapislot:  v.URLapislot,
+			Endjoin:     endjoin,
+			Activetoto:  v.Activetoto,
+			Activeslot:  v.Activeslot,
+			Status:      v.Status,
+			Created:     createdAt,
+			Update:      updatedAt,
 		})
 	}
 
@@ -106,12 +117,18 @@ func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_ad
 			return util.ErrDuplicate
 		}
 		comp := domain.Company{
-			ID:        req.ID,
-			IDcurrdef: req.IDcurr,
-			Name:      req.Name,
-			Status:    req.Status,
-			Created:   client_admin,
-			CreatedAt: sql.NullTime{Valid: true, Time: now},
+			ID:          req.ID,
+			IDcurrdef:   req.IDcurr,
+			IDgroupcomp: req.IDgroupcomp,
+			Name:        req.Name,
+			TelegramID:  req.TelegramID,
+			URLapitoto:  req.URLapitoto,
+			URLapislot:  req.URLapislot,
+			Status:      req.Status,
+			Activetoto:  req.Activetoto,
+			Activeslot:  req.Activeslot,
+			Created:     client_admin,
+			CreatedAt:   sql.NullTime{Valid: true, Time: now},
 		}
 		err = txRepo.Save(ctx, &comp)
 		if err != nil {
@@ -123,12 +140,18 @@ func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_ad
 		}
 	} else {
 		if flag.ID == "" {
-			return errors.New("Company not found")
+			return fmt.Errorf("Company %w", util.ErrNotFound)
 		}
 
 		flag.IDcurrdef = req.IDcurr
+		flag.IDgroupcomp = req.IDgroupcomp
 		flag.Name = req.Name
+		flag.TelegramID = req.TelegramID
+		flag.URLapitoto = req.URLapitoto
+		flag.URLapislot = req.URLapislot
 		flag.Status = req.Status
+		flag.Activetoto = req.Activetoto
+		flag.Activeslot = req.Activeslot
 		flag.Update = client_admin
 		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 

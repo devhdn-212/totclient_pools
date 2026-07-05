@@ -10,16 +10,23 @@ import (
 )
 
 type Company struct {
-	ID        string          `db:"idcompany"`
-	IDcurrdef string          `db:"idcurrdef"`
-	Name      string          `db:"compname"`
-	Endjoin   sql.NullTime    `db:"endjoin"`
-	Amount    decimal.Decimal `db:"amountcomp"`
-	Status    string          `db:"compstatus"`
-	Created   string          `db:"createcomp"`
-	CreatedAt sql.NullTime    `db:"createdatecomp"`
-	Update    string          `db:"updatecomp"`
-	UpdateAt  sql.NullTime    `db:"updatedatecomp"`
+	ID          string          `db:"idcompany"`
+	IDgroupcomp string          `db:"idgroupcomp"`
+	Nmgroupcomp sql.NullString  `db:"nmgroupcomp"`
+	IDcurrdef   string          `db:"idcurrdef"`
+	Name        string          `db:"compname"`
+	Endjoin     sql.NullTime    `db:"endjoin"`
+	Amount      decimal.Decimal `db:"amountcomp"`
+	TelegramID  string          `db:"telegramid"`
+	URLapitoto  string          `db:"urlapitoto"`
+	URLapislot  string          `db:"urlapislot"`
+	Status      string          `db:"compstatus"`
+	Activetoto  string          `db:"compactivetoto"`
+	Activeslot  string          `db:"compactiveslot"`
+	Created     string          `db:"createcomp"`
+	CreatedAt   sql.NullTime    `db:"createdatecomp"`
+	Update      string          `db:"updatecomp"`
+	UpdateAt    sql.NullTime    `db:"updatedatecomp"`
 }
 
 type CompanyRepository interface {

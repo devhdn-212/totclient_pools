@@ -72,12 +72,17 @@ CREATE TABLE public.tbl_clientrule (
 );
 
 
+CREATE TABLE tbl_groupcompany (
+	idgroupcomp varchar(20) NOT NULL,
+	nmgroupcomp varchar(100) DEFAULT ''::character varying NOT NULL,
+	statusgroupcomp varchar(1) DEFAULT 'Y'::character varying NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_groupcompany_unique UNIQUE (idgroupcomp)
+);
 
--- public.tbl_company definition
-
--- Drop table
-
--- DROP TABLE public.tbl_company;
 
 CREATE TABLE public.tbl_company (
 	idcompany varchar(10) NOT NULL,
@@ -86,19 +91,18 @@ CREATE TABLE public.tbl_company (
 	endjoin timestamp NULL,
 	amountcomp numeric(36, 18) DEFAULT 0 NOT NULL,
 	compstatus varchar(1) DEFAULT 'Y'::character varying NULL,
+	idgroupcomp varchar(20) DEFAULT ''::character varying NULL,
+	telegramid varchar(50) DEFAULT ''::character varying NULL,
+	urlapitoto varchar(150) DEFAULT ''::character varying NULL,
+	urlapislot varchar(150) DEFAULT ''::character varying NULL,
+	compactivetoto varchar DEFAULT 'N'::character varying NULL,
+	compactiveslot varchar DEFAULT 'N'::character varying NULL,
 	createcomp varchar(30) DEFAULT ''::character varying NULL,
 	createdatecomp timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	updatecomp varchar(30) DEFAULT ''::character varying NULL,
 	updatedatecomp timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
 	CONSTRAINT tbl_company_unique UNIQUE (idcompany)
 );
-
-
--- public.tbl_company_admin definition
-
--- Drop table
-
--- DROP TABLE public.tbl_company_admin;
 
 CREATE TABLE public.tbl_company_admin (
 	idcompadmin varchar(64) NOT NULL,
@@ -117,12 +121,86 @@ CREATE TABLE public.tbl_company_admin (
 	CONSTRAINT tbl_company_admin_unique UNIQUE (idcompadmin)
 );
 
-
--- public.tbl_company_wallet definition
-
--- Drop table
-
--- DROP TABLE public.tbl_company_wallet;
+CREATE TABLE tbl_company_conf_toto (
+	idcompconftoto varchar(80) NOT NULL,
+	idcompany varchar(10) NOT NULL,
+	angka_max_minbasket NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_4d NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_3d NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_3dd NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_2d NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_2dd NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_2dt NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_4d_bbdisc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_3d_bbdisc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_3dd_bbdisc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_2d_bbdisc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_2dd_bbdisc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_maxbet_2dt_bbdisc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win4d_full NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win3d_full NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win3dd_full NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2d_full NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2dd_full NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2dt_full NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win4d_disc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win3d_disc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win3dd_disc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2d_disc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2dd_disc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2dt_disc NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win4d_bb NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win3d_bb NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win3dd_bb NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2d_bb NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2dd_bb NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2dt_bb NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win4d_bb_kena NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win3d_bb_kena NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win3dd_bb_kena NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2d_bb_kena NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2dd_bb_kena NUMERIC(15,2) DEFAULT 0 NULL,
+	angka_max_win2dt_bb_kena NUMERIC(15,2) DEFAULT 0 NULL,
+	cbebas_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	cbebas_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	cbebas_max_win NUMERIC(5,2) DEFAULT 0 NULL,
+	cmacau_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	cmacau_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	cmacau_max_win2 NUMERIC(5,2) DEFAULT 0 NULL,
+	cmacau_max_win3 NUMERIC(5,2) DEFAULT 0 NULL,
+	cmacau_max_win4 NUMERIC(5,2) DEFAULT 0 NULL,
+	cnaga_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	cnaga_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	cnaga_max_win3 NUMERIC(5,2) DEFAULT 0 NULL,
+	cnaga_max_win4 NUMERIC(5,2) DEFAULT 0 NULL,
+	cjitu_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	cjitu_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	cjitu_max_winas NUMERIC(5,2) DEFAULT 0 NULL,
+	cjitu_max_winkop NUMERIC(5,2) DEFAULT 0 NULL,
+	cjitu_max_winkepala NUMERIC(5,2) DEFAULT 0 NULL,
+	cjitu_max_winekor NUMERIC(5,2) DEFAULT 0 NULL,
+	umum50_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	umum50_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	special50_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	special50_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	kombinasi50_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	kombinasi50_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	macau_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	macau_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	macau_max_win NUMERIC(5,2) DEFAULT 0 NULL,
+	dasar_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	dasar_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	shio_max_minbet NUMERIC(15,2) DEFAULT 0 NULL,
+	shio_max_maxbet NUMERIC(15,2) DEFAULT 0 NULL,
+	shio_max_win NUMERIC(5,2) DEFAULT 0 NULL,
+	shio_parent int4 DEFAULT 0 NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_company_conf_toto_unique UNIQUE (idcompconftoto)
+);
 
 CREATE TABLE public.tbl_company_wallet (
 	idcompwallet varchar(64) NOT NULL,

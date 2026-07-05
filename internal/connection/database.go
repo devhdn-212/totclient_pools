@@ -14,7 +14,7 @@ import (
 
 func GetDatabase(conf config.Database) *pgxpool.Pool {
 	// 1. Buat config dasar pakai string minimalis tanpa password yang aneh-aneh
-	baseDSN := fmt.Sprintf("postgres://%s:%s/subapp?sslmode=disable", conf.Host, conf.Port)
+	baseDSN := fmt.Sprintf("postgres://%s:%s/%s?sslmode=disable", conf.Host, conf.Port, conf.Name)
 
 	configPool, err := pgxpool.ParseConfig(baseDSN)
 	if err != nil {

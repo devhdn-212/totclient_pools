@@ -10,7 +10,7 @@ import (
 type Currency struct {
 	ID        string       `db:"idcurr"`
 	Type      string       `db:"typecurr"`
-	Status    string       `db:"status"`
+	Status    string       `db:"statuscurr"`
 	Created   string       `db:"createcurr"`
 	CreatedAt sql.NullTime `db:"createdatecurr"`
 	Update    string       `db:"updatecurr"`

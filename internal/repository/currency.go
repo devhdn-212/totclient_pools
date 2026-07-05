@@ -45,12 +45,18 @@ func (c currRepository) FindSelect(ctx context.Context) ([]domain.Currency, erro
 	}
 	defer rows.Close()
 
-	// Mapping manual per baris
-	res, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.Currency, error) {
-		var curr domain.Currency
-		err := row.Scan(&curr.ID)
-		return curr, err
-	})
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[domain.Currency])
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert ke domain.Groupcompany
+	var result []domain.Currency
+	for _, v := range res {
+		result = append(result, domain.Currency{
+			ID: v.ID,
+		})
+	}
 
 	return res, nil
 }
@@ -70,7 +76,7 @@ func (c currRepository) FindByID(ctx context.Context, id string) (domain.Currenc
 }
 func (c currRepository) Save(ctx context.Context, cur *domain.Currency) error {
 	query := `INSERT INTO ` + config.DB_tbl_currency + ` 
-                (idcurr, typecurr, status, createcurr, createdatecurr) 
+                (idcurr, typecurr, statuscurr, createcurr, createdatecurr) 
               VALUES ($1, $2, $3, $4, $5)`
 
 	_, err := c.db.Exec(ctx, query,
@@ -86,7 +92,7 @@ func (c currRepository) Save(ctx context.Context, cur *domain.Currency) error {
 func (c currRepository) Update(ctx context.Context, cur *domain.Currency) error {
 	query := `UPDATE ` + config.DB_tbl_currency + ` SET 
                 typecurr = $1, 
-                status = $2, 
+                statuscurr = $2, 
                 updatecurr = $3, 
                 updatedatecurr = $4 
               WHERE idcurr = $5`

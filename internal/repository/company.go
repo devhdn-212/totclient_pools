@@ -20,7 +20,29 @@ func NewCompanyRepository(db DBExecutor) domain.CompanyRepository {
 	}
 }
 func (c companyRepository) FindAll(ctx context.Context) ([]domain.Company, error) {
-	query := `SELECT * FROM ` + config.DB_tbl_company + ` ORDER BY idcompany ASC`
+	query := `
+		SELECT 
+			c.idcompany,
+            c.idgroupcomp,
+            g.nmgroupcomp, 
+            c.idcurrdef,
+            c.compname,
+            c.endjoin,
+            c.amountcomp,
+            c.telegramid,
+            c.urlapitoto,
+            c.urlapislot,
+            c.compstatus,
+            c.compactivetoto,
+            c.compactiveslot,
+            c.createcomp,
+            c.createdatecomp,
+            c.updatecomp,
+            c.updatedatecomp
+		FROM ` + config.DB_tbl_company + ` c
+		LEFT JOIN ` + config.DB_tbl_groupcompany + ` g ON c.idgroupcomp = g.idgroupcomp 
+		ORDER BY GREATEST(c.createdatecomp, c.updatedatecomp) DESC
+	`
 
 	rows, err := c.db.Query(ctx, query)
 	if err != nil {
@@ -54,15 +76,26 @@ func (c companyRepository) FindByID(ctx context.Context, id string) (domain.Comp
 
 func (c companyRepository) Save(ctx context.Context, company *domain.Company) error {
 	query := `INSERT INTO ` + config.DB_tbl_company + ` 
-                (idcompany, idcurrdef, compname, compstatus, createcomp, createdatecomp) 
-              VALUES ($1, $2, $3, $4, $5, $6)`
+                (
+					idcompany, idcurrdef, idgroupcomp,
+					compname, telegramid, urlapitoto, urlapislot,
+					compstatus, compactivetoto, compactiveslot, 
+					createcomp, createdatecomp
+				) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,$10, $11, $12)`
 
 	_, err := c.db.Exec(ctx, query,
 		company.ID,
 		company.IDcurrdef,
+		company.IDgroupcomp,
 		company.Name,
+		company.TelegramID,
+		company.URLapitoto,
+		company.URLapislot,
 		company.Status,
-		company.Created, // Pastikan field ini ada di struct domain.Company
+		company.Activetoto,
+		company.Activeslot,
+		company.Created,
 		company.CreatedAt,
 	)
 	return err
@@ -71,16 +104,28 @@ func (c companyRepository) Save(ctx context.Context, company *domain.Company) er
 func (c companyRepository) Update(ctx context.Context, company *domain.Company) error {
 	query := `UPDATE ` + config.DB_tbl_company + ` SET 
                 idcurrdef = $1, 
-                compname = $2, 
-                compstatus = $3, 
-                updatecomp = $4, 
-                updatedatecomp = $5 
-              WHERE idcompany = $6`
+                idgroupcomp = $2, 
+                compname = $3, 
+                telegramid = $4, 
+                urlapitoto = $5, 
+                urlapislot = $6, 
+                compstatus = $7, 
+                compactivetoto = $8, 
+                compactiveslot = $9, 
+                updatecomp = $10, 
+                updatedatecomp = $11   
+              WHERE idcompany = $12`
 
 	res, err := c.db.Exec(ctx, query,
 		company.IDcurrdef,
+		company.IDgroupcomp,
 		company.Name,
+		company.TelegramID,
+		company.URLapitoto,
+		company.URLapislot,
 		company.Status,
+		company.Activetoto,
+		company.Activeslot,
 		company.Update,
 		company.UpdateAt,
 		company.ID,
