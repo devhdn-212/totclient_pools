@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/devhdn-212/totmaster_api/domain"
@@ -33,7 +34,7 @@ func NewCompanyconftotoService(db *pgxpool.Pool, repo domain.CompanyconftotoRepo
 	}
 }
 func (c companyconftotoService) All(ctx context.Context, idcomp string) ([]dto.CompanyconftotoData, error) {
-	cached, found, err := connection.GetRedis(RedisCompanyconftotoKey)
+	cached, found, err := connection.GetRedis(RedisCompanyconftotoKey + strings.ToLower(idcomp))
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +142,7 @@ func (c companyconftotoService) All(ctx context.Context, idcomp string) ([]dto.C
 		})
 	}
 
-	go connection.SetRedis(RedisCompanyconftotoKey, data, 60*time.Minute)
+	go connection.SetRedis(RedisCompanyconftotoKey+strings.ToLower(idcomp), data, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Company Conf TOTO")
 	return data, nil
 }
@@ -254,6 +255,6 @@ func (c companyconftotoService) Save(ctx context.Context, req dto.Companyconftot
 		return err
 	}
 
-	go connection.DeleteRedis(RedisCompanyconftotoKey)
+	go connection.DeleteRedis(RedisCompanyconftotoKey + strings.ToLower(req.IDcompany))
 	return nil
 }
