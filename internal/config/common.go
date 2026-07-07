@@ -10,9 +10,11 @@ const (
 	DB_tbl_domain              string = "tbl_mst_domain"
 	DB_tbl_groupcompany        string = "tbl_groupcompany"
 	DB_tbl_company             string = "tbl_company"
-	DB_tbl_companywallet       string = "tbl_company_wallet"
 	DB_tbl_companyadmin        string = "tbl_company_admin"
 	DB_tbl_companyconftoto     string = "tbl_company_conf_toto"
+	DB_mst_company_pasaran     string = "tbl_mst_company_pasaran"
+	DB_mst_company_jadwaltogel string = "tbl_mst_company_jadwaltogel"
+	DB_tbl_companywallet       string = "tbl_company_wallet"
 	DB_mst_pasaran_togel       string = "tbl_mst_pasaran_togel"
 	DB_mst_pasaran_jadwaltogel string = "tbl_mst_pasaran_jadwaltogel"
 )

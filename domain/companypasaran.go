@@ -9,13 +9,15 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type Pasarantoto struct {
+type Companypasaran struct {
+	IDcomppasaran                    string          `db:"idcomppasaran"`
+	IDcompany                        string          `db:"idcompany"`
 	IDpasarantogel                   string          `db:"idpasarantogel"`
-	Nmpasarantogel                   string          `db:"nmpasarantogel"`
-	Tipepasaran                      string          `db:"tipepasaran"`
+	Aliascomppasaran                 string          `db:"aliascomppasaran"`
 	URLpasaran                       string          `db:"urlpasaran"`
 	Pasarandiundi                    string          `db:"pasarandiundi"`
 	Pasaranlibur                     string          `db:"pasaranlibur"`
+	Display                          int             `db:"displaypasaran"`
 	AngkaMinbasket                   decimal.Decimal `db:"angka_minbasket"`
 	AngkaMinbet                      decimal.Decimal `db:"angka_minbet"`
 	AngkaMaxbet4d                    decimal.Decimal `db:"angka_maxbet4d"`
@@ -267,37 +269,34 @@ type Pasarantoto struct {
 	ShioDisc                         decimal.Decimal `db:"shio_disc"`
 	ShioLimitbuang                   decimal.Decimal `db:"shio_limitbuang"`
 	ShioLimittotal                   decimal.Decimal `db:"shio_limittotal"`
+	Status                           string          `db:"statuscompasaran"`
 	CreateBy                         string          `db:"create_by"`
 	CreateAt                         sql.NullTime    `db:"create_at"`
 	UpdateBy                         string          `db:"update_by"`
 	UpdateAt                         sql.NullTime    `db:"update_at"`
 }
-type Jadwalpasarantoto struct {
-	IDjadwalpasarantogel string       `db:"idjadwalpasarantogel"`
-	IDpasarantogel       string       `db:"idpasarantogel"`
-	Haripasaran          string       `db:"haripasaran"`
-	Jamtutup             pgtype.Time  `db:"jamtutup"`
-	Jamjadwal            pgtype.Time  `db:"jamjadwal"`
-	Jamopen              pgtype.Time  `db:"jamopen"`
-	CreateBy             string       `db:"create_by"`
-	CreateAt             sql.NullTime `db:"create_at"`
-	UpdateBy             string       `db:"update_by"`
-	UpdateAt             sql.NullTime `db:"update_at"`
+type Companyjadwalpasaran struct {
+	IDjadwalcomppasaran string       `db:"idjadwalcomppasaran"`
+	IDcomppasaran       string       `db:"idcomppasaran"`
+	Haripasaran         string       `db:"haripasaran"`
+	Jamtutup            pgtype.Time  `db:"jamtutup"`
+	Jamjadwal           pgtype.Time  `db:"jamjadwal"`
+	Jamopen             pgtype.Time  `db:"jamopen"`
+	CreateBy            string       `db:"create_by"`
+	CreateAt            sql.NullTime `db:"create_at"`
 }
 
-type PasarantotoRepository interface {
-	FindAll(ctx context.Context) ([]Pasarantoto, error)
-	FindJadwal(ctx context.Context, id string) ([]Jadwalpasarantoto, error)
-	FindByID(ctx context.Context, id string) (Pasarantoto, error)
-	FindSelect(ctx context.Context) ([]Pasarantoto, error)
-	Save(ctx context.Context, pasarantoto *Pasarantoto) error
-	Update(ctx context.Context, pasarantoto *Pasarantoto) error
-	Savejadwal(ctx context.Context, jadwalpasarantoto *Jadwalpasarantoto) error
-	Updatejadwal(ctx context.Context, jadwalpasarantoto *Jadwalpasarantoto) error
-	DeleteJadwalByPasaran(ctx context.Context, id string) error
+type CompanypasaranRepository interface {
+	FindAll(ctx context.Context, idcomp string) ([]Companypasaran, error)
+	FindJadwal(ctx context.Context, id string) ([]Companyjadwalpasaran, error)
+	FindByID(ctx context.Context, id string) (Companypasaran, error)
+	Save(ctx context.Context, pasarantoto *Companypasaran) error
+	Update(ctx context.Context, pasarantoto *Companypasaran) error
+	SavejadwalCopyPasaran(ctx context.Context, jadwalpasaran *Companyjadwalpasaran, idpasarantogel string) error
+	Savejadwal(ctx context.Context, jadwalpasaran *Companyjadwalpasaran) error
+	DeleteJadwal(ctx context.Context, id string) error
 }
-type PasarantotoService interface {
-	All(ctx context.Context) ([]dto.PasarantotoData, error)
-	Select(ctx context.Context) ([]dto.PasaranSelect, error)
-	Save(ctx context.Context, req dto.PasarantotoSave, client string) error
+type CompanypasaranService interface {
+	All(ctx context.Context, id string) ([]dto.CompanypasaranData, error)
+	Save(ctx context.Context, req dto.CompanypasaranSave, client string) error
 }

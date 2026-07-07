@@ -73,7 +73,22 @@ func (u *pasarantotoRepository) FindByID(ctx context.Context, id string) (domain
 	}
 	return record, nil
 }
+func (u pasarantotoRepository) FindSelect(ctx context.Context) ([]domain.Pasarantoto, error) {
+	query := `SELECT idpasarantogel, nmpasarantogel FROM ` + config.DB_mst_pasaran_togel + ` ORDER BY nmpasarantogel ASC`
 
+	rows, err := u.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[domain.Pasarantoto])
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
 func (u *pasarantotoRepository) Save(ctx context.Context, pasarantoto *domain.Pasarantoto) error {
 	query := `INSERT INTO ` + config.DB_mst_pasaran_togel + ` (
 		idpasarantogel,

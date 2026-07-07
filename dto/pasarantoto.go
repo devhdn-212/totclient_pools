@@ -266,6 +266,10 @@ type PasarantotoData struct {
 	Created                          string              `json:"pasarantoto_created"`
 	Update                           string              `json:"pasarantoto_updated"`
 }
+type PasaranSelect struct {
+	ID   string `json:"pasarantoto_id"`
+	Name string `json:"pasarantoto_name"`
+}
 type Jadwalpasarantoto struct {
 	IDjadwalpasarantogel string `json:"jadwalpasaran_id"`
 	IDpasarantogel       string `json:"jadwalpasaran_idpasarantogel"`

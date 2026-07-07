@@ -21,36 +21,35 @@ import (
 )
 
 const (
-	RedisPasarantoto    = "master:pasarantoto:all"
-	RedisPasarantotoKey = "master:pasarantoto:select"
+	RedisCompanypasaran = "master:companypasaran:all"
 )
 
-type pasarantotoService struct {
+type companypasaranService struct {
 	db   *pgxpool.Pool
-	repo domain.PasarantotoRepository
+	repo domain.CompanypasaranRepository
 }
 
-func NewPasarantotoService(db *pgxpool.Pool, repo domain.PasarantotoRepository) domain.PasarantotoService {
-	return &pasarantotoService{
+func NewCompaypasaranService(db *pgxpool.Pool, repo domain.CompanypasaranRepository) domain.CompanypasaranService {
+	return &companypasaranService{
 		db:   db,
 		repo: repo,
 	}
 }
 
-func (u *pasarantotoService) All(ctx context.Context) ([]dto.PasarantotoData, error) {
-	cached, found, err := connection.GetRedis(RedisPasarantoto)
+func (u *companypasaranService) All(ctx context.Context, idcomp string) ([]dto.CompanypasaranData, error) {
+	cached, found, err := connection.GetRedis(RedisCompanypasaran + strings.ToLower(idcomp))
 	if err != nil {
 		return nil, err
 	}
-	var record []dto.PasarantotoData
+	var record []dto.CompanypasaranData
 	if found {
 		if err := json.Unmarshal([]byte(cached), &record); err == nil {
-			connection.Log.Info("Returning data from Redis - Pasaran Toto")
+			connection.Log.Info("Returning data from Redis - Company Pasaran")
 			return record, nil
 		}
 	}
 
-	pasaran, err := u.repo.FindAll(ctx)
+	pasaran, err := u.repo.FindAll(ctx, idcomp)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -74,29 +73,31 @@ func (u *pasarantotoService) All(ctx context.Context) ([]dto.PasarantotoData, er
 			}
 		}
 
-		jadwal, err := u.repo.FindJadwal(ctx, v.IDpasarantogel)
+		jadwal, err := u.repo.FindJadwal(ctx, v.IDcomppasaran)
 		if err != nil {
 			log.Error(err)
 			return nil, err
 		}
-		var record_jadwal []dto.Jadwalpasarantoto
+		var record_jadwal []dto.Companyjadwalpasaran
 		for _, d := range jadwal {
-			record_jadwal = append(record_jadwal, dto.Jadwalpasarantoto{
-				IDjadwalpasarantogel: d.IDjadwalpasarantogel,
-				Haripasaran:          d.Haripasaran,
-				Jamtutup:             util.PgTimeToString(d.Jamtutup),
-				Jamjadwal:            util.PgTimeToString(d.Jamjadwal),
-				Jamopen:              util.PgTimeToString(d.Jamopen),
+			record_jadwal = append(record_jadwal, dto.Companyjadwalpasaran{
+				IDjadwalpasaran: d.IDjadwalcomppasaran,
+				Haripasaran:     d.Haripasaran,
+				Jamtutup:        util.PgTimeToString(d.Jamtutup),
+				Jamjadwal:       util.PgTimeToString(d.Jamjadwal),
+				Jamopen:         util.PgTimeToString(d.Jamopen),
 			})
 		}
 
-		record = append(record, dto.PasarantotoData{
-			IDpasarantogel:                   v.IDpasarantogel,
-			Nmpasarantogel:                   v.Nmpasarantogel,
-			Tipepasaran:                      v.Tipepasaran,
+		record = append(record, dto.CompanypasaranData{
+			IDcomppasaran:                    v.IDcomppasaran,
+			IDcompany:                        v.IDcompany,
+			Aliascomppasaran:                 v.Aliascomppasaran,
 			URLpasaran:                       v.URLpasaran,
 			Pasarandiundi:                    v.Pasarandiundi,
 			Pasaranlibur:                     v.Pasaranlibur,
+			Display:                          v.Display,
+			Status:                           v.Status,
 			AngkaMinbasket:                   v.AngkaMinbasket,
 			AngkaMinbet:                      v.AngkaMinbet,
 			AngkaMaxbet4d:                    v.AngkaMaxbet4d,
@@ -353,42 +354,12 @@ func (u *pasarantotoService) All(ctx context.Context) ([]dto.PasarantotoData, er
 			Update:                           updateAt,
 		})
 	}
-	go connection.SetRedis(RedisPasarantoto, record, 24*time.Hour)
-	connection.Log.Info("Returning data Database - Pasaran Toto")
+	go connection.SetRedis(RedisCompanypasaran+strings.ToLower(idcomp), record, 24*time.Hour)
+	connection.Log.Info("Returning data Database - Company Pasaran")
 	return record, nil
 }
-func (b pasarantotoService) Select(ctx context.Context) ([]dto.PasaranSelect, error) {
-	cached, found, err := connection.GetRedis(RedisPasarantotoKey)
-	if err != nil {
-		return nil, err
-	}
-	var data []dto.PasaranSelect
-	if found {
 
-		if err := json.Unmarshal([]byte(cached), &data); err == nil {
-			connection.Log.Info("Returning data from Redis - Pasarantoto Select")
-			return data, nil
-		}
-	}
-
-	curr, err := b.repo.FindSelect(ctx)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-
-	for _, v := range curr {
-		data = append(data, dto.PasaranSelect{
-			ID:   v.IDpasarantogel,
-			Name: v.Nmpasarantogel,
-		})
-	}
-
-	go connection.SetRedis(RedisPasarantotoKey, data, 60*time.Minute)
-	connection.Log.Info("Returning data Database - Pasarantoto Select")
-	return data, nil
-}
-func (u *pasarantotoService) Save(ctx context.Context, req dto.PasarantotoSave, client string) error {
+func (u *companypasaranService) Save(ctx context.Context, req dto.CompanypasaranSave, client string) error {
 	// Start Transaction native pgx v5
 	tx, err := u.db.Begin(ctx)
 	if err != nil {
@@ -400,7 +371,7 @@ func (u *pasarantotoService) Save(ctx context.Context, req dto.PasarantotoSave, 
 
 	// Executor transaksi native pgx
 	txExec := repository.NewPGXTxExecutor(tx)
-	txRepo := repository.NewPasarantotoRepository(txExec)
+	txRepo := repository.NewCompanypasaranRepository(txExec)
 
 	flag, err := txRepo.FindByID(ctx, req.IDpasarantogel)
 	if err != nil {
@@ -413,270 +384,15 @@ func (u *pasarantotoService) Save(ctx context.Context, req dto.PasarantotoSave, 
 		if flag.IDpasarantogel != "" {
 			return util.ErrDuplicate
 		}
-
-		pasarantoto := domain.Pasarantoto{
+		raw := strings.ReplaceAll(uuid.NewString(), "-", "")
+		date := time.Now().Format("0601")
+		idcomppasaran := fmt.Sprintf("%s-%s-comppasaran-%s", strings.ToLower(req.IDcompany), date, raw)
+		pasarantoto := domain.Companypasaran{
+			IDcomppasaran:  idcomppasaran,
+			IDcompany:      req.IDcompany,
 			IDpasarantogel: req.IDpasarantogel,
-			Nmpasarantogel: req.Nmpasarantogel,
-			Tipepasaran:    req.Tipepasaran,
-			URLpasaran:     req.URLpasaran,
-			Pasarandiundi:  req.Pasarandiundi,
-			Pasaranlibur:   req.Pasaranlibur,
-			// Jamtutup:                         util.StringToPgTime(req.Jamtutup),
-			// Jamjadwal:                        util.StringToPgTime(req.Jamjadwal),
-			// Jamopen:                          util.StringToPgTime(req.Jamopen),
-			AngkaMinbasket:                   req.AngkaMinbasket,
-			AngkaMinbet:                      req.AngkaMinbet,
-			AngkaMaxbet4d:                    req.AngkaMaxbet4d,
-			AngkaMaxbet3d:                    req.AngkaMaxbet3d,
-			AngkaMaxbet3dd:                   req.AngkaMaxbet3dd,
-			AngkaMaxbet2d:                    req.AngkaMaxbet2d,
-			AngkaMaxbet2dd:                   req.AngkaMaxbet2dd,
-			AngkaMaxbet2dt:                   req.AngkaMaxbet2dt,
-			AngkaWin4d:                       req.AngkaWin4d,
-			AngkaWin3d:                       req.AngkaWin3d,
-			AngkaWin3dd:                      req.AngkaWin3dd,
-			AngkaWin2d:                       req.AngkaWin2d,
-			AngkaWin2dd:                      req.AngkaWin2dd,
-			AngkaWin2dt:                      req.AngkaWin2dt,
-			AngkaDisc4d:                      req.AngkaDisc4d,
-			AngkaDisc3d:                      req.AngkaDisc3d,
-			AngkaDisc3dd:                     req.AngkaDisc3dd,
-			AngkaDisc2d:                      req.AngkaDisc2d,
-			AngkaDisc2dd:                     req.AngkaDisc2dd,
-			AngkaDisc2dt:                     req.AngkaDisc2dt,
-			AngkaLimitbuang4d:                req.AngkaLimitbuang4d,
-			AngkaLimitbuang3d:                req.AngkaLimitbuang3d,
-			AngkaLimitbuang3dd:               req.AngkaLimitbuang3dd,
-			AngkaLimitbuang2d:                req.AngkaLimitbuang2d,
-			AngkaLimitbuang2dd:               req.AngkaLimitbuang2dd,
-			AngkaLimitbuang2dt:               req.AngkaLimitbuang2dt,
-			AngkaLimittotal4d:                req.AngkaLimittotal4d,
-			AngkaLimittotal3d:                req.AngkaLimittotal3d,
-			AngkaLimittotal3dd:               req.AngkaLimittotal3dd,
-			AngkaLimittotal2d:                req.AngkaLimittotal2d,
-			AngkaLimittotal2dd:               req.AngkaLimittotal2dd,
-			AngkaLimittotal2dt:               req.AngkaLimittotal2dt,
-			AngkaMaxbet4dFull:                req.AngkaMaxbet4dFull,
-			AngkaMaxbet3dFull:                req.AngkaMaxbet3dFull,
-			AngkaMaxbet3ddFull:               req.AngkaMaxbet3ddFull,
-			AngkaMaxbet2dFull:                req.AngkaMaxbet2dFull,
-			AngkaMaxbet2ddFull:               req.AngkaMaxbet2ddFull,
-			AngkaMaxbet2dtFull:               req.AngkaMaxbet2dtFull,
-			AngkaMaxbet4dBb:                  req.AngkaMaxbet4dBb,
-			AngkaMaxbet3dBb:                  req.AngkaMaxbet3dBb,
-			AngkaMaxbet3ddBb:                 req.AngkaMaxbet3ddBb,
-			AngkaMaxbet2dBb:                  req.AngkaMaxbet2dBb,
-			AngkaMaxbet2ddBb:                 req.AngkaMaxbet2ddBb,
-			AngkaMaxbet2dtBb:                 req.AngkaMaxbet2dtBb,
-			AngkaMaxbet4dBbdisc:              req.AngkaMaxbet4dBbdisc,
-			AngkaMaxbet3dBbdisc:              req.AngkaMaxbet3dBbdisc,
-			AngkaMaxbet3ddBbdisc:             req.AngkaMaxbet3ddBbdisc,
-			AngkaMaxbet2dBbdisc:              req.AngkaMaxbet2dBbdisc,
-			AngkaMaxbet2ddBbdisc:             req.AngkaMaxbet2ddBbdisc,
-			AngkaMaxbet2dtBbdisc:             req.AngkaMaxbet2dtBbdisc,
-			AngkaWin4dnodisc:                 req.AngkaWin4dnodisc,
-			AngkaWin3dnodisc:                 req.AngkaWin3dnodisc,
-			AngkaWin3ddnodisc:                req.AngkaWin3ddnodisc,
-			AngkaWin2dnodisc:                 req.AngkaWin2dnodisc,
-			AngkaWin2ddnodisc:                req.AngkaWin2ddnodisc,
-			AngkaWin2dtnodisc:                req.AngkaWin2dtnodisc,
-			AngkaWin4dbbKena:                 req.AngkaWin4dbbKena,
-			AngkaWin3dbbKena:                 req.AngkaWin3dbbKena,
-			AngkaWin3ddbbKena:                req.AngkaWin3ddbbKena,
-			AngkaWin2dbbKena:                 req.AngkaWin2dbbKena,
-			AngkaWin2ddbbKena:                req.AngkaWin2ddbbKena,
-			AngkaWin2dtbbKena:                req.AngkaWin2dtbbKena,
-			AngkaWin4dbb:                     req.AngkaWin4dbb,
-			AngkaWin3dbb:                     req.AngkaWin3dbb,
-			AngkaWin3ddbb:                    req.AngkaWin3ddbb,
-			AngkaWin2dbb:                     req.AngkaWin2dbb,
-			AngkaWin2ddbb:                    req.AngkaWin2ddbb,
-			AngkaWin2dtbb:                    req.AngkaWin2dtbb,
-			AngkaMaxbuy4d:                    req.AngkaMaxbuy4d,
-			AngkaMaxbuy3d:                    req.AngkaMaxbuy3d,
-			AngkaMaxbuy3dd:                   req.AngkaMaxbuy3dd,
-			AngkaMaxbuy2d:                    req.AngkaMaxbuy2d,
-			AngkaMaxbuy2dd:                   req.AngkaMaxbuy2dd,
-			AngkaMaxbuy2dt:                   req.AngkaMaxbuy2dt,
-			AngkaMaxbet4dFullbb:              req.AngkaMaxbet4dFullbb,
-			AngkaMaxbet3dFullbb:              req.AngkaMaxbet3dFullbb,
-			AngkaMaxbet3ddFullbb:             req.AngkaMaxbet3ddFullbb,
-			AngkaMaxbet2dFullbb:              req.AngkaMaxbet2dFullbb,
-			AngkaMaxbet2ddFullbb:             req.AngkaMaxbet2ddFullbb,
-			AngkaMaxbet2dtFullbb:             req.AngkaMaxbet2dtFullbb,
-			AngkaLimitbuang4dFullbb:          req.AngkaLimitbuang4dFullbb,
-			AngkaLimitbuang3dFullbb:          req.AngkaLimitbuang3dFullbb,
-			AngkaLimitbuang3ddFullbb:         req.AngkaLimitbuang3ddFullbb,
-			AngkaLimitbuang2dFullbb:          req.AngkaLimitbuang2dFullbb,
-			AngkaLimitbuang2ddFullbb:         req.AngkaLimitbuang2ddFullbb,
-			AngkaLimitbuang2dtFullbb:         req.AngkaLimitbuang2dtFullbb,
-			AngkaLimittotal4dFullbb:          req.AngkaLimittotal4dFullbb,
-			AngkaLimittotal3dFullbb:          req.AngkaLimittotal3dFullbb,
-			AngkaLimittotal3ddFullbb:         req.AngkaLimittotal3ddFullbb,
-			AngkaLimittotal2dFullbb:          req.AngkaLimittotal2dFullbb,
-			AngkaLimittotal2ddFullbb:         req.AngkaLimittotal2ddFullbb,
-			AngkaLimittotal2dtFullbb:         req.AngkaLimittotal2dtFullbb,
-			AngkaLimitline4d:                 req.AngkaLimitline4d,
-			AngkaLimitline3d:                 req.AngkaLimitline3d,
-			AngkaLimitline2d:                 req.AngkaLimitline2d,
-			AngkaLimitline2dd:                req.AngkaLimitline2dd,
-			AngkaLimitline2dt:                req.AngkaLimitline2dt,
-			AngkaLimitline3dd:                req.AngkaLimitline3dd,
-			AngkaBbfs:                        req.AngkaBbfs,
-			CbMinbet:                         req.CbMinbet,
-			CbMaxbet:                         req.CbMaxbet,
-			CbMaxbuy:                         req.CbMaxbuy,
-			CbWin:                            req.CbWin,
-			CbDisc:                           req.CbDisc,
-			CbLimitbuang:                     req.CbLimitbuang,
-			CbLimitotal:                      req.CbLimitotal,
-			CmacauMinbet:                     req.CmacauMinbet,
-			CmacauMaxbet:                     req.CmacauMaxbet,
-			CmacauMaxbuy:                     req.CmacauMaxbuy,
-			CmacauWin2digit:                  req.CmacauWin2digit,
-			CmacauWin3digit:                  req.CmacauWin3digit,
-			CmacauWin4digit:                  req.CmacauWin4digit,
-			CmacauDisc:                       req.CmacauDisc,
-			CmacauLimitbuang:                 req.CmacauLimitbuang,
-			CmacauLimittotal:                 req.CmacauLimittotal,
-			CnagaMinbet:                      req.CnagaMinbet,
-			CnagaMaxbet:                      req.CnagaMaxbet,
-			CnagaMaxbuy:                      req.CnagaMaxbuy,
-			CnagaWin3digit:                   req.CnagaWin3digit,
-			CnagaWin4digit:                   req.CnagaWin4digit,
-			CnagaDisc:                        req.CnagaDisc,
-			CnagaLimitbuang:                  req.CnagaLimitbuang,
-			CnagaLimittotal:                  req.CnagaLimittotal,
-			CjituMinbet:                      req.CjituMinbet,
-			CjituMaxbet:                      req.CjituMaxbet,
-			CjituMaxbuy:                      req.CjituMaxbuy,
-			CjituWinas:                       req.CjituWinas,
-			CjituWinkop:                      req.CjituWinkop,
-			CjituWinkepala:                   req.CjituWinkepala,
-			CjituWinekor:                     req.CjituWinekor,
-			CjituDesic:                       req.CjituDesic,
-			CjituLimitbuang:                  req.CjituLimitbuang,
-			CjituLimitotal:                   req.CjituLimitotal,
-			Umum5050Minbet:                   req.Umum5050Minbet,
-			Umum5050Maxbet:                   req.Umum5050Maxbet,
-			Umum5050Maxbuy:                   req.Umum5050Maxbuy,
-			Umum5050Keibesar:                 req.Umum5050Keibesar,
-			Umum5050Keikecil:                 req.Umum5050Keikecil,
-			Umum5050Keigenap:                 req.Umum5050Keigenap,
-			Umum5050Keiganjil:                req.Umum5050Keiganjil,
-			Umum5050Keitengah:                req.Umum5050Keitengah,
-			Umum5050Keitepi:                  req.Umum5050Keitepi,
-			Umum5050Discbesar:                req.Umum5050Discbesar,
-			Umum5050Disckecil:                req.Umum5050Disckecil,
-			Umum5050Discgenap:                req.Umum5050Discgenap,
-			Umum5050Discganjil:               req.Umum5050Discganjil,
-			Umum5050Disctengah:               req.Umum5050Disctengah,
-			Umum5050Disctepi:                 req.Umum5050Disctepi,
-			Umum5050Limitbuang:               req.Umum5050Limitbuang,
-			Umum5050Limittotal:               req.Umum5050Limittotal,
-			Special5050Minbet:                req.Special5050Minbet,
-			Special5050Maxbet:                req.Special5050Maxbet,
-			Special5050Maxbuy:                req.Special5050Maxbuy,
-			Special5050Keiasganjil:           req.Special5050Keiasganjil,
-			Special5050Keiasgenap:            req.Special5050Keiasgenap,
-			Special5050Keiasbesar:            req.Special5050Keiasbesar,
-			Special5050Keiaskecil:            req.Special5050Keiaskecil,
-			Special5050Keikopganjil:          req.Special5050Keikopganjil,
-			Special5050Keikopgenap:           req.Special5050Keikopgenap,
-			Special5050Keikopbesar:           req.Special5050Keikopbesar,
-			Special5050Keikopkecil:           req.Special5050Keikopkecil,
-			Special5050Keikepalaganjil:       req.Special5050Keikepalaganjil,
-			Special5050Keikepalagenap:        req.Special5050Keikepalagenap,
-			Special5050Keikepalabesar:        req.Special5050Keikepalabesar,
-			Special5050Keikepalakecil:        req.Special5050Keikepalakecil,
-			Special5050Keiekorganjil:         req.Special5050Keiekorganjil,
-			Special5050Keiekorgenap:          req.Special5050Keiekorgenap,
-			Special5050Keiekorbesar:          req.Special5050Keiekorbesar,
-			Special5050Keiekorkecil:          req.Special5050Keiekorkecil,
-			Special5050Discasganjil:          req.Special5050Discasganjil,
-			Special5050Discasgenap:           req.Special5050Discasgenap,
-			Special5050Discasbesar:           req.Special5050Discasbesar,
-			Special5050Discaskecil:           req.Special5050Discaskecil,
-			Special5050Disckopganjil:         req.Special5050Disckopganjil,
-			Special5050Disckopgenap:          req.Special5050Disckopgenap,
-			Special5050Disckopbesar:          req.Special5050Disckopbesar,
-			Special5050Disckopkecil:          req.Special5050Disckopkecil,
-			Special5050Disckepalaganjil:      req.Special5050Disckepalaganjil,
-			Special5050Disckepalagenap:       req.Special5050Disckepalagenap,
-			Special5050Disckepalabesar:       req.Special5050Disckepalabesar,
-			Special5050Disckepalakecil:       req.Special5050Disckepalakecil,
-			Special5050Discekorganjil:        req.Special5050Discekorganjil,
-			Special5050Discekorgenap:         req.Special5050Discekorgenap,
-			Special5050Discekorbesar:         req.Special5050Discekorbesar,
-			Special5050Discekorkecil:         req.Special5050Discekorkecil,
-			Special5050Limitbuang:            req.Special5050Limitbuang,
-			Special5050Limittotal:            req.Special5050Limittotal,
-			Kombinasi5050Minbet:              req.Kombinasi5050Minbet,
-			Kombinasi5050Maxbet:              req.Kombinasi5050Maxbet,
-			Kombinasi5050Maxbuy:              req.Kombinasi5050Maxbuy,
-			Kombinasi5050Belakangkeimono:     req.Kombinasi5050Belakangkeimono,
-			Kombinasi5050Belakangkeistereo:   req.Kombinasi5050Belakangkeistereo,
-			Kombinasi5050Belakangkeikembang:  req.Kombinasi5050Belakangkeikembang,
-			Kombinasi5050Belakangkeikempis:   req.Kombinasi5050Belakangkeikempis,
-			Kombinasi5050Belakangkeikembar:   req.Kombinasi5050Belakangkeikembar,
-			Kombinasi5050Tengahkeimono:       req.Kombinasi5050Tengahkeimono,
-			Kombinasi5050Tengahkeistereo:     req.Kombinasi5050Tengahkeistereo,
-			Kombinasi5050Tengahkeikembang:    req.Kombinasi5050Tengahkeikembang,
-			Kombinasi5050Tengahkeikempis:     req.Kombinasi5050Tengahkeikempis,
-			Kombinasi5050Tengahkeikembar:     req.Kombinasi5050Tengahkeikembar,
-			Kombinasi5050Depankeimono:        req.Kombinasi5050Depankeimono,
-			Kombinasi5050Depankeistereo:      req.Kombinasi5050Depankeistereo,
-			Kombinasi5050Depankeikembang:     req.Kombinasi5050Depankeikembang,
-			Kombinasi5050Depankeikempis:      req.Kombinasi5050Depankeikempis,
-			Kombinasi5050Depankeikembar:      req.Kombinasi5050Depankeikembar,
-			Kombinasi5050Belakangdiscmono:    req.Kombinasi5050Belakangdiscmono,
-			Kombinasi5050Belakangdiscstereo:  req.Kombinasi5050Belakangdiscstereo,
-			Kombinasi5050Belakangdisckembang: req.Kombinasi5050Belakangdisckembang,
-			Kombinasi5050Belakangdisckempis:  req.Kombinasi5050Belakangdisckempis,
-			Kombinasi5050Belakangdisckembar:  req.Kombinasi5050Belakangdisckembar,
-			Kombinasi5050Tengahdiscmono:      req.Kombinasi5050Tengahdiscmono,
-			Kombinasi5050Tengahdiscstereo:    req.Kombinasi5050Tengahdiscstereo,
-			Kombinasi5050Tengahdisckembang:   req.Kombinasi5050Tengahdisckembang,
-			Kombinasi5050Tengahdisckempis:    req.Kombinasi5050Tengahdisckempis,
-			Kombinasi5050Tengahdisckembar:    req.Kombinasi5050Tengahdisckembar,
-			Kombinasi5050Depandiscmono:       req.Kombinasi5050Depandiscmono,
-			Kombinasi5050Depandiscstereo:     req.Kombinasi5050Depandiscstereo,
-			Kombinasi5050Depandisckembang:    req.Kombinasi5050Depandisckembang,
-			Kombinasi5050Depandisckempis:     req.Kombinasi5050Depandisckempis,
-			Kombinasi5050Depandisckembar:     req.Kombinasi5050Depandisckembar,
-			Kombinasi5050Limitbuang:          req.Kombinasi5050Limitbuang,
-			Kombinasi5050Limittotal:          req.Kombinasi5050Limittotal,
-			MacaukombinasiMinbet:             req.MacaukombinasiMinbet,
-			MacaukombinasiMaxbet:             req.MacaukombinasiMaxbet,
-			MacaukombinasiMaxbuy:             req.MacaukombinasiMaxbuy,
-			MacaukombinasiWin:                req.MacaukombinasiWin,
-			MacaukombinasiDiscount:           req.MacaukombinasiDiscount,
-			MacaukombinasiLimitbuang:         req.MacaukombinasiLimitbuang,
-			MacaukombinasiLimittotal:         req.MacaukombinasiLimittotal,
-			DasarMinbet:                      req.DasarMinbet,
-			DasarMaxbet:                      req.DasarMaxbet,
-			DasarMaxbuy:                      req.DasarMaxbuy,
-			DasarKeibesar:                    req.DasarKeibesar,
-			DasarKeikecil:                    req.DasarKeikecil,
-			DasarKeigenap:                    req.DasarKeigenap,
-			DasarKeiganjil:                   req.DasarKeiganjil,
-			DasarDiscbesar:                   req.DasarDiscbesar,
-			DasarDisckecil:                   req.DasarDisckecil,
-			DasarDiscigenap:                  req.DasarDiscigenap,
-			DasarDiscganjil:                  req.DasarDiscganjil,
-			DasarLimitbuang:                  req.DasarLimitbuang,
-			DasarLimittotal:                  req.DasarLimittotal,
-			ShioReferal:                      req.ShioReferal,
-			ShioShiotahunini:                 req.ShioShiotahunini,
-			ShioMinbet:                       req.ShioMinbet,
-			ShioMaxbet:                       req.ShioMaxbet,
-			ShioMaxbuy:                       req.ShioMaxbuy,
-			ShioWin:                          req.ShioWin,
-			ShioDisc:                         req.ShioDisc,
-			ShioLimitbuang:                   req.ShioLimitbuang,
-			ShioLimittotal:                   req.ShioLimittotal,
-			CreateBy:                         client,
-			CreateAt:                         sql.NullTime{Valid: true, Time: now},
+			CreateBy:       client,
+			CreateAt:       sql.NullTime{Valid: true, Time: now},
 		}
 		err = txRepo.Save(ctx, &pasarantoto)
 		if err != nil {
@@ -688,44 +404,27 @@ func (u *pasarantotoService) Save(ctx context.Context, req dto.PasarantotoSave, 
 		}
 
 		//jadwal
-		for _, j := range req.Jadwalpasaran {
-			jt := util.StringToPgTime(j.Jamtutup)
-			jj := util.StringToPgTime(j.Jamjadwal)
-			jo := util.StringToPgTime(j.Jamopen)
-			if !jt.Valid || !jj.Valid || !jo.Valid {
-				return fmt.Errorf("format jam tidak valid untuk hari %s", j.Haripasaran)
-			}
+		jadwalpasarantoto := domain.Companyjadwalpasaran{
+			IDcomppasaran: idcomppasaran,
+			CreateBy:      client,
+			CreateAt:      sql.NullTime{Valid: true, Time: now},
+		}
 
-			raw := strings.ReplaceAll(uuid.NewString(), "-", "")
-			date := time.Now().Format("0601")
-
-			jadwalpasarantoto := domain.Jadwalpasarantoto{
-				IDjadwalpasarantogel: fmt.Sprintf("%s%s", date, raw),
-				IDpasarantogel:       req.IDpasarantogel,
-				Haripasaran:          j.Haripasaran,
-				Jamtutup:             util.StringToPgTime(j.Jamtutup),
-				Jamjadwal:            util.StringToPgTime(j.Jamjadwal),
-				Jamopen:              util.StringToPgTime(j.Jamopen),
-				CreateBy:             client,
-				CreateAt:             sql.NullTime{Valid: true, Time: now},
+		if err = txRepo.SavejadwalCopyPasaran(ctx, &jadwalpasarantoto, req.IDpasarantogel); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return util.ErrDuplicate
 			}
-
-			if err = txRepo.Savejadwal(ctx, &jadwalpasarantoto); err != nil {
-				var pgErr *pgconn.PgError
-				if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-					return util.ErrDuplicate
-				}
-				return err
-			}
+			return err
 		}
 	} else {
 		if flag.IDpasarantogel == "" {
 			return fmt.Errorf("Pasarantoto %w", util.ErrNotFound)
 		}
 
-		flag.IDpasarantogel = req.IDpasarantogel
-		flag.Nmpasarantogel = req.Nmpasarantogel
-		flag.Tipepasaran = req.Tipepasaran
+		flag.IDcomppasaran = req.IDcomppasaran
+		flag.Aliascomppasaran = req.Aliascomppasaran
+		flag.Display = req.Display
 		flag.URLpasaran = req.URLpasaran
 		flag.Pasarandiundi = req.Pasarandiundi
 		flag.Pasaranlibur = req.Pasaranlibur
@@ -989,7 +688,7 @@ func (u *pasarantotoService) Save(ctx context.Context, req dto.PasarantotoSave, 
 		}
 
 		// jadwal: hapus semua, nanti di-insert ulang di loop bawah
-		if err = txRepo.DeleteJadwalByPasaran(ctx, req.IDpasarantogel); err != nil {
+		if err = txRepo.DeleteJadwal(ctx, req.IDcomppasaran); err != nil {
 			return err
 		}
 		//jadwal
@@ -1004,15 +703,15 @@ func (u *pasarantotoService) Save(ctx context.Context, req dto.PasarantotoSave, 
 			raw := strings.ReplaceAll(uuid.NewString(), "-", "")
 			date := time.Now().Format("0601")
 
-			jadwalpasarantoto := domain.Jadwalpasarantoto{
-				IDjadwalpasarantogel: fmt.Sprintf("%s%s", date, raw),
-				IDpasarantogel:       req.IDpasarantogel,
-				Haripasaran:          j.Haripasaran,
-				Jamtutup:             util.StringToPgTime(j.Jamtutup),
-				Jamjadwal:            util.StringToPgTime(j.Jamjadwal),
-				Jamopen:              util.StringToPgTime(j.Jamopen),
-				CreateBy:             client,
-				CreateAt:             sql.NullTime{Valid: true, Time: now},
+			jadwalpasarantoto := domain.Companyjadwalpasaran{
+				IDjadwalcomppasaran: fmt.Sprintf("%s%s", date, raw),
+				IDcomppasaran:       req.IDcomppasaran,
+				Haripasaran:         j.Haripasaran,
+				Jamtutup:            util.StringToPgTime(j.Jamtutup),
+				Jamjadwal:           util.StringToPgTime(j.Jamjadwal),
+				Jamopen:             util.StringToPgTime(j.Jamopen),
+				CreateBy:            client,
+				CreateAt:            sql.NullTime{Valid: true, Time: now},
 			}
 
 			if err = txRepo.Savejadwal(ctx, &jadwalpasarantoto); err != nil {
@@ -1030,6 +729,6 @@ func (u *pasarantotoService) Save(ctx context.Context, req dto.PasarantotoSave, 
 		return err
 	}
 
-	go connection.DeleteRedis(RedisPasarantoto)
+	go connection.DeleteRedis(RedisCompanypasaran + strings.ToLower(req.IDcompany))
 	return nil
 }

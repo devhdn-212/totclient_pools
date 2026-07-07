@@ -20,6 +20,7 @@ type companyApi struct {
 	groupcompanyService domain.GroupcompanyService
 	currService         domain.CurrencyService
 	clientruleService   domain.ClientruleService
+	pasarantotoService  domain.PasarantotoService
 }
 
 func NewCompanyApi(app *fiber.App,
@@ -27,12 +28,14 @@ func NewCompanyApi(app *fiber.App,
 	groupcompanyService domain.GroupcompanyService,
 	currService domain.CurrencyService,
 	clientruleService domain.ClientruleService,
+	pasarantotoService domain.PasarantotoService,
 	authmidle fiber.Handler) {
 	ad := companyApi{
 		companyService:      companyService,
 		groupcompanyService: groupcompanyService,
 		currService:         currService,
 		clientruleService:   clientruleService,
+		pasarantotoService:  pasarantotoService,
 	}
 	company := app.Group("/api/company", authmidle)
 	company.Post("", ad.Index)
@@ -46,6 +49,12 @@ func (co *companyApi) Index(ctx *fiber.Ctx) error {
 	if errselectgroup != nil {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error - Group Company"))
+	}
+
+	resselectpasaran, errselectpasaran := co.pasarantotoService.Select(c)
+	if errselectpasaran != nil {
+		return ctx.Status(http.StatusInternalServerError).
+			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error - Pasarantoto"))
 	}
 
 	resselectrule, errselectrule := co.clientruleService.Select(c)
@@ -65,12 +74,13 @@ func (co *companyApi) Index(ctx *fiber.Ctx) error {
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
 	return ctx.JSON(fiber.Map{
-		"status":    fiber.StatusOK,
-		"message":   "success",
-		"listcurr":  resselect,
-		"listrule":  resselectrule,
-		"listgroup": resselectgroup,
-		"record":    res,
+		"status":          fiber.StatusOK,
+		"message":         "success",
+		"listpasarantoto": resselectpasaran,
+		"listcurr":        resselect,
+		"listrule":        resselectrule,
+		"listgroup":       resselectgroup,
+		"record":          res,
 	})
 }
 func (co *companyApi) Save(ctx *fiber.Ctx) error {
