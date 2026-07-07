@@ -131,6 +131,7 @@ func main() {
 	companyadminRepository := repository.NewCompanyadminRepository(pgxExec)
 	companyconftotoRepository := repository.NewCompanyconftotoRepository(pgxExec)
 	customerRepository := repository.NewCustomerRepository(pgxExec)
+	pasarantotoRepository := repository.NewPasarantotoRepository(pgxExec)
 
 	adminService := service.NewAdminService(dbPool, adminRepository)
 	adminruleService := service.NewAdminruleService(dbPool, adminruleRepository)
@@ -145,6 +146,7 @@ func main() {
 	companyadminService := service.NewCompanyadminService(dbPool, companyadminRepository)
 	companyconftotoService := service.NewCompanyconftotoService(dbPool, companyconftotoRepository)
 	customerService := service.NewCustomerService(dbPool, customerRepository)
+	pasarantotoService := service.NewPasarantotoService(dbPool, pasarantotoRepository)
 	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
@@ -159,6 +161,7 @@ func main() {
 	api.NewCompanywalletApi(app, companywalletService, jwtMidd)
 	api.NewCompanyadminApi(app, companyadminService, jwtMidd)
 	api.NewCompanyconftotoApi(app, companyconftotoService, jwtMidd)
+	api.NewPasarantotoApi(app, pasarantotoService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 
