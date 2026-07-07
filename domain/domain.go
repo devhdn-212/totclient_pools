@@ -12,10 +12,10 @@ type Domain struct {
 	Name      string       `db:"nmdomain"`
 	Type      string       `db:"tipedomain"`
 	Status    string       `db:"statusdomain"`
-	Created   string       `db:"createdomain"`
-	CreatedAt sql.NullTime `db:"createdatedomain"`
-	Update    string       `db:"updatedomain"`
-	UpdateAt  sql.NullTime `db:"updatedatedomain"`
+	Created   string       `db:"create_by"`
+	CreatedAt sql.NullTime `db:"create_at"`
+	Update    string       `db:"update_by"`
+	UpdateAt  sql.NullTime `db:"update_at"`
 }
 type DomainRepository interface {
 	FindAll(ctx context.Context) ([]Domain, error)

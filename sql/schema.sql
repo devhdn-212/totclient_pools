@@ -121,6 +121,18 @@ CREATE TABLE public.tbl_company_admin (
 	CONSTRAINT tbl_company_admin_unique UNIQUE (idcompadmin)
 );
 
+
+CREATE TABLE public.tbl_mst_domain (
+	iddomain varchar(40) NOT NULL,
+	nmdomain varchar(70) DEFAULT ''::character varying NOT NULL,
+	tipedomain varchar(50) DEFAULT ''::character varying NOT NULL,
+	statusdomain varchar(15) DEFAULT 'N'::character varying NOT NULL,
+	create_by varchar(30) DEFAULT ''::character varying NULL,
+	create_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	update_by varchar(30) DEFAULT ''::character varying NULL,
+	update_at timestamptz DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT tbl_mst_domain_pk PRIMARY KEY (iddomain)
+);
 CREATE TABLE tbl_company_conf_toto (
 	idcompconftoto varchar(80) NOT NULL,
 	idcompany varchar(10) NOT NULL,

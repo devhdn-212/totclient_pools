@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/devhdn-212/totmaster_api/domain"
@@ -39,9 +40,8 @@ func (d domainService) All(ctx context.Context) ([]dto.DomainData, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	var data []dto.DomainData
 	if found {
-		var data []dto.DomainData
 		if err := json.Unmarshal([]byte(cached), &data); err == nil {
 			connection.Log.Info("Returning data from Redis - Domain")
 			return data, nil
@@ -54,7 +54,6 @@ func (d domainService) All(ctx context.Context) ([]dto.DomainData, error) {
 		return nil, err
 	}
 
-	var domainData []dto.DomainData
 	for _, v := range dm {
 		var createdAt, updatedAt string
 		if v.CreatedAt.Valid {
@@ -68,7 +67,7 @@ func (d domainService) All(ctx context.Context) ([]dto.DomainData, error) {
 			}
 		}
 
-		domainData = append(domainData, dto.DomainData{
+		data = append(data, dto.DomainData{
 			ID:      v.ID,
 			Type:    v.Type,
 			Name:    v.Name,
@@ -77,9 +76,9 @@ func (d domainService) All(ctx context.Context) ([]dto.DomainData, error) {
 			Update:  updatedAt,
 		})
 	}
-	go connection.SetRedis(RedisDomainAllKey, domainData, 60*time.Minute)
+	go connection.SetRedis(RedisDomainAllKey, data, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Domain")
-	return domainData, nil
+	return data, nil
 }
 
 func (d domainService) Save(ctx context.Context, req dto.DomainSave, client string) error {
@@ -123,7 +122,7 @@ func (d domainService) Save(ctx context.Context, req dto.DomainSave, client stri
 		}
 	} else {
 		if flag.ID == "" {
-			return errors.New("Domain not found")
+			return fmt.Errorf("Domain conf toto %w", util.ErrNotFound)
 		}
 
 		flag.Type = req.Typedomain

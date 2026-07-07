@@ -20,7 +20,8 @@ func NewDomainRepository(db DBExecutor) domain.DomainRepository {
 	}
 }
 func (d domainRepository) FindAll(ctx context.Context) ([]domain.Domain, error) {
-	query := `SELECT * FROM ` + config.DB_tbl_domain + ` ORDER BY createdatedomain ASC`
+	query := `SELECT * FROM ` + config.DB_tbl_domain + ` 
+		ORDER BY GREATEST(create_at, update_at) DESC`
 
 	rows, err := d.db.Query(ctx, query)
 	if err != nil {
@@ -53,7 +54,7 @@ func (d domainRepository) FindByID(ctx context.Context, id string) (domain.Domai
 
 func (d domainRepository) Save(ctx context.Context, dm *domain.Domain) error {
 	query := `INSERT INTO ` + config.DB_tbl_domain + ` 
-                (iddomain, tipedomain, nmdomain, statusdomain, createdomain, createdatedomain) 
+                (iddomain, tipedomain, nmdomain, statusdomain, create_by, create_at) 
               VALUES ($1, $2, $3, $4, $5, $6)`
 
 	_, err := d.db.Exec(ctx, query,
@@ -72,8 +73,8 @@ func (d domainRepository) Update(ctx context.Context, dm *domain.Domain) error {
                 tipedomain = $1, 
                 nmdomain = $2, 
                 statusdomain = $3, 
-                updatedomain = $4, 
-                updatedatedomain = $5 
+                update_by = $4, 
+                update_at = $5 
               WHERE iddomain = $6`
 
 	res, err := d.db.Exec(ctx, query,

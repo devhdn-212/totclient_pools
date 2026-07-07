@@ -47,7 +47,7 @@ func (ad *domainApi) Save(ctx *fiber.Ctx) error {
 	var req dto.DomainSave
 	if err := ctx.BodyParser(&req); err != nil {
 		connection.Log.Error("Failed to parse request body",
-			zap.String("endpoint", "Create Bank"),
+			zap.String("endpoint", "Create Domain"),
 			zap.String("body", string(ctx.Body())),
 			zap.String("error", err.Error()),
 		)
