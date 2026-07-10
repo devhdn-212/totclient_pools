@@ -289,7 +289,7 @@ type Companyjadwalpasaran struct {
 type CompanypasaranRepository interface {
 	FindAll(ctx context.Context, idcomp string) ([]Companypasaran, error)
 	FindJadwal(ctx context.Context, id string) ([]Companyjadwalpasaran, error)
-	FindByID(ctx context.Context, id string) (Companypasaran, error)
+	FindByID(ctx context.Context, id, idcomp string) (Companypasaran, error)
 	Save(ctx context.Context, pasarantoto *Companypasaran) error
 	Update(ctx context.Context, pasarantoto *Companypasaran) error
 	SavejadwalCopyPasaran(ctx context.Context, jadwalpasaran *Companyjadwalpasaran, idpasarantogel string) error

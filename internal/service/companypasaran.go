@@ -37,7 +37,7 @@ func NewCompaypasaranService(db *pgxpool.Pool, repo domain.CompanypasaranReposit
 }
 
 func (u *companypasaranService) All(ctx context.Context, idcomp string) ([]dto.CompanypasaranData, error) {
-	cached, found, err := connection.GetRedis(RedisCompanypasaran + strings.ToLower(idcomp))
+	cached, found, err := connection.GetRedis(RedisCompanypasaran + ":" + strings.ToLower(idcomp))
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +92,7 @@ func (u *companypasaranService) All(ctx context.Context, idcomp string) ([]dto.C
 		record = append(record, dto.CompanypasaranData{
 			IDcomppasaran:                    v.IDcomppasaran,
 			IDcompany:                        v.IDcompany,
+			IDpasarantogel:                   v.IDpasarantogel,
 			Aliascomppasaran:                 v.Aliascomppasaran,
 			URLpasaran:                       v.URLpasaran,
 			Pasarandiundi:                    v.Pasarandiundi,
@@ -354,7 +355,7 @@ func (u *companypasaranService) All(ctx context.Context, idcomp string) ([]dto.C
 			Update:                           updateAt,
 		})
 	}
-	go connection.SetRedis(RedisCompanypasaran+strings.ToLower(idcomp), record, 24*time.Hour)
+	go connection.SetRedis(RedisCompanypasaran+":"+strings.ToLower(idcomp), record, 24*time.Hour)
 	connection.Log.Info("Returning data Database - Company Pasaran")
 	return record, nil
 }
@@ -373,7 +374,7 @@ func (u *companypasaranService) Save(ctx context.Context, req dto.Companypasaran
 	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewCompanypasaranRepository(txExec)
 
-	flag, err := txRepo.FindByID(ctx, req.IDpasarantogel)
+	flag, err := txRepo.FindByID(ctx, req.IDcomppasaran, req.IDcompany)
 	if err != nil {
 		return err
 	}
@@ -381,9 +382,6 @@ func (u *companypasaranService) Save(ctx context.Context, req dto.Companypasaran
 	now := util.GetNowJakarta()
 
 	if req.Type == "New" {
-		if flag.IDpasarantogel != "" {
-			return util.ErrDuplicate
-		}
 		raw := strings.ReplaceAll(uuid.NewString(), "-", "")
 		date := time.Now().Format("0601")
 		idcomppasaran := fmt.Sprintf("%s-%s-comppasaran-%s", strings.ToLower(req.IDcompany), date, raw)
@@ -418,8 +416,8 @@ func (u *companypasaranService) Save(ctx context.Context, req dto.Companypasaran
 			return err
 		}
 	} else {
-		if flag.IDpasarantogel == "" {
-			return fmt.Errorf("Pasarantoto %w", util.ErrNotFound)
+		if flag.IDcomppasaran == "" {
+			return fmt.Errorf("Company Pasaran %w", util.ErrNotFound)
 		}
 
 		flag.IDcomppasaran = req.IDcomppasaran
@@ -679,11 +677,12 @@ func (u *companypasaranService) Save(ctx context.Context, req dto.Companypasaran
 		flag.ShioDisc = req.ShioDisc
 		flag.ShioLimitbuang = req.ShioLimitbuang
 		flag.ShioLimittotal = req.ShioLimittotal
+		flag.Status = req.Status
 		flag.UpdateBy = client
 		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
 		if err = txRepo.Update(ctx, &flag); err != nil {
-			fmt.Println("Error update Pasantoto: ", err)
+			fmt.Println("Error update Company Pasaran: ", err)
 			return err
 		}
 
@@ -692,6 +691,7 @@ func (u *companypasaranService) Save(ctx context.Context, req dto.Companypasaran
 			return err
 		}
 		//jadwal
+
 		for _, j := range req.Jadwalpasaran {
 			jt := util.StringToPgTime(j.Jamtutup)
 			jj := util.StringToPgTime(j.Jamjadwal)
@@ -729,6 +729,6 @@ func (u *companypasaranService) Save(ctx context.Context, req dto.Companypasaran
 		return err
 	}
 
-	go connection.DeleteRedis(RedisCompanypasaran + strings.ToLower(req.IDcompany))
+	go connection.DeleteRedis(RedisCompanypasaran + ":" + strings.ToLower(req.IDcompany))
 	return nil
 }

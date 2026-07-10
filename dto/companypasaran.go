@@ -7,6 +7,7 @@ import (
 type CompanypasaranData struct {
 	IDcomppasaran                    string                 `json:"companypasaran_idcomppasaran"`
 	IDcompany                        string                 `json:"companypasaran_idcompany"`
+	IDpasarantogel                   string                 `json:"companypasaran_idpasarantogel"`
 	Aliascomppasaran                 string                 `json:"companypasaran_aliascomppasaran"`
 	URLpasaran                       string                 `json:"companypasaran_urlpasaran"`
 	Pasarandiundi                    string                 `json:"companypasaran_pasarandiundi"`
@@ -288,6 +289,7 @@ type CompanypasaranSave struct {
 	URLpasaran                       string              `json:"companypasaran_urlpasaran"`
 	Pasarandiundi                    string              `json:"companypasaran_pasarandiundi"`
 	Pasaranlibur                     string              `json:"companypasaran_pasaranlibur"`
+	Status                           string              `json:"companypasaran_status"`
 	Display                          int                 `json:"companypasaran_displaypasaran"`
 	AngkaMinbasket                   decimal.Decimal     `json:"companypasaran_angka_minbasket"`
 	AngkaMinbet                      decimal.Decimal     `json:"companypasaran_angka_minbet"`

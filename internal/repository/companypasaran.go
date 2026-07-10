@@ -24,7 +24,7 @@ func NewCompanypasaranRepository(db DBExecutor) domain.CompanypasaranRepository 
 func (u *companypasaranRepository) FindAll(ctx context.Context, idcomp string) ([]domain.Companypasaran, error) {
 	query := `SELECT * FROM ` + config.DB_mst_company_pasaran + ` 
 			  WHERE idcompany=$1 
-			  ORDER BY GREATEST(create_at, update_at) DESC`
+			  ORDER BY displaypasaran ASC`
 
 	rows, err := u.db.Query(ctx, query, idcomp)
 	if err != nil {
@@ -60,11 +60,13 @@ func (u *companypasaranRepository) FindJadwal(ctx context.Context, idcomppasaran
 	return res, nil
 }
 
-func (u *companypasaranRepository) FindByID(ctx context.Context, id string) (domain.Companypasaran, error) {
+func (u *companypasaranRepository) FindByID(ctx context.Context, id, idcomp string) (domain.Companypasaran, error) {
 	var record domain.Companypasaran
-	query := `SELECT idcomppasaran FROM ` + config.DB_mst_company_pasaran + ` WHERE idcomppasaran = $1 LIMIT 1`
+	query := `SELECT idcomppasaran FROM ` + config.DB_mst_company_pasaran + ` 
+			WHERE idcomppasaran = $1 AND idcompany = $2 
+			LIMIT 1`
 
-	err := u.db.QueryRow(ctx, query, id).Scan(&record.IDcomppasaran)
+	err := u.db.QueryRow(ctx, query, id, idcomp).Scan(&record.IDcomppasaran)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -505,7 +507,7 @@ func (u *companypasaranRepository) Update(ctx context.Context, comppasaran *doma
 	}
 
 	query := fmt.Sprintf(`UPDATE %s SET %s WHERE idcomppasaran = $%d`,
-		config.DB_mst_pasaran_togel,
+		config.DB_mst_company_pasaran,
 		strings.Join(setClauses, ", "),
 		len(cols)+1,
 	)
@@ -565,7 +567,7 @@ func (u *companypasaranRepository) Savejadwal(ctx context.Context, compjadwal *d
 	return err
 }
 func (u *companypasaranRepository) DeleteJadwal(ctx context.Context, idcomppasaran string) error {
-	query := `DELETE FROM ` + config.DB_mst_pasaran_jadwaltogel + ` WHERE idcomppasaran = $1`
+	query := `DELETE FROM ` + config.DB_mst_company_jadwaltogel + ` WHERE idcomppasaran = $1`
 	_, err := u.db.Exec(ctx, query, idcomppasaran)
 	return err
 }
