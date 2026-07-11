@@ -12,8 +12,9 @@ type ClientruleSelect struct {
 	Name string `json:"clientrule_name"`
 }
 type ClientruleSave struct {
-	Type string `json:"type" validate:"required"`
-	ID   string `json:"clientrule_id" validate:"required"`
-	Name string `json:"clientrule_name" validate:"required,max=30"`
-	Rule string `json:"clientrule_rule"`
+	Type      string `json:"type" validate:"required"`
+	ID        string `json:"clientrule_id" validate:"required"`
+	IDcompany string `json:"clientrule_idcomp" validate:"required"`
+	Name      string `json:"clientrule_name" validate:"required,max=30"`
+	Rule      string `json:"clientrule_rule"`
 }

@@ -41,9 +41,8 @@ func (c clientruleService) All(ctx context.Context) ([]dto.ClientruleData, error
 	if err != nil {
 		return nil, err
 	}
-
+	var data []dto.ClientruleData
 	if found {
-		var data []dto.ClientruleData
 		if err := json.Unmarshal([]byte(cached), &data); err == nil {
 			connection.Log.Info("Returning data from Redis - Clientrule")
 			return data, nil
@@ -57,7 +56,6 @@ func (c clientruleService) All(ctx context.Context) ([]dto.ClientruleData, error
 		return nil, err
 	}
 
-	var clientruleData []dto.ClientruleData
 	for _, v := range clr {
 		var createdAt, updatedAt string
 
@@ -72,7 +70,7 @@ func (c clientruleService) All(ctx context.Context) ([]dto.ClientruleData, error
 			}
 		}
 
-		clientruleData = append(clientruleData, dto.ClientruleData{
+		data = append(data, dto.ClientruleData{
 			ID:      v.ID,
 			Name:    v.Name,
 			Rule:    v.Rule,
@@ -81,9 +79,9 @@ func (c clientruleService) All(ctx context.Context) ([]dto.ClientruleData, error
 		})
 	}
 
-	go connection.SetRedis(RedisClientruleAllKey, clientruleData, 60*time.Minute)
+	go connection.SetRedis(RedisClientruleAllKey, data, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Clientrule")
-	return clientruleData, nil
+	return data, nil
 }
 
 func (c clientruleService) Select(ctx context.Context) ([]dto.ClientruleSelect, error) {
@@ -91,9 +89,9 @@ func (c clientruleService) Select(ctx context.Context) ([]dto.ClientruleSelect, 
 	if err != nil {
 		return nil, err
 	}
-
+	var data []dto.ClientruleSelect
 	if found {
-		var data []dto.ClientruleSelect
+
 		if err := json.Unmarshal([]byte(cached), &data); err == nil {
 			connection.Log.Info("Returning data from Redis - Clientrule Select")
 			return data, nil
@@ -106,17 +104,16 @@ func (c clientruleService) Select(ctx context.Context) ([]dto.ClientruleSelect, 
 		log.Error(err)
 		return nil, err
 	}
-	var clientruleSelect []dto.ClientruleSelect
 	for _, v := range admins {
-		clientruleSelect = append(clientruleSelect, dto.ClientruleSelect{
+		data = append(data, dto.ClientruleSelect{
 			ID:   v.ID,
 			Name: v.Name,
 		})
 	}
 
-	go connection.SetRedis(RedisClientruleSelectKey, clientruleSelect, 60*time.Minute)
+	go connection.SetRedis(RedisClientruleSelectKey, data, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Clientrule Select")
-	return clientruleSelect, nil
+	return data, nil
 }
 
 func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, client string) error {
@@ -162,6 +159,7 @@ func (c clientruleService) Save(ctx context.Context, req dto.ClientruleSave, cli
 		if flag.ID == "" {
 			return errors.New("ID not found")
 		}
+		flag.ID = req.ID
 		flag.Name = req.Name
 		flag.Rule = req.Rule
 		flag.Update = client

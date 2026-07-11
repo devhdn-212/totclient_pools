@@ -20,7 +20,8 @@ func NewClientruleRepository(db DBExecutor) domain.ClientruleRepository {
 	}
 }
 func (c clientruleRepository) FindAll(ctx context.Context) ([]domain.Clientrule, error) {
-	query := `SELECT * FROM ` + config.DB_tbl_clientrule + ` ORDER BY updatedateclientrule DESC`
+	query := `SELECT * FROM ` + config.DB_tbl_clientrule + ` 
+				ORDER BY updatedateclientrule DESC`
 
 	rows, err := c.db.Query(ctx, query)
 	if err != nil {
@@ -38,7 +39,8 @@ func (c clientruleRepository) FindAll(ctx context.Context) ([]domain.Clientrule,
 }
 
 func (c clientruleRepository) FindSelect(ctx context.Context) ([]domain.Clientrule, error) {
-	query := `SELECT idclientrule, nmclientrule FROM ` + config.DB_tbl_clientrule + ` ORDER BY idclientrule ASC`
+	query := `SELECT idclientrule, nmclientrule FROM ` + config.DB_tbl_clientrule + `
+				 ORDER BY idclientrule ASC`
 
 	rows, err := c.db.Query(ctx, query)
 	if err != nil {
@@ -61,7 +63,9 @@ func (c clientruleRepository) FindSelect(ctx context.Context) ([]domain.Clientru
 
 func (c clientruleRepository) FindByID(ctx context.Context, id string) (domain.Clientrule, error) {
 	var cr domain.Clientrule
-	query := `SELECT idclientrule FROM ` + config.DB_tbl_clientrule + ` WHERE idclientrule = $1 LIMIT 1`
+	query := `SELECT idclientrule FROM ` + config.DB_tbl_clientrule + ` 
+			WHERE idclientrule = $1  
+			LIMIT 1`
 
 	err := c.db.QueryRow(ctx, query, id).Scan(&cr.ID)
 
@@ -95,7 +99,7 @@ func (c clientruleRepository) Update(ctx context.Context, clientrule *domain.Cli
                 ruleclient = $2, 
                 updateclientrule = $3, 
                 updatedateclientrule = $4 
-              WHERE idclientrule = $5`
+              WHERE idclientrule = $5 `
 
 	res, err := c.db.Exec(ctx, query,
 		clientrule.Name,
