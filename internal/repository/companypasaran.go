@@ -80,7 +80,7 @@ func (u *companypasaranRepository) FindByID(ctx context.Context, id, idcomp stri
 func (u *companypasaranRepository) Save(ctx context.Context, comppasaran *domain.Companypasaran) error {
 	query := `INSERT INTO ` + config.DB_mst_company_pasaran + ` (
 		idcomppasaran, idcompany, aliascomppasaran, idpasarantogel,
-		urlpasaran, pasarandiundi, pasaranlibur, angka_minbasket, angka_minbet, angka_maxbet4d,
+		urlpasaran,urllogo, pasarandiundi, pasaranlibur, angka_minbasket, angka_minbet, angka_maxbet4d,
 		angka_maxbet3d, angka_maxbet3dd, angka_maxbet2d, angka_maxbet2dd, angka_maxbet2dt,
 		angka_win4d, angka_win3d, angka_win3dd, angka_win2d, angka_win2dd, angka_win2dt, angka_disc4d,
 		angka_disc3d, angka_disc3dd, angka_disc2d, angka_disc2dd, angka_disc2dt, angka_limitbuang4d,
@@ -145,7 +145,7 @@ func (u *companypasaranRepository) Save(ctx context.Context, comppasaran *domain
 		dasar_limittotal, shio_referal, shio_shiotahunini, shio_minbet, shio_maxbet, shio_maxbuy,
 		shio_win, shio_disc, shio_limitbuang, shio_limittotal, create_by, create_at
 	) SELECT
-		$1, $2, $3,  p.idpasarantogel, p.urlpasaran, p.pasarandiundi, p.pasaranlibur,
+		$1, $2, $3,  p.idpasarantogel, p.urlpasaran, $4, p.pasarandiundi, p.pasaranlibur,
 		p.angka_minbasket, p.angka_minbet, p.angka_maxbet4d, p.angka_maxbet3d, p.angka_maxbet3dd,
 		p.angka_maxbet2d, p.angka_maxbet2dd, p.angka_maxbet2dt, p.angka_win4d, p.angka_win3d,
 		p.angka_win3dd, p.angka_win2d, p.angka_win2dd, p.angka_win2dt, p.angka_disc4d, p.angka_disc3d,
@@ -216,14 +216,15 @@ func (u *companypasaranRepository) Save(ctx context.Context, comppasaran *domain
 		p.dasar_discbesar, p.dasar_disckecil, p.dasar_discigenap, p.dasar_discganjil,
 		p.dasar_limitbuang, p.dasar_limittotal, p.shio_referal, p.shio_shiotahunini, p.shio_minbet,
 		p.shio_maxbet, p.shio_maxbuy, p.shio_win, p.shio_disc, p.shio_limitbuang, p.shio_limittotal,
-		$4, $5
+		$5, $6
 	FROM ` + config.DB_mst_pasaran_togel + ` p
-	WHERE p.idpasarantogel = $6`
+	WHERE p.idpasarantogel = $7`
 
 	_, err := u.db.Exec(ctx, query,
 		comppasaran.IDcomppasaran,
 		comppasaran.IDcompany,
 		comppasaran.IDpasarantogel,
+		comppasaran.URLlogo,
 		comppasaran.CreateBy,
 		comppasaran.CreateAt,
 		comppasaran.IDpasarantogel,
@@ -240,6 +241,7 @@ func (u *companypasaranRepository) Update(ctx context.Context, comppasaran *doma
 	cols := []col{
 		{"aliascomppasaran", comppasaran.Aliascomppasaran},
 		{"urlpasaran", comppasaran.URLpasaran},
+		{"urllogo", comppasaran.URLlogo},
 		{"pasarandiundi", comppasaran.Pasarandiundi},
 		{"pasaranlibur", comppasaran.Pasaranlibur},
 		{"displaypasaran", comppasaran.Display},

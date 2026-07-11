@@ -95,6 +95,7 @@ func (u *companypasaranService) All(ctx context.Context, idcomp string) ([]dto.C
 			IDpasarantogel:                   v.IDpasarantogel,
 			Aliascomppasaran:                 v.Aliascomppasaran,
 			URLpasaran:                       v.URLpasaran,
+			URLlogo:                          v.URLlogo,
 			Pasarandiundi:                    v.Pasarandiundi,
 			Pasaranlibur:                     v.Pasaranlibur,
 			Display:                          v.Display,
@@ -389,6 +390,7 @@ func (u *companypasaranService) Save(ctx context.Context, req dto.Companypasaran
 			IDcomppasaran:  idcomppasaran,
 			IDcompany:      req.IDcompany,
 			IDpasarantogel: req.IDpasarantogel,
+			URLlogo:        req.URLlogo,
 			CreateBy:       client,
 			CreateAt:       sql.NullTime{Valid: true, Time: now},
 		}
@@ -424,6 +426,7 @@ func (u *companypasaranService) Save(ctx context.Context, req dto.Companypasaran
 		flag.Aliascomppasaran = req.Aliascomppasaran
 		flag.Display = req.Display
 		flag.URLpasaran = req.URLpasaran
+		flag.URLlogo = req.URLlogo
 		flag.Pasarandiundi = req.Pasarandiundi
 		flag.Pasaranlibur = req.Pasaranlibur
 		flag.AngkaMinbasket = req.AngkaMinbasket

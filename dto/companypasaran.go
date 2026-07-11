@@ -10,6 +10,7 @@ type CompanypasaranData struct {
 	IDpasarantogel                   string                 `json:"companypasaran_idpasarantogel"`
 	Aliascomppasaran                 string                 `json:"companypasaran_aliascomppasaran"`
 	URLpasaran                       string                 `json:"companypasaran_urlpasaran"`
+	URLlogo                          string                 `json:"companypasaran_urllogo"`
 	Pasarandiundi                    string                 `json:"companypasaran_pasarandiundi"`
 	Pasaranlibur                     string                 `json:"companypasaran_pasaranlibur"`
 	Display                          int                    `json:"companypasaran_displaypasaran"`
@@ -287,6 +288,7 @@ type CompanypasaranSave struct {
 	IDpasarantogel                   string              `json:"companypasaran_idpasarantogel" validate:"required"`
 	Aliascomppasaran                 string              `json:"companypasaran_aliascomppasaran"`
 	URLpasaran                       string              `json:"companypasaran_urlpasaran"`
+	URLlogo                          string              `json:"companypasaran_urllogo"`
 	Pasarandiundi                    string              `json:"companypasaran_pasarandiundi"`
 	Pasaranlibur                     string              `json:"companypasaran_pasaranlibur"`
 	Status                           string              `json:"companypasaran_status"`

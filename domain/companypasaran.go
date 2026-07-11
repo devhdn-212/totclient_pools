@@ -15,6 +15,7 @@ type Companypasaran struct {
 	IDpasarantogel                   string          `db:"idpasarantogel"`
 	Aliascomppasaran                 string          `db:"aliascomppasaran"`
 	URLpasaran                       string          `db:"urlpasaran"`
+	URLlogo                          string          `db:"urllogo"`
 	Pasarandiundi                    string          `db:"pasarandiundi"`
 	Pasaranlibur                     string          `db:"pasaranlibur"`
 	Display                          int             `db:"displaypasaran"`
