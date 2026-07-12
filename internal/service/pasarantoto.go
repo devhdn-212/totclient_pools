@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devhdn-212/totmaster_api/domain"
-	"github.com/devhdn-212/totmaster_api/dto"
-	"github.com/devhdn-212/totmaster_api/internal/connection"
-	"github.com/devhdn-212/totmaster_api/internal/repository"
-	"github.com/devhdn-212/totmaster_api/internal/util"
+	"github.com/devhdn-212/totagen_api/domain"
+	"github.com/devhdn-212/totagen_api/dto"
+	"github.com/devhdn-212/totagen_api/internal/connection"
+	"github.com/devhdn-212/totagen_api/internal/repository"
+	"github.com/devhdn-212/totagen_api/internal/util"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -415,15 +415,12 @@ func (u *pasarantotoService) Save(ctx context.Context, req dto.PasarantotoSave, 
 		}
 
 		pasarantoto := domain.Pasarantoto{
-			IDpasarantogel: req.IDpasarantogel,
-			Nmpasarantogel: req.Nmpasarantogel,
-			Tipepasaran:    req.Tipepasaran,
-			URLpasaran:     req.URLpasaran,
-			Pasarandiundi:  req.Pasarandiundi,
-			Pasaranlibur:   req.Pasaranlibur,
-			// Jamtutup:                         util.StringToPgTime(req.Jamtutup),
-			// Jamjadwal:                        util.StringToPgTime(req.Jamjadwal),
-			// Jamopen:                          util.StringToPgTime(req.Jamopen),
+			IDpasarantogel:                   req.IDpasarantogel,
+			Nmpasarantogel:                   req.Nmpasarantogel,
+			Tipepasaran:                      req.Tipepasaran,
+			URLpasaran:                       req.URLpasaran,
+			Pasarandiundi:                    req.Pasarandiundi,
+			Pasaranlibur:                     req.Pasaranlibur,
 			AngkaMinbasket:                   req.AngkaMinbasket,
 			AngkaMinbet:                      req.AngkaMinbet,
 			AngkaMaxbet4d:                    req.AngkaMaxbet4d,

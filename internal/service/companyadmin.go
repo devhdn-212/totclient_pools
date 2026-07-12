@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devhdn-212/totmaster_api/domain"
-	"github.com/devhdn-212/totmaster_api/dto"
-	"github.com/devhdn-212/totmaster_api/internal/connection"
-	"github.com/devhdn-212/totmaster_api/internal/repository"
-	"github.com/devhdn-212/totmaster_api/internal/util"
+	"github.com/devhdn-212/totagen_api/domain"
+	"github.com/devhdn-212/totagen_api/dto"
+	"github.com/devhdn-212/totagen_api/internal/connection"
+	"github.com/devhdn-212/totagen_api/internal/repository"
+	"github.com/devhdn-212/totagen_api/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
@@ -120,12 +120,12 @@ func (c companyadminService) Save(ctx context.Context, req dto.CompanyadminSave,
 		raw := strings.ReplaceAll(uuid.NewString(), "-", "")
 		date := time.Now().Format("0601")
 		idcompadmin := fmt.Sprintf("%s-%s-admin-%s", strings.ToLower(req.IDcompany), date, raw)
-
+		username := strings.ToLower(req.IDcompany) + req.Username
 		comp := domain.Companyadmin{
 			ID:           idcompadmin,
 			IDCompany:    req.IDcompany,
 			IDClientrule: req.IDrule,
-			Username:     req.Username,
+			Username:     username,
 			Pass:         haspass,
 			Name:         req.Name,
 			Status:       req.Status,

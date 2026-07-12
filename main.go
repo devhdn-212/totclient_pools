@@ -8,12 +8,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/devhdn-212/totmaster_api/dto"
-	"github.com/devhdn-212/totmaster_api/internal/api"
-	"github.com/devhdn-212/totmaster_api/internal/config"
-	"github.com/devhdn-212/totmaster_api/internal/connection"
-	"github.com/devhdn-212/totmaster_api/internal/repository"
-	"github.com/devhdn-212/totmaster_api/internal/service"
+	"github.com/devhdn-212/totagen_api/dto"
+	"github.com/devhdn-212/totagen_api/internal/api"
+	"github.com/devhdn-212/totagen_api/internal/config"
+	"github.com/devhdn-212/totagen_api/internal/connection"
+	"github.com/devhdn-212/totagen_api/internal/repository"
+	"github.com/devhdn-212/totagen_api/internal/service"
 
 	jwtMid "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"

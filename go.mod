@@ -1,4 +1,4 @@
-module github.com/devhdn-212/totmaster_api
+module github.com/devhdn-212/totagen_api
 
 go 1.25.0
 

@@ -1,1 +1,1 @@
-# github.com/devhdn-212/totmaster_api2026
+# github.com/devhdn-212/totagen_api2026

@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/devhdn-212/totmaster_api/domain"
-	"github.com/devhdn-212/totmaster_api/dto"
-	"github.com/devhdn-212/totmaster_api/internal/connection"
-	"github.com/devhdn-212/totmaster_api/internal/repository"
-	"github.com/devhdn-212/totmaster_api/internal/util"
+	"github.com/devhdn-212/totagen_api/domain"
+	"github.com/devhdn-212/totagen_api/dto"
+	"github.com/devhdn-212/totagen_api/internal/connection"
+	"github.com/devhdn-212/totagen_api/internal/repository"
+	"github.com/devhdn-212/totagen_api/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5/pgconn"

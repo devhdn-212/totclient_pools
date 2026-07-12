@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/devhdn-212/totmaster_api/domain"
-	"github.com/devhdn-212/totmaster_api/internal/config"
+	"github.com/devhdn-212/totagen_api/domain"
+	"github.com/devhdn-212/totagen_api/internal/config"
 	"github.com/jackc/pgx/v5"
 )
 

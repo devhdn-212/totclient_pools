@@ -3,9 +3,10 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
-	"github.com/devhdn-212/totmaster_api/domain"
-	"github.com/devhdn-212/totmaster_api/internal/config"
+	"github.com/devhdn-212/totagen_api/domain"
+	"github.com/devhdn-212/totagen_api/internal/config"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -45,7 +46,7 @@ func (c companyadminRepository) FindByID(ctx context.Context, idcompany, usernam
               WHERE idcompany = $1 AND usernamecompadmin = $2 LIMIT 1`
 
 	err := c.db.QueryRow(ctx, query, idcompany, username).Scan(&compadmin.ID)
-
+	fmt.Printf("query: %s | args: [%s, %s]\n", query, idcompany, username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Companyadmin{}, nil
