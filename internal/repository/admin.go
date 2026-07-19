@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/devhdn-212/totagen_api/domain"
 	"github.com/devhdn-212/totagen_api/internal/config"
@@ -19,11 +18,12 @@ func NewAdminRepository(db DBExecutor) domain.AdminsRepository {
 		db: db,
 	}
 }
-func (a adminRepository) FindAll(ctx context.Context) ([]domain.Admin, error) {
-	// Menggunakan ORDER BY sesuai logika awal
-	query := `SELECT * FROM ` + config.DB_tbl_admin + ` ORDER BY lastlogin DESC`
+func (a adminRepository) FindAll(ctx context.Context, idcomp string) ([]domain.Admin, error) {
+	query := `SELECT * FROM ` + config.DB_tbl_companyadmin + ` 
+			WHERE idcompany = $1 
+			ORDER BY GREATEST(createdatecompadmin, lastlogincompadmin) DESC`
 
-	rows, err := a.db.Query(ctx, query)
+	rows, err := a.db.Query(ctx, query, idcomp)
 	if err != nil {
 		return nil, err
 	}
@@ -41,28 +41,16 @@ func (a adminRepository) FindAll(ctx context.Context) ([]domain.Admin, error) {
 func (a adminRepository) FindByUsername(ctx context.Context, username string) (domain.Admin, error) {
 	var c domain.Admin
 	query := `SELECT 
-                username, password, idadmin, name, statuslogin, 
-                lastlogin, joindate, ipaddress, timezone, 
-                createadmin, createdateadmin, updateadmin, updatedateadmin 
-              FROM ` + config.DB_tbl_admin + ` 
-              WHERE username = $1 LIMIT 1`
+                passcompadmin, idcompany, idclientrule, namecompadmin  
+              FROM ` + config.DB_tbl_companyadmin + ` 
+              WHERE usernamecompadmin=$1 AND compadminstatus='Y' LIMIT 1`
 
 	err := a.db.QueryRow(ctx, query, username).Scan(
-		&c.Username,
 		&c.Pass,
-		&c.Idadmin,
+		&c.IDCompany,
+		&c.IDClientrule,
 		&c.Name,
-		&c.Status,
-		&c.Lastlogin,
-		&c.Joindate,
-		&c.Ipaddress,
-		&c.Timezone,
-		&c.Created,
-		&c.CreatedAt,
-		&c.Update,
-		&c.UpdateAt,
 	)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Admin{}, nil
@@ -71,69 +59,91 @@ func (a adminRepository) FindByUsername(ctx context.Context, username string) (d
 	}
 	return c, nil
 }
+func (a adminRepository) FindByUsernameComp(ctx context.Context, username, idcomp string) (domain.Admin, error) {
+	var c domain.Admin
+	query := `SELECT 
+            	idcompadmin, passcompadmin, idclientrule, namecompadmin  
+              FROM ` + config.DB_tbl_companyadmin + ` 
+              WHERE usernamecompadmin=$1 
+			  AND idcompany=$2 
+			  AND compadminstatus='Y' LIMIT 1`
 
+	err := a.db.QueryRow(ctx, query, username, idcomp).Scan(
+		&c.ID,
+		&c.Pass,
+		&c.IDClientrule,
+		&c.Name,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.Admin{}, nil
+		}
+		return c, err
+	}
+	return c, nil
+}
 func (a adminRepository) Save(ctx context.Context, admin *domain.Admin) error {
-	// Gunakan mapping manual atau pastikan urutan kolom sesuai
-	query := `INSERT INTO ` + config.DB_tbl_admin + ` 
-                (username, password, idadmin, name, statuslogin, ipaddress, createadmin, createdateadmin) 
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	query := `INSERT INTO ` + config.DB_tbl_companyadmin + ` 
+                (idcompadmin, idcompany, idclientrule, usernamecompadmin, passcompadmin, 
+                 namecompadmin, compadminstatus, createcompadmin, createdatecompadmin) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	_, err := a.db.Exec(ctx, query,
-		admin.Username, admin.Pass, admin.Idadmin, admin.Name,
-		admin.Status, admin.Ipaddress, admin.Username, time.Now(),
+		admin.ID,
+		admin.IDCompany,
+		admin.IDClientrule,
+		admin.Username,
+		admin.Pass,
+		admin.Name,
+		admin.Status,
+		admin.Created,
+		admin.CreatedAt,
 	)
 	return err
 }
 
-func (a adminRepository) Update(ctx context.Context, admin *domain.Admin) error {
-	query := `UPDATE ` + config.DB_tbl_admin + ` SET 
-                password = $1, 
-                idadmin = $2, 
-                name = $3, 
-                statuslogin = $4, 
-                ipaddress = $5, 
-                updateadmin = $6, 
-                updatedateadmin = $7 
-              WHERE username = $8`
+func (a adminRepository) Update(ctx context.Context, admin *domain.Admin, flagpass bool) error {
+	var query string
+	var args []any
 
-	res, err := a.db.Exec(ctx, query,
-		admin.Pass,
-		admin.Idadmin,
-		admin.Name,
-		admin.Status,
-		admin.Ipaddress,
-		admin.Username,
-		admin.UpdateAt,
-		admin.Username,
-	)
-	if err != nil {
-		return err
+	if flagpass {
+		query = `UPDATE ` + config.DB_tbl_companyadmin + ` SET 
+                    idclientrule = $1, 
+                    passcompadmin = $2, 
+                    namecompadmin = $3, 
+                    compadminstatus = $4, 
+                    updatecompadmin = $5, 
+                    updatedatecompadmin = $6 
+                  WHERE idcompadmin = $7 AND idcompany=$8`
+		args = []any{
+			admin.IDClientrule,
+			admin.Pass,
+			admin.Name,
+			admin.Status,
+			admin.Update,
+			admin.UpdateAt,
+			admin.ID,
+			admin.IDCompany,
+		}
+	} else {
+		query = `UPDATE ` + config.DB_tbl_companyadmin + ` SET 
+                    idclientrule = $1, 
+                    namecompadmin = $2, 
+                    compadminstatus = $3, 
+                    updatecompadmin = $4, 
+                    updatedatecompadmin = $5 
+                  WHERE idcompadmin = $6`
+		args = []any{
+			admin.IDClientrule,
+			admin.Name,
+			admin.Status,
+			admin.Update,
+			admin.UpdateAt,
+			admin.ID,
+		}
 	}
 
-	if res.RowsAffected() == 0 {
-		return pgx.ErrNoRows
-	}
-	return nil
-}
-func (a adminRepository) UpdateNotPassword(ctx context.Context, admin *domain.Admin) error {
-	query := `UPDATE ` + config.DB_tbl_admin + ` SET 
-                idadmin = $1, 
-                name = $2, 
-                statuslogin = $3, 
-                ipaddress = $4, 
-                updateadmin = $5, 
-                updatedateadmin = $6 
-              WHERE username = $7`
-
-	res, err := a.db.Exec(ctx, query,
-		admin.Idadmin,
-		admin.Name,
-		admin.Status,
-		admin.Ipaddress,
-		admin.Username,
-		admin.UpdateAt,
-		admin.Username,
-	)
+	res, err := a.db.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -144,15 +154,17 @@ func (a adminRepository) UpdateNotPassword(ctx context.Context, admin *domain.Ad
 	return nil
 }
 func (a adminRepository) UpdateLogin(ctx context.Context, admin *domain.Admin) error {
-	query := `UPDATE ` + config.DB_tbl_admin + ` SET 
-                lastlogin = $1, 
-                ipaddress = $2  
-              WHERE username = $3`
+	query := `UPDATE ` + config.DB_tbl_companyadmin + ` SET 
+                lastlogincompadmin = $1, 
+                ipaddresscompadmin = $2  
+              WHERE usernamecompadmin = $3 AND idcompany = $4 `
 	res, err := a.db.Exec(ctx, query,
 		admin.Lastlogin,
 		admin.Ipaddress,
 		admin.Username,
+		admin.IDCompany,
 	)
+
 	if err != nil {
 		return err
 	}

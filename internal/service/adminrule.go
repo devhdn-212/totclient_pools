@@ -2,19 +2,15 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/devhdn-212/totagen_api/domain"
 	"github.com/devhdn-212/totagen_api/dto"
 	"github.com/devhdn-212/totagen_api/internal/connection"
-	"github.com/devhdn-212/totagen_api/internal/repository"
 	"github.com/devhdn-212/totagen_api/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -114,64 +110,4 @@ func (a adminruleService) Select(ctx context.Context) ([]dto.AdminruleSelect, er
 	go connection.SetRedis(RedisAdminruleSelectKey, data, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Adminrule Select")
 	return data, nil
-}
-func (a adminruleService) Save(ctx context.Context, req dto.AdminruleSave, client_admin string) error {
-	tx, err := a.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback(ctx)
-
-	txExec := repository.NewPGXTxExecutor(tx)
-	txRepo := repository.NewAdminruleRepository(txExec)
-
-	flag, err := txRepo.FindByID(ctx, req.ID)
-	if err != nil {
-		return err
-	}
-
-	// Pakai helper GetNowJakarta()
-	now := util.GetNowJakarta()
-
-	if req.Type == "New" {
-		if flag.ID != "" {
-			return util.ErrDuplicate
-		}
-		adminrule := domain.Adminrule{
-			ID:        req.ID,
-			Name:      req.Name,
-			Created:   client_admin,
-			CreatedAt: sql.NullTime{Valid: true, Time: now},
-		}
-		err = txRepo.Save(ctx, &adminrule)
-		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				return util.ErrDuplicate
-			}
-			return err
-		}
-	} else {
-		if flag.ID == "" {
-			return errors.New("ID not found")
-		}
-		flag.Name = req.Name
-		flag.Rule = req.Rule
-		flag.Update = client_admin
-		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
-
-		// Pastikan pakai repository transaksi supaya perubahan masuk dalam scope Tx
-		if err = txRepo.Update(ctx, &flag); err != nil {
-			return err
-		}
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		return err
-	}
-
-	go connection.DeleteRedis(RedisAdminruleAllKey)
-	go connection.DeleteRedis(RedisAdminruleSelectKey)
-	return nil
 }

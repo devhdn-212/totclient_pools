@@ -9,6 +9,7 @@ type AuthPage struct {
 	Page string `json:"page" validate:"required"`
 }
 type AuthClientRedis struct {
+	IDcomp   string `json:"idcomp"`
 	Username string `json:"username"`
 	IDrule   string `json:"idule"`
 	Rule     string `json:"rule"`

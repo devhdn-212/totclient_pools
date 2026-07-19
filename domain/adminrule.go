@@ -8,13 +8,13 @@ import (
 )
 
 type Adminrule struct {
-	ID        string       `db:"idadminrole"`
-	Name      string       `db:"nmadminrole"`
-	Rule      string       `db:"ruleadmin"`
-	Created   string       `db:"createadminrole"`
-	CreatedAt sql.NullTime `db:"createdateadminrole"`
-	Update    string       `db:"updateadminrole"`
-	UpdateAt  sql.NullTime `db:"updatedateadminrole"`
+	ID        string       `db:"idclientrule"`
+	Name      string       `db:"nmclientrule"`
+	Rule      string       `db:"ruleclient"`
+	Created   string       `db:"createclientrule"`
+	CreatedAt sql.NullTime `db:"createdateclientrule"`
+	Update    string       `db:"updateclientrule"`
+	UpdateAt  sql.NullTime `db:"updatedateclientrule"`
 }
 
 type AdminruleRepository interface {
@@ -22,11 +22,8 @@ type AdminruleRepository interface {
 	FindSelect(ctx context.Context) ([]Adminrule, error)
 	FindByID(ctx context.Context, id string) (Adminrule, error)
 	GetRule(ctx context.Context, id string) (string, error)
-	Save(ctx context.Context, adminrule *Adminrule) error
-	Update(ctx context.Context, adminrule *Adminrule) error
 }
 type AdminruleService interface {
 	All(ctx context.Context) ([]dto.AdminruleData, error)
 	Select(ctx context.Context) ([]dto.AdminruleSelect, error)
-	Save(ctx context.Context, req dto.AdminruleSave, client string) error
 }

@@ -90,8 +90,8 @@ func main() {
 				return c.Status(fiber.StatusUnauthorized).
 					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
 			}
-			username, ok := claims["clien_admin"].(string)
-			c.Locals("client_username", username)
+			username, ok := claims["client_agen"].(string)
+			c.Locals("client_agen", username)
 			if !ok || username == "" {
 				return c.Status(fiber.StatusUnauthorized).
 					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token - Username"))
@@ -131,6 +131,7 @@ func main() {
 	companyconftotoRepository := repository.NewCompanyconftotoRepository(pgxExec)
 	customerRepository := repository.NewCustomerRepository(pgxExec)
 	pasarantotoRepository := repository.NewPasarantotoRepository(pgxExec)
+	pasaranRepository := repository.NewPasaranRepository(pgxExec)
 
 	adminService := service.NewAdminService(dbPool, adminRepository)
 	adminruleService := service.NewAdminruleService(dbPool, adminruleRepository)
@@ -145,6 +146,7 @@ func main() {
 	companyconftotoService := service.NewCompanyconftotoService(dbPool, companyconftotoRepository)
 	customerService := service.NewCustomerService(dbPool, customerRepository)
 	pasarantotoService := service.NewPasarantotoService(dbPool, pasarantotoRepository)
+	pasaranService := service.NewPasaranService(dbPool, pasaranRepository)
 	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
@@ -159,6 +161,7 @@ func main() {
 	api.NewCompanypasaranApi(app, companypasaranService, jwtMidd)
 	api.NewCompanyconftotoApi(app, companyconftotoService, jwtMidd)
 	api.NewPasarantotoApi(app, pasarantotoService, jwtMidd)
+	api.NewPasaranApi(app, pasaranService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 

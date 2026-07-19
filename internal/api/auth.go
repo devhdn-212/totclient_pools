@@ -93,7 +93,7 @@ func (a authApi) Page(ctx *fiber.Ctx) error {
 	}
 	fails := util.Validate(req)
 	if len(fails) > 0 {
-		connection.Log.Warn("Validation failed for update Admin",
+		connection.Log.Warn("Validation failed for Page",
 			zap.Any("validation_errors", fails),
 			zap.Any("body", req),
 		)
@@ -101,9 +101,8 @@ func (a authApi) Page(ctx *fiber.Ctx) error {
 			JSON(dto.CreateResponseErrorData(http.StatusBadRequest, "validation failed", fails))
 	}
 
-	datatoken := ctx.Locals("client_username").(string)
+	datatoken := ctx.Locals("client_agen").(string)
 	client_username := util.Parsing_final(datatoken)
-	fmt.Println("Username: ", client_username)
 	flagpage := util.Validpage(client_username, req.Page)
 	if !flagpage {
 		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -127,15 +126,15 @@ func (a authApi) Logout(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusUnauthorized).
 			JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
 	}
-	username, ok := claims["clien_admin"].(string)
-	ctx.Locals("client_username", username)
+	username, ok := claims["client_agen"].(string)
+	ctx.Locals("client_agen", username)
 	client_username := util.Parsing_final(username)
 	fmt.Println("USERNAME: ", client_username)
 	if !ok || username == "" {
 		return ctx.Status(fiber.StatusUnauthorized).
 			JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
 	} else {
-		go connection.DeleteRedis("master:client:" + client_username)
+		go connection.DeleteRedis("agen:client:" + client_username)
 	}
 	jti, ok := claims["jti"].(string)
 	if !ok || jti == "" {

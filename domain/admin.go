@@ -8,29 +8,29 @@ import (
 )
 
 type Admin struct {
-	Username  string       `db:"username"`
-	Pass      string       `db:"password"`
-	Idadmin   string       `db:"idadmin"`
-	Name      string       `db:"name"`
-	Status    string       `db:"statuslogin"`
-	Lastlogin sql.NullTime `db:"lastlogin"`
-	Joindate  sql.NullTime `db:"joindate"`
-	Ipaddress string       `db:"ipaddress"`
-	Timezone  string       `db:"timezone"`
-	Created   string       `db:"createadmin"`
-	CreatedAt sql.NullTime `db:"createdateadmin"`
-	Update    string       `db:"updateadmin"`
-	UpdateAt  sql.NullTime `db:"updatedateadmin"`
+	ID           string       `db:"idcompadmin"`
+	IDCompany    string       `db:"idcompany"`
+	IDClientrule string       `db:"idclientrule"`
+	Username     string       `db:"usernamecompadmin"`
+	Pass         string       `db:"passcompadmin"`
+	Name         string       `db:"namecompadmin"`
+	Ipaddress    string       `db:"ipaddresscompadmin"`
+	Lastlogin    sql.NullTime `db:"lastlogincompadmin"`
+	Status       string       `db:"compadminstatus"`
+	Created      string       `db:"createcompadmin"`
+	CreatedAt    sql.NullTime `db:"createdatecompadmin"`
+	Update       string       `db:"updatecompadmin"`
+	UpdateAt     sql.NullTime `db:"updatedatecompadmin"`
 }
 type AdminsRepository interface {
-	FindAll(ctx context.Context) ([]Admin, error)
+	FindAll(ctx context.Context, idcomp string) ([]Admin, error)
+	FindByUsernameComp(ctx context.Context, username, idcomp string) (Admin, error)
 	FindByUsername(ctx context.Context, username string) (Admin, error)
 	Save(ctx context.Context, admin *Admin) error
-	Update(ctx context.Context, admin *Admin) error
-	UpdateNotPassword(ctx context.Context, admin *Admin) error
+	Update(ctx context.Context, admin *Admin, flag bool) error
 	UpdateLogin(ctx context.Context, admin *Admin) error
 }
 type AdminService interface {
-	All(ctx context.Context) ([]dto.AdminData, error)
-	Save(ctx context.Context, req dto.AdminSave, client string) error
+	All(ctx context.Context, idcomp string) ([]dto.AdminData, error)
+	Save(ctx context.Context, req dto.AdminSave, client, idcomp string) error
 }

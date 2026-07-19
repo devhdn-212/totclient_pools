@@ -48,7 +48,7 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 	if err != nil {
 		return dto.AuthResponse{}, err
 	}
-	if user.Username == "" {
+	if user.Pass == "" {
 		return dto.AuthResponse{}, errors.New("Username / Password Not Found")
 	}
 
@@ -58,8 +58,7 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 		return dto.AuthResponse{}, errors.New("Username / Password Not Found")
 	}
 
-	// 3. Ambil Rule (Hak Akses)
-	rule, errrule := a.adminruleRepository.GetRule(ctx, user.Idadmin)
+	rule, errrule := a.adminruleRepository.GetRule(ctx, user.IDClientrule)
 	if errrule != nil {
 		return dto.AuthResponse{}, errors.New("Please contact Admin")
 	}
@@ -75,6 +74,7 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 	txRepo := repository.NewAdminRepository(txExec)
 	now := util.GetNowJakarta()
 	// Update data login
+	user.Username = req.Username
 	user.Ipaddress = req.Ipaddress
 	user.Lastlogin = sql.NullTime{Valid: true, Time: now}
 
@@ -91,8 +91,9 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 
 	// 5. Simpan Data ke Redis
 	var clientRedis dto.AuthClientRedis
+	clientRedis.IDcomp = user.IDCompany
 	clientRedis.Username = user.Username
-	clientRedis.IDrule = user.Idadmin
+	clientRedis.IDrule = user.IDClientrule
 	clientRedis.Rule = rule
 
 	// Enkripsi username untuk payload token
@@ -104,7 +105,7 @@ func (a authService) Login(ctx context.Context, req dto.AuthRequest) (dto.AuthRe
 	// 6. Generate JWT Token (v5)
 	claim := jwt.MapClaims{
 		"username":    user.Username, // Tambahkan username plain untuk middleware
-		"clien_admin": dataclient_encr_final,
+		"client_agen": dataclient_encr_final,
 		"jti":         uuid.NewString(),
 		"iss":         a.conf.Jwt.Issuer,
 		"aud":         a.conf.Jwt.Audience,

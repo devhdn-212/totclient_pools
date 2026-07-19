@@ -16,23 +16,21 @@ import (
 	"go.uber.org/zap"
 )
 
-type adminApi struct {
-	adminService     domain.AdminService
-	adminruleService domain.AdminruleService
+type pasaranApi struct {
+	pasaranService domain.PasaranService
 }
 
-func NewAdminApi(app *fiber.App,
-	adminService domain.AdminService, adminruleService domain.AdminruleService,
+func NewPasaranApi(app *fiber.App,
+	pasaranService domain.PasaranService,
 	authmidle fiber.Handler) {
-	ad := adminApi{
-		adminService:     adminService,
-		adminruleService: adminruleService,
+	ad := pasaranApi{
+		pasaranService: pasaranService,
 	}
-	admin := app.Group("/api/admin", authmidle)
-	admin.Post("", ad.Index)
-	admin.Post("/save", ad.Save)
+	pasaran := app.Group("/api/pasaran", authmidle)
+	pasaran.Post("", ad.Index)
+	pasaran.Post("/save", ad.Save)
 }
-func (ad *adminApi) Index(ctx *fiber.Ctx) error {
+func (co *pasaranApi) Index(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
 
@@ -44,41 +42,32 @@ func (ad *adminApi) Index(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-
-	resselect, errselect := ad.adminruleService.Select(c)
-	if errselect != nil {
-		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
+	flagpage := util.Validpage(client_username, "COMPANY-VIEW")
+	if !flagpage {
+		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"status":  fiber.StatusForbidden,
+			"message": "Please Contact Admin",
+		})
 	}
-	res, err := ad.adminService.All(c, idcomp)
+	res, err := co.pasaranService.All(c, idcomp)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
 	return ctx.JSON(fiber.Map{
-		"status":        fiber.StatusOK,
-		"message":       "success",
-		"listadminrule": resselect,
-		"record":        res,
+		"status":  fiber.StatusOK,
+		"message": "success",
+		"record":  res,
 	})
 }
-func (ad *adminApi) Save(ctx *fiber.Ctx) error {
+func (co *pasaranApi) Save(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
 
-	datatoken := ctx.Locals("client_agen").(string)
-	client_username := util.Parsing_final(datatoken)
-	flag, _, idcomp := util.GetDataRedisClient(client_username)
-	fmt.Println("COMP : ", idcomp)
-	if !flag {
-		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error Admin Redis"))
-	}
-
-	var req dto.AdminSave
+	var req dto.PasaranSave
 	if err := ctx.BodyParser(&req); err != nil {
 		connection.Log.Error("Failed to parse request body",
-			zap.String("endpoint", "Create Admin"),
+			zap.String("endpoint", "Create Company Admin"),
 			zap.String("body", string(ctx.Body())),
 			zap.String("error", err.Error()),
 		)
@@ -87,15 +76,22 @@ func (ad *adminApi) Save(ctx *fiber.Ctx) error {
 	fails := util.Validate(req)
 
 	if len(fails) > 0 {
-		connection.Log.Warn("Validation failed for update Admin",
+		connection.Log.Warn("Validation failed for update Company Pasaran",
 			zap.Any("validation_errors", fails),
 			zap.Any("body", req),
 		)
 		return ctx.Status(http.StatusBadRequest).
 			JSON(dto.CreateResponseErrorData(http.StatusBadRequest, "validation failed", fails))
 	}
-
-	flagpage := util.Validpage(client_username, "ADMIN-SAVE")
+	datatoken := ctx.Locals("client_agen").(string)
+	client_username := util.Parsing_final(datatoken)
+	flag, _, idcomp := util.GetDataRedisClient(client_username)
+	fmt.Println("COMP : ", idcomp)
+	if !flag {
+		return ctx.Status(http.StatusInternalServerError).
+			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
+	}
+	flagpage := util.Validpage(client_username, "COMPANY-SAVE")
 	if !flagpage {
 		return ctx.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"status":  fiber.StatusForbidden,
@@ -103,15 +99,14 @@ func (ad *adminApi) Save(ctx *fiber.Ctx) error {
 		})
 	}
 
-	err := ad.adminService.Save(c, req, client_username, idcomp)
+	err := co.pasaranService.Save(c, req, client_username, idcomp)
 	if err != nil {
 		recordJson, _ := json.Marshal(req)
-		connection.Log.Error("Failed to create / update Admin",
-			zap.String("id", req.Username),
+		connection.Log.Error("Failed to create / update Pasaran",
+			zap.String("id", req.IDcomppasaran),
 			zap.String("error", err.Error()),
 			zap.String("record", string(recordJson)),
 		)
-
 		// cek duplicate entry
 		if err.Error() == "duplicate entry" {
 			return ctx.Status(http.StatusConflict).
@@ -120,8 +115,8 @@ func (ad *adminApi) Save(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
 	}
-	connection.Log.Info("Admin create / update successfully",
-		zap.String("id", req.Username),
+	connection.Log.Info("Pasaran create / update successfully",
+		zap.String("id", req.IDcomppasaran),
 	)
 
 	return ctx.Status(http.StatusOK).
