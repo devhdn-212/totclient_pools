@@ -73,7 +73,7 @@ func NtToStr(nt sql.NullTime, prefix string, loc *time.Location) string {
 }
 
 func Get_mapping_totodb(company string) (string, string, string, string, string, string) {
-	schema := "db_" + s.ToLower(company)
+	schema := "db_tot_" + s.ToLower(company)
 	tbl_trx_keluarantogel := "tbl_trx_keluarantogel"
 	tbl_trx_keluarantogel_detail := "tbl_trx_keluarantogel_detail"
 	tbl_trx_keluarantogel_detail_reject := "tbl_trx_keluarantogel_detail_reject"

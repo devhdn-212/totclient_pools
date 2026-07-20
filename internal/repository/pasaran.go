@@ -59,7 +59,33 @@ func (u *pasaranRepository) FindJadwal(ctx context.Context, idcomppasaran string
 
 	return res, nil
 }
+func (u pasaranRepository) FindSelect(ctx context.Context, idcomp string) ([]domain.Pasaran, error) {
+	query := `SELECT idcomppasaran, aliascomppasaran 
+		FROM ` + config.DB_mst_company_pasaran + ` 
+		WHERE idcompany = $1 AND statuscompasaran = 'Y' 
+		ORDER BY displaypasaran ASC`
 
+	rows, err := u.db.Query(ctx, query, idcomp)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[domain.Pasaran])
+	if err != nil {
+		return nil, err
+	}
+
+	var result []domain.Pasaran
+	for _, v := range res {
+		result = append(result, domain.Pasaran{
+			IDcomppasaran:    v.IDcomppasaran,
+			Aliascomppasaran: v.Aliascomppasaran,
+		})
+	}
+
+	return res, nil
+}
 func (u *pasaranRepository) FindByID(ctx context.Context, id, idcomp string) (domain.Pasaran, error) {
 	var record domain.Pasaran
 	query := `SELECT idcomppasaran FROM ` + config.DB_mst_company_pasaran + ` 

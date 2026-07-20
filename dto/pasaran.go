@@ -272,6 +272,10 @@ type PasaranData struct {
 type PasaranAll struct {
 	IDcompany string `json:"comppasran_idcompany" validate:"required"`
 }
+type PasaranSelect struct {
+	ID   string `json:"pasaran_id"`
+	Name string `json:"pasaran_alias"`
+}
 type Pasaranjadwal struct {
 	IDjadwalpasaran string `json:"jadwalpasaran_id"`
 	IDcomppasaran   string `json:"jadwalpasaran_idcomppasaran"`

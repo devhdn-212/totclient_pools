@@ -266,7 +266,7 @@ type PasarantotoData struct {
 	Created                          string              `json:"pasarantoto_created"`
 	Update                           string              `json:"pasarantoto_updated"`
 }
-type PasaranSelect struct {
+type PasarantotoSelect struct {
 	ID   string `json:"pasarantoto_id"`
 	Name string `json:"pasarantoto_name"`
 }

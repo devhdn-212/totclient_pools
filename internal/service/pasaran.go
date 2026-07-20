@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	RedisPasaran         = "agen:pasaran:all"
-	RedisPasaranconftoto = "agen:pasaran:conftoto"
+	RedisPasaran          = "agen:pasaran:all"
+	RedisPasaranconftoto  = "agen:pasaran:conftoto"
+	RedisPasaranSelectKey = "agen:pasaran:select"
 )
 
 type pasaranService struct {
@@ -361,7 +362,35 @@ func (u *pasaranService) All(ctx context.Context, idcomp string) ([]dto.PasaranD
 	connection.Log.Info("Returning data Database - Pasaran")
 	return record, nil
 }
+func (u pasaranService) Select(ctx context.Context, idcomp string) ([]dto.PasaranSelect, error) {
+	cached, found, err := connection.GetRedis(RedisPasaranSelectKey + ":" + strings.ToLower(idcomp))
+	if err != nil {
+		return nil, err
+	}
+	var data []dto.PasaranSelect
+	if found {
+		if err := json.Unmarshal([]byte(cached), &data); err == nil {
+			connection.Log.Info("Returning data from Redis - Pasaran Select")
+			return data, nil
+		}
+	}
 
+	pasaran, err := u.repo.FindSelect(ctx, idcomp)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	for _, v := range pasaran {
+		data = append(data, dto.PasaranSelect{
+			ID:   v.IDcomppasaran,
+			Name: v.Aliascomppasaran,
+		})
+	}
+
+	go connection.SetRedis(RedisPasaranSelectKey+":"+strings.ToLower(idcomp), data, 60*time.Minute)
+	connection.Log.Info("Returning data Database - Pasaran Select")
+	return data, nil
+}
 func (u *pasaranService) Save(ctx context.Context, req dto.PasaranSave, client, idcomp string) error {
 	// Start Transaction native pgx v5
 	tx, err := u.db.Begin(ctx)
@@ -726,6 +755,7 @@ func (u *pasaranService) Save(ctx context.Context, req dto.PasaranSave, client, 
 		return err
 	}
 
+	go connection.DeleteRedis(RedisPasaranSelectKey + ":" + strings.ToLower(idcomp))
 	go connection.DeleteRedis(RedisPasaran + ":" + strings.ToLower(idcomp))
 	return nil
 }

@@ -289,6 +289,7 @@ type Pasaranjadwal struct {
 
 type PasaranRepository interface {
 	FindAll(ctx context.Context, idcomp string) ([]Pasaran, error)
+	FindSelect(ctx context.Context, idcomp string) ([]Pasaran, error)
 	FindJadwal(ctx context.Context, id string) ([]Pasaranjadwal, error)
 	FindByID(ctx context.Context, id, idcomp string) (Pasaran, error)
 	Update(ctx context.Context, pasarantoto *Pasaran) error
@@ -297,5 +298,6 @@ type PasaranRepository interface {
 }
 type PasaranService interface {
 	All(ctx context.Context, id string) ([]dto.PasaranData, error)
+	Select(ctx context.Context, idcomp string) ([]dto.PasaranSelect, error)
 	Save(ctx context.Context, req dto.PasaranSave, client, idcomp string) error
 }

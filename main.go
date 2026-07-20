@@ -131,6 +131,7 @@ func main() {
 	customerRepository := repository.NewCustomerRepository(pgxExec)
 	pasarantotoRepository := repository.NewPasarantotoRepository(pgxExec)
 	pasaranRepository := repository.NewPasaranRepository(pgxExec)
+	trxkeluaranRepository := repository.NewTrxkeluaranRepository(pgxExec)
 
 	adminService := service.NewAdminService(dbPool, adminRepository)
 	adminruleService := service.NewAdminruleService(dbPool, adminruleRepository)
@@ -145,6 +146,7 @@ func main() {
 	customerService := service.NewCustomerService(dbPool, customerRepository)
 	pasarantotoService := service.NewPasarantotoService(dbPool, pasarantotoRepository)
 	pasaranService := service.NewPasaranService(dbPool, pasaranRepository)
+	trxkeluaranService := service.NewTrxkeluaranService(dbPool, trxkeluaranRepository)
 	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
@@ -159,6 +161,7 @@ func main() {
 	api.NewCompanypasaranApi(app, companypasaranService, jwtMidd)
 	api.NewPasarantotoApi(app, pasarantotoService, jwtMidd)
 	api.NewPasaranApi(app, pasaranService, jwtMidd)
+	api.NewTrxkeluaranApi(app, trxkeluaranService, pasaranService, jwtMidd)
 	api.NewCustomer(app, customerService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 
