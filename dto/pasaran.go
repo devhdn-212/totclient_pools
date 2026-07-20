@@ -282,7 +282,7 @@ type Pasaranjadwal struct {
 }
 type PasaranSave struct {
 	Type                             string              `json:"type" validate:"required"`
-	IDcomppasaran                    string              `json:"pasaran_idcomppasaran"`
+	IDcomppasaran                    string              `json:"pasaran_idcomppasaran" validate:"required"`
 	IDcompany                        string              `json:"pasaran_idcompany" validate:"required"`
 	Aliascomppasaran                 string              `json:"pasaran_aliascomppasaran"`
 	URLpasaran                       string              `json:"pasaran_urlpasaran"`

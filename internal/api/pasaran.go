@@ -113,7 +113,7 @@ func (co *pasaranApi) Save(ctx *fiber.Ctx) error {
 				JSON(dto.CreateResponseError(http.StatusConflict, "Duplicate Entry"))
 		}
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseError(http.StatusInternalServerError, "internal server error"))
+			JSON(dto.CreateResponseError(http.StatusInternalServerError, err.Error()))
 	}
 	connection.Log.Info("Pasaran create / update successfully",
 		zap.String("id", req.IDcomppasaran),

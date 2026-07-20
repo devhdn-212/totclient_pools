@@ -18,10 +18,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/shopspring/decimal"
 )
 
 const (
-	RedisPasaran = "agen:pasaran:all"
+	RedisPasaran         = "agen:pasaran:all"
+	RedisPasaranconftoto = "agen:pasaran:conftoto"
 )
 
 type pasaranService struct {
@@ -373,6 +375,7 @@ func (u *pasaranService) Save(ctx context.Context, req dto.PasaranSave, client, 
 	// Executor transaksi native pgx
 	txExec := repository.NewPGXTxExecutor(tx)
 	txRepo := repository.NewCompanypasaranRepository(txExec)
+	txRepoconftoto := repository.NewCompanyconftotoRepository(txExec)
 
 	flag, err := txRepo.FindByID(ctx, req.IDcomppasaran, req.IDcompany)
 	if err != nil {
@@ -385,7 +388,35 @@ func (u *pasaranService) Save(ctx context.Context, req dto.PasaranSave, client, 
 		if flag.IDcomppasaran == "" {
 			return fmt.Errorf("Pasaran %w", util.ErrNotFound)
 		}
+
+		cached_conftoto, found_conftoto, err_conftoto := connection.GetRedis(RedisPasaranconftoto + ":" + strings.ToLower(idcomp))
+		if err_conftoto != nil {
+			return err_conftoto
+		}
+
+		var record domain.Companyconftoto
+		if found_conftoto {
+			if err := json.Unmarshal([]byte(cached_conftoto), &record); err != nil {
+				found_conftoto = false
+			} else {
+				connection.Log.Info("Returning data from Redis - Comp Conf Toto")
+			}
+		}
+
+		if !found_conftoto {
+			flagconfoto, errconfoto := txRepoconftoto.FindByID(ctx, idcomp)
+			if errconfoto != nil {
+				return errconfoto
+			}
+			go connection.SetRedis(RedisPasaranconftoto+":"+strings.ToLower(idcomp), flagconfoto, 24*time.Hour)
+			record = flagconfoto
+		}
+		if err := _validatePasaranLimits(req, record); err != nil {
+			return err
+		}
+
 		flag.IDcomppasaran = req.IDcomppasaran
+		flag.IDcompany = idcomp
 		flag.Aliascomppasaran = req.Aliascomppasaran
 		flag.Display = req.Display
 		flag.URLpasaran = req.URLpasaran
@@ -648,7 +679,7 @@ func (u *pasaranService) Save(ctx context.Context, req dto.PasaranSave, client, 
 		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
 
 		if err = txRepo.Update(ctx, &flag); err != nil {
-			fmt.Println("Error update Company Pasaran: ", err)
+			fmt.Println("Error update Pasaran: ", err)
 			return err
 		}
 
@@ -696,5 +727,91 @@ func (u *pasaranService) Save(ctx context.Context, req dto.PasaranSave, client, 
 	}
 
 	go connection.DeleteRedis(RedisPasaran + ":" + strings.ToLower(idcomp))
+	return nil
+}
+func _validatePasaranLimits(req dto.PasaranSave, record domain.Companyconftoto) error {
+	checks := []struct {
+		label string
+		val   decimal.Decimal
+		max   decimal.Decimal
+	}{
+		{"Total Keranjang", req.AngkaMinbasket, record.AngkaMaxMinbasket},
+		{"MinBet", req.AngkaMinbet, record.AngkaMaxMinbet},
+		{"MinBet Colok Bebas", req.CbMinbet, record.CbebasMaxMinbet},
+		{"MinBet Colok Macau", req.CmacauMinbet, record.CmacauMaxMinbet},
+		{"MinBet Colok Naga", req.CmacauMinbet, record.CmacauMaxMinbet},
+		{"MinBet Colok Jitu", req.CjituMinbet, record.CjituMaxMinbet},
+		{"MinBet 5050 Umum", req.Umum5050Minbet, record.Umum50MaxMinbet},
+		{"MinBet 5050 Special", req.Special5050Minbet, record.Special50MaxMinbet},
+		{"MinBet 5050 Kombinasi", req.Kombinasi5050Minbet, record.Kombinasi50MaxMinbet},
+		{"MinBet Macau / Kombinasi", req.MacaukombinasiMinbet, record.MacauMaxMinbet},
+		{"MinBet Dasar", req.DasarMinbet, record.DasarMaxMinbet},
+		{"MinBet Shio", req.ShioMinbet, record.ShioMaxMinbet},
+		{"MaxBet 4D", req.AngkaMaxbet4d, record.AngkaMaxMaxbet4d},
+		{"MaxBet 3D", req.AngkaMaxbet3d, record.AngkaMaxMaxbet3d},
+		{"MaxBet 3DD", req.AngkaMaxbet3dd, record.AngkaMaxMaxbet3dd},
+		{"MaxBet 2D", req.AngkaMaxbet2d, record.AngkaMaxMaxbet2d},
+		{"MaxBet 2DD", req.AngkaMaxbet2dd, record.AngkaMaxMaxbet2dd},
+		{"MaxBet 2DT", req.AngkaMaxbet2dt, record.AngkaMaxMaxbet2dt},
+		{"MaxBet Colok Bebas", req.CbMaxbet, record.CbebasMaxMaxbet},
+		{"MaxBet Colok Macau", req.CmacauMaxbet, record.CmacauMaxMaxbet},
+		{"MaxBet Colok Naga", req.CnagaMaxbet, record.CnagaMaxMaxbet},
+		{"MaxBet Colok Jitu", req.CjituMaxbet, record.CjituMaxMaxbet},
+		{"MaxBet 5050 Umum", req.Umum5050Maxbet, record.Umum50MaxMaxbet},
+		{"MaxBet 5050 Special", req.Special5050Maxbet, record.Special50MaxMaxbet},
+		{"MaxBet 5050 Kombinasi", req.Kombinasi5050Maxbet, record.Kombinasi50MaxMaxbet},
+		{"MaxBet Macau / Kombinasi", req.MacaukombinasiMaxbet, record.MacauMaxMaxbet},
+		{"MaxBet Dasar", req.DasarMaxbet, record.DasarMaxMaxbet},
+		{"MaxBet Shio", req.ShioMaxbet, record.ShioMaxMaxbet},
+
+		{"Win 4D FULL", req.AngkaWin4dnodisc, record.AngkaMaxWin4dFull},
+		{"Win 4D DISC", req.AngkaWin4d, record.AngkaMaxWin4dDisc},
+		{"Win 4D BB", req.AngkaWin4dbb, record.AngkaMaxWin4dBb},
+		{"Win 4D BB Match", req.AngkaWin4dbbKena, record.AngkaMaxWin4dBbKena},
+
+		{"Win 3D FULL", req.AngkaWin3dnodisc, record.AngkaMaxWin3dFull},
+		{"Win 3D DISC", req.AngkaWin3d, record.AngkaMaxWin3dDisc},
+		{"Win 3D BB", req.AngkaWin3dbb, record.AngkaMaxWin3dBb},
+		{"Win 3D BB Match", req.AngkaWin3dbbKena, record.AngkaMaxWin3dBbKena},
+
+		{"Win 3DD FULL", req.AngkaWin3ddnodisc, record.AngkaMaxWin3ddFull},
+		{"Win 3DD DISC", req.AngkaWin3dd, record.AngkaMaxWin3ddDisc},
+		{"Win 3DD BB", req.AngkaWin3ddbb, record.AngkaMaxWin3ddBb},
+		{"Win 3DD BB Match", req.AngkaWin3ddbbKena, record.AngkaMaxWin3ddBbKena},
+
+		{"Win 2D FULL", req.AngkaWin2dnodisc, record.AngkaMaxWin2dFull},
+		{"Win 2D DISC", req.AngkaWin2d, record.AngkaMaxWin2dDisc},
+		{"Win 2D BB", req.AngkaWin2dbb, record.AngkaMaxWin2dBb},
+		{"Win 2D BB Match", req.AngkaWin2dbbKena, record.AngkaMaxWin2dBbKena},
+
+		{"Win 2DD FULL", req.AngkaWin2ddnodisc, record.AngkaMaxWin2ddFull},
+		{"Win 2DD DISC", req.AngkaWin2dd, record.AngkaMaxWin2ddDisc},
+		{"Win 2DD BB", req.AngkaWin2ddbb, record.AngkaMaxWin2ddBb},
+		{"Win 2DD BB Match", req.AngkaWin2ddbbKena, record.AngkaMaxWin2ddBbKena},
+
+		{"Win 2DT FULL", req.AngkaWin2dtnodisc, record.AngkaMaxWin2dtFull},
+		{"Win 2DT DISC", req.AngkaWin2dt, record.AngkaMaxWin2dtDisc},
+		{"Win 2DT BB", req.AngkaWin2dtbb, record.AngkaMaxWin2dtBb},
+		{"Win 2DT BB Match", req.AngkaWin2dtbbKena, record.AngkaMaxWin2dtBbKena},
+
+		{"Win Colok Bebas", req.CbWin, record.CbebasMaxWin},
+		{"Win 2 Digit Colok Macau", req.CmacauWin2digit, record.CmacauMaxWin2},
+		{"Win 3 Digit Colok Macau", req.CmacauWin3digit, record.CmacauMaxWin3},
+		{"Win 4 Digit Colok Macau", req.CmacauWin3digit, record.CmacauMaxWin4},
+		{"Win 3 Digit Colok Naga", req.CnagaWin3digit, record.CnagaMaxWin3},
+		{"Win 4 Digit Colok Naga", req.CnagaWin4digit, record.CnagaMaxWin4},
+		{"Win As Colok Jitu", req.CjituWinas, record.CjituMaxWinas},
+		{"Win Kop Colok Jitu", req.CjituWinkop, record.CjituMaxWinkop},
+		{"Win Kepala Colok Jitu", req.CjituWinkepala, record.CjituMaxWinkepala},
+		{"Win Ekor Colok Jitu", req.CjituWinekor, record.CjituMaxWinekor},
+		{"Win Macau / Kombinasi", req.MacaukombinasiWin, record.MacauMaxWin},
+		{"Win Shio", req.ShioWin, record.ShioMaxWin},
+	}
+
+	for _, c := range checks {
+		if c.val.GreaterThan(c.max) {
+			return fmt.Errorf("%s tidak boleh melebihi %s", c.label, c.max.String())
+		}
+	}
 	return nil
 }

@@ -2,16 +2,13 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/devhdn-212/totagen_api/domain"
 	"github.com/devhdn-212/totagen_api/dto"
 	"github.com/devhdn-212/totagen_api/internal/connection"
-	"github.com/devhdn-212/totagen_api/internal/repository"
 	"github.com/devhdn-212/totagen_api/internal/util"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -145,116 +142,4 @@ func (c companyconftotoService) All(ctx context.Context, idcomp string) ([]dto.C
 	go connection.SetRedis(RedisCompanyconftotoKey+strings.ToLower(idcomp), data, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Company Conf TOTO")
 	return data, nil
-}
-
-func (c companyconftotoService) Save(ctx context.Context, req dto.CompanyconftotoSave, client_admin string) error {
-	tx, err := c.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback(ctx)
-
-	txExec := repository.NewPGXTxExecutor(tx)
-	txRepo := repository.NewCompanyconftotoRepository(txExec)
-
-	flag, err := txRepo.FindByID(ctx, req.IDcompany)
-	if err != nil {
-		return err
-	}
-
-	now := util.GetNowJakarta()
-
-	if req.Type == "Edit" {
-		if flag.IDcompconftoto == "" {
-			return fmt.Errorf("Company conf toto %w", util.ErrNotFound)
-		}
-		flag.IDcompconftoto = req.IDcompconftoto
-		flag.IDcompany = req.IDcompany
-		flag.AngkaMaxMinbasket = req.AngkaMaxMinbasket
-		flag.AngkaMaxMinbet = req.AngkaMaxMinbet
-		flag.AngkaMaxMaxbet4d = req.AngkaMaxMaxbet4d
-		flag.AngkaMaxMaxbet3d = req.AngkaMaxMaxbet3d
-		flag.AngkaMaxMaxbet3dd = req.AngkaMaxMaxbet3dd
-		flag.AngkaMaxMaxbet2d = req.AngkaMaxMaxbet2d
-		flag.AngkaMaxMaxbet2dd = req.AngkaMaxMaxbet2dd
-		flag.AngkaMaxMaxbet2dt = req.AngkaMaxMaxbet2dt
-		flag.AngkaMaxMaxbet4dBbdisc = req.AngkaMaxMaxbet4dBbdisc
-		flag.AngkaMaxMaxbet3dBbdisc = req.AngkaMaxMaxbet3dBbdisc
-		flag.AngkaMaxMaxbet3ddBbdisc = req.AngkaMaxMaxbet3ddBbdisc
-		flag.AngkaMaxMaxbet2dBbdisc = req.AngkaMaxMaxbet2dBbdisc
-		flag.AngkaMaxMaxbet2ddBbdisc = req.AngkaMaxMaxbet2ddBbdisc
-		flag.AngkaMaxMaxbet2dtBbdisc = req.AngkaMaxMaxbet2dtBbdisc
-		flag.AngkaMaxWin4dFull = req.AngkaMaxWin4dFull
-		flag.AngkaMaxWin3dFull = req.AngkaMaxWin3dFull
-		flag.AngkaMaxWin3ddFull = req.AngkaMaxWin3ddFull
-		flag.AngkaMaxWin2dFull = req.AngkaMaxWin2dFull
-		flag.AngkaMaxWin2ddFull = req.AngkaMaxWin2ddFull
-		flag.AngkaMaxWin2dtFull = req.AngkaMaxWin2dtFull
-		flag.AngkaMaxWin4dDisc = req.AngkaMaxWin4dDisc
-		flag.AngkaMaxWin3dDisc = req.AngkaMaxWin3dDisc
-		flag.AngkaMaxWin3ddDisc = req.AngkaMaxWin3ddDisc
-		flag.AngkaMaxWin2dDisc = req.AngkaMaxWin2dDisc
-		flag.AngkaMaxWin2ddDisc = req.AngkaMaxWin2ddDisc
-		flag.AngkaMaxWin2dtDisc = req.AngkaMaxWin2dtDisc
-		flag.AngkaMaxWin4dBb = req.AngkaMaxWin4dBb
-		flag.AngkaMaxWin3dBb = req.AngkaMaxWin3dBb
-		flag.AngkaMaxWin3ddBb = req.AngkaMaxWin3ddBb
-		flag.AngkaMaxWin2dBb = req.AngkaMaxWin2dBb
-		flag.AngkaMaxWin2ddBb = req.AngkaMaxWin2ddBb
-		flag.AngkaMaxWin2dtBb = req.AngkaMaxWin2dtBb
-		flag.AngkaMaxWin4dBbKena = req.AngkaMaxWin4dBbKena
-		flag.AngkaMaxWin3dBbKena = req.AngkaMaxWin3dBbKena
-		flag.AngkaMaxWin3ddBbKena = req.AngkaMaxWin3ddBbKena
-		flag.AngkaMaxWin2dBbKena = req.AngkaMaxWin2dBbKena
-		flag.AngkaMaxWin2ddBbKena = req.AngkaMaxWin2ddBbKena
-		flag.AngkaMaxWin2dtBbKena = req.AngkaMaxWin2dtBbKena
-		flag.CbebasMaxMinbet = req.CbebasMaxMinbet
-		flag.CbebasMaxMaxbet = req.CbebasMaxMaxbet
-		flag.CbebasMaxWin = req.CbebasMaxWin
-		flag.CmacauMaxMinbet = req.CmacauMaxMinbet
-		flag.CmacauMaxMaxbet = req.CmacauMaxMaxbet
-		flag.CmacauMaxWin2 = req.CmacauMaxWin2
-		flag.CmacauMaxWin3 = req.CmacauMaxWin3
-		flag.CmacauMaxWin4 = req.CmacauMaxWin4
-		flag.CnagaMaxMinbet = req.CnagaMaxMinbet
-		flag.CnagaMaxMaxbet = req.CnagaMaxMaxbet
-		flag.CnagaMaxWin3 = req.CnagaMaxWin3
-		flag.CnagaMaxWin4 = req.CnagaMaxWin4
-		flag.CjituMaxMinbet = req.CjituMaxMinbet
-		flag.CjituMaxMaxbet = req.CjituMaxMaxbet
-		flag.CjituMaxWinas = req.CjituMaxWinas
-		flag.CjituMaxWinkop = req.CjituMaxWinkop
-		flag.CjituMaxWinkepala = req.CjituMaxWinkepala
-		flag.CjituMaxWinekor = req.CjituMaxWinekor
-		flag.Umum50MaxMinbet = req.Umum50MaxMinbet
-		flag.Umum50MaxMaxbet = req.Umum50MaxMaxbet
-		flag.Special50MaxMinbet = req.Special50MaxMinbet
-		flag.Special50MaxMaxbet = req.Special50MaxMaxbet
-		flag.Kombinasi50MaxMinbet = req.Kombinasi50MaxMinbet
-		flag.Kombinasi50MaxMaxbet = req.Kombinasi50MaxMaxbet
-		flag.MacauMaxMinbet = req.MacauMaxMinbet
-		flag.MacauMaxMaxbet = req.MacauMaxMaxbet
-		flag.MacauMaxWin = req.MacauMaxWin
-		flag.DasarMaxMinbet = req.DasarMaxMinbet
-		flag.DasarMaxMaxbet = req.DasarMaxMaxbet
-		flag.ShioMaxMinbet = req.ShioMaxMinbet
-		flag.ShioMaxMaxbet = req.ShioMaxMaxbet
-		flag.ShioMaxWin = req.ShioMaxWin
-		flag.ShioParent = req.ShioParent
-		flag.UpdateBy = client_admin
-		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
-
-		if err = txRepo.Update(ctx, &flag); err != nil {
-			return err
-		}
-
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		return err
-	}
-
-	go connection.DeleteRedis(RedisCompanyconftotoKey + strings.ToLower(req.IDcompany))
-	return nil
 }

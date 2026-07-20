@@ -91,10 +91,7 @@ type Companyconftoto struct {
 type CompanyconftotoRepository interface {
 	FindAll(ctx context.Context, idcomp string) ([]Companyconftoto, error)
 	FindByID(ctx context.Context, idcomp string) (Companyconftoto, error)
-	Save(ctx context.Context, compconftoto *Companyconftoto) error
-	Update(ctx context.Context, compconftoto *Companyconftoto) error
 }
 type CompanyconftotoService interface {
 	All(ctx context.Context, idcomp string) ([]dto.CompanyconftotoData, error)
-	Save(ctx context.Context, req dto.CompanyconftotoSave, client string) error
 }

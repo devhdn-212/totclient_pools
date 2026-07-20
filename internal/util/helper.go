@@ -71,3 +71,14 @@ func NtToStr(nt sql.NullTime, prefix string, loc *time.Location) string {
 	}
 	return ""
 }
+
+func Get_mapping_totodb(company string) (string, string, string, string, string, string) {
+	schema := "db_" + s.ToLower(company)
+	tbl_trx_keluarantogel := "tbl_trx_keluarantogel"
+	tbl_trx_keluarantogel_detail := "tbl_trx_keluarantogel_detail"
+	tbl_trx_keluarantogel_detail_reject := "tbl_trx_keluarantogel_detail_reject"
+	tbl_trx_keluarantogel_member := "tbl_trx_keluarantogel_member"
+	tbl_trx_member_invoice := "tbl_trx_member_invoice"
+
+	return schema, tbl_trx_keluarantogel, tbl_trx_keluarantogel_detail, tbl_trx_keluarantogel_detail_reject, tbl_trx_keluarantogel_member, tbl_trx_member_invoice
+}

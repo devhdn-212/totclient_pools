@@ -2,22 +2,15 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/devhdn-212/totagen_api/domain"
 	"github.com/devhdn-212/totagen_api/dto"
 	"github.com/devhdn-212/totagen_api/internal/connection"
-	"github.com/devhdn-212/totagen_api/internal/repository"
 	"github.com/devhdn-212/totagen_api/internal/util"
-	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -94,129 +87,4 @@ func (c companyService) All(ctx context.Context) ([]dto.CompanyData, error) {
 	go connection.SetRedis(RedisCompanyKey, compData, 60*time.Minute)
 	connection.Log.Info("Returning data Database - Company")
 	return compData, nil
-}
-
-func (c companyService) Save(ctx context.Context, req dto.CompanySave, client_admin string) error {
-	tx, err := c.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback(ctx)
-
-	txExec := repository.NewPGXTxExecutor(tx)
-	txRepo := repository.NewCompanyRepository(txExec)
-	txRepoConfToto := repository.NewCompanyconftotoRepository(txExec)
-
-	flag, err := txRepo.FindByID(ctx, req.ID)
-	flag_conf, err_conf := txRepoConfToto.FindByID(ctx, req.ID)
-	if err != nil {
-		return err
-	}
-	if err_conf != nil {
-		return err_conf
-	}
-
-	now := util.GetNowJakarta()
-
-	if req.Type == "New" {
-		if flag.ID != "" {
-			return util.ErrDuplicate
-		}
-		comp := domain.Company{
-			ID:          req.ID,
-			IDcurrdef:   req.IDcurr,
-			IDgroupcomp: req.IDgroupcomp,
-			Name:        req.Name,
-			TelegramID:  req.TelegramID,
-			URLapitoto:  req.URLapitoto,
-			URLapislot:  req.URLapislot,
-			Status:      req.Status,
-			Activetoto:  req.Activetoto,
-			Activeslot:  req.Activeslot,
-			Created:     client_admin,
-			CreatedAt:   sql.NullTime{Valid: true, Time: now},
-		}
-		err = txRepo.Save(ctx, &comp)
-		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				return util.ErrDuplicate
-			}
-			return err
-		}
-		if flag.Activetoto == "Y" {
-			if flag_conf.IDcompconftoto == "" { // TOTO ACTIVE
-				fmt.Println("==CREATE CONF TOTO==")
-				raw := strings.ReplaceAll(uuid.NewString(), "-", "")
-				date := time.Now().Format("0601")
-				idconf := fmt.Sprintf("%s-%s-conftoto-%s", strings.ToLower(req.ID), date, raw)
-				compconf := domain.Companyconftoto{
-					IDcompconftoto: idconf,
-					IDcompany:      req.ID,
-					CreateBy:       client_admin,
-					CreateAt:       sql.NullTime{Valid: true, Time: now},
-				}
-				err = txRepoConfToto.Save(ctx, &compconf)
-				if err != nil {
-					var pgErr *pgconn.PgError
-					if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-						return util.ErrDuplicate
-					}
-					return err
-				}
-				fmt.Println("==END CREATE CONF TOTO==")
-			}
-		}
-	} else {
-		if flag.ID == "" {
-			return fmt.Errorf("Company %w", util.ErrNotFound)
-		}
-
-		flag.IDcurrdef = req.IDcurr
-		flag.IDgroupcomp = req.IDgroupcomp
-		flag.Name = req.Name
-		flag.TelegramID = req.TelegramID
-		flag.URLapitoto = req.URLapitoto
-		flag.URLapislot = req.URLapislot
-		flag.Status = req.Status
-		flag.Activetoto = req.Activetoto
-		flag.Activeslot = req.Activeslot
-		flag.Update = client_admin
-		flag.UpdateAt = sql.NullTime{Valid: true, Time: now}
-
-		if err = txRepo.Update(ctx, &flag); err != nil {
-			return err
-		}
-		if flag.Activetoto == "Y" {
-			if flag_conf.IDcompconftoto == "" { // TOTO ACTIVE
-				fmt.Println("==CREATE CONF TOTO==")
-				raw := strings.ReplaceAll(uuid.NewString(), "-", "")
-				date := time.Now().Format("0601")
-				idconf := fmt.Sprintf("%s-%s-conftoto-%s", strings.ToLower(req.ID), date, raw)
-				compconf := domain.Companyconftoto{
-					IDcompconftoto: idconf,
-					IDcompany:      req.ID,
-					CreateBy:       client_admin,
-					CreateAt:       sql.NullTime{Valid: true, Time: now},
-				}
-				err = txRepoConfToto.Save(ctx, &compconf)
-				if err != nil {
-					var pgErr *pgconn.PgError
-					if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-						return util.ErrDuplicate
-					}
-					return err
-				}
-				fmt.Println("==END CREATE CONF TOTO==")
-			}
-		}
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		return err
-	}
-
-	go connection.DeleteRedis(RedisCompanyKey)
-	return nil
 }
