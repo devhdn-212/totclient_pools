@@ -13,6 +13,7 @@ import (
 	"github.com/devhdn-212/totclient_api/internal/util"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -20,19 +21,24 @@ const (
 )
 
 type pasaranService struct {
-	db   *pgxpool.Pool
-	repo domain.PasaranRepository
+	db      *pgxpool.Pool
+	repo    domain.PasaranRepository
+	trxRepo domain.TrxkeluaranRepository
+	sf      singleflight.Group
 }
 
-func NewPasaranService(db *pgxpool.Pool, repo domain.PasaranRepository) domain.PasaranService {
+func NewPasaranService(db *pgxpool.Pool, repo domain.PasaranRepository, trxRepo domain.TrxkeluaranRepository) domain.PasaranService {
 	return &pasaranService{
-		db:   db,
-		repo: repo,
+		db:      db,
+		repo:    repo,
+		trxRepo: trxRepo,
 	}
 }
 
 func (u *pasaranService) FindID(ctx context.Context, idcomp, codepasaran string) (dto.PasaranData, error) {
-	cached, found, err := connection.GetRedis(RedisPasaran + ":" + strings.ToLower(idcomp) + ":" + strings.ToLower(codepasaran))
+	redisKey := RedisPasaran + ":" + strings.ToLower(idcomp) + ":" + strings.ToLower(codepasaran)
+
+	cached, found, err := connection.GetRedis(redisKey)
 	if err != nil {
 		return dto.PasaranData{}, err
 	}
@@ -43,6 +49,18 @@ func (u *pasaranService) FindID(ctx context.Context, idcomp, codepasaran string)
 			return record, nil
 		}
 	}
+
+	result, err, _ := u.sf.Do(redisKey, func() (any, error) {
+		return u.fetchPasaranData(ctx, idcomp, codepasaran, redisKey)
+	})
+	if err != nil {
+		return dto.PasaranData{}, err
+	}
+	return result.(dto.PasaranData), nil
+}
+
+func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasaran, redisKey string) (dto.PasaranData, error) {
+	var record dto.PasaranData
 
 	v, err := u.repo.FindByID(ctx, idcomp, strings.ToUpper(codepasaran))
 	if err != nil {
@@ -59,33 +77,49 @@ func (u *pasaranService) FindID(ctx context.Context, idcomp, codepasaran string)
 		return dto.PasaranData{}, err
 	}
 
+	trxkeluaran, err := u.trxRepo.FindByID(ctx, strings.ToUpper(idcomp), v.IDcomppasaran)
+	if err != nil {
+		log.Error(err)
+		return dto.PasaranData{}, err
+	}
+
 	now := util.GetNowJakarta()
-	todayNamaHari := util.HariIndonesia(now)
-	nowMicros := int64(now.Hour())*3600e6 + int64(now.Minute())*60e6 + int64(now.Second())*1e6
+	tglKeluaran := trxkeluaran.Datekeluaran
+	tglAwal := time.Date(tglKeluaran.Year(), tglKeluaran.Month(), tglKeluaran.Day(), 0, 0, 0, 0, util.LocJakarta)
+	tglHariIni := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, util.LocJakarta)
 
-	status := "OFFLINE"
+	status := "ONLINE"
 	var jadwalOpen string
-	for _, d := range jadwal {
-		if d.Haripasaran != todayNamaHari {
-			continue
-		}
 
-		if d.Jamtutup.Valid && d.Jamopen.Valid {
-			if nowMicros >= d.Jamtutup.Microseconds && nowMicros < d.Jamopen.Microseconds {
+	hariIni := util.HariIndonesia(now)
+	for _, d := range jadwal {
+		if d.Haripasaran == hariIni && d.Jamopen.Valid {
+			jadwalOpen = tglHariIni.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond).Format("2006-01-02 15:04:05")
+		}
+	}
+
+	if tglAwal.Before(tglHariIni) {
+		status = "OFFLINE"
+	} else {
+		hariKeluaran := util.HariIndonesia(tglKeluaran)
+		for _, d := range jadwal {
+			if d.Haripasaran != hariKeluaran || !d.Jamtutup.Valid || !d.Jamopen.Valid {
+				continue
+			}
+
+			tutupTime := tglAwal.Add(time.Duration(d.Jamtutup.Microseconds) * time.Microsecond)
+			openTime := tglAwal.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond)
+
+			if !now.Before(tutupTime) && now.Before(openTime) {
 				status = "OFFLINE"
 			} else {
 				status = "ONLINE"
 			}
 		}
-
-		if d.Jamopen.Valid {
-			jadwalOpen = now.Format("2006-01-02") + " " + util.PgTimeToString(d.Jamopen)
-		}
 	}
 
+	fmt.Println("idcompasaran : ", v.IDcomppasaran)
 	record = dto.PasaranData{
-		IDcomppasaran:                    v.IDcomppasaran,
-		IDcompany:                        v.IDcompany,
 		Codepasaran:                      v.Codecomppasaran,
 		Aliascomppasaran:                 v.Aliascomppasaran,
 		URLlogo:                          v.URLlogo,
@@ -322,8 +356,11 @@ func (u *pasaranService) FindID(ctx context.Context, idcomp, codepasaran string)
 		ShioLimittotal:                   v.ShioLimittotal,
 		Status:                           status,
 		JadwalOpen:                       jadwalOpen,
+		IDtrxkeluaran:                    trxkeluaran.ID,
+		Keluaranperiode:                  trxkeluaran.Keluaranperiode,
+		Datekeluaran:                     trxkeluaran.Datekeluaran.Format("2006-01-02"),
 	}
-	go connection.SetRedis(RedisPasaran+":"+strings.ToLower(idcomp)+":"+strings.ToLower(codepasaran), record, 24*time.Hour)
+	go connection.SetRedis(redisKey, record, 24*time.Hour)
 	connection.Log.Info("Returning data Database - Pasaran")
 	return record, nil
 }

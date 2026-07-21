@@ -12,7 +12,6 @@ import (
 	"github.com/devhdn-212/totclient_api/internal/util"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"go.uber.org/zap"
 )
 
@@ -25,17 +24,7 @@ func NewMemberInfo(app *fiber.App,
 	aa := &memberinfoApi{
 		memberinfoService: memberinfoService,
 	}
-	memberinfo := app.Group("/api/servicetoken", limiter.New(limiter.Config{
-		Max:        20,
-		Expiration: 1 * time.Minute,
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
-		},
-		LimitReached: func(c *fiber.Ctx) error {
-			return c.Status(fiber.StatusTooManyRequests).
-				JSON(dto.CreateResponseError(fiber.StatusTooManyRequests, "too many requests"))
-		},
-	}))
+	memberinfo := app.Group("/api/servicetoken")
 	memberinfo.Post("", aa.Checktoken)
 }
 func (a memberinfoApi) Checktoken(ctx *fiber.Ctx) error {

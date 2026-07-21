@@ -5,8 +5,6 @@ import (
 )
 
 type PasaranData struct {
-	IDcomppasaran                    string          `json:"pasaran_idcomppasaran"`
-	IDcompany                        string          `json:"pasaran_idcompany"`
 	Codepasaran                      string          `json:"pasaran_codecomppasaran"`
 	Aliascomppasaran                 string          `json:"pasaran_aliascomppasaran"`
 	URLlogo                          string          `json:"pasaran_urllogo"`
@@ -243,6 +241,9 @@ type PasaranData struct {
 	ShioLimittotal                   decimal.Decimal `json:"pasaran_shio_limittotal"`
 	Status                           string          `json:"pasaran_status"`
 	JadwalOpen                       string          `json:"pasaran_jadwal_open"`
+	IDtrxkeluaran                    int             `json:"pasaran_invoice"`
+	Keluaranperiode                  int             `json:"pasaran_keluaranperiode"`
+	Datekeluaran                     string          `json:"pasaran_datekeluaran"`
 }
 
 type PasaranAll struct {

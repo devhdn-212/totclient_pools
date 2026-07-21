@@ -52,12 +52,9 @@ type Trxkeluaranview struct {
 
 type TrxkeluaranRepository interface {
 	FindAllRunning(ctx context.Context, idcomp string) ([]Trxkeluaranview, error)
-	FindByID(ctx context.Context, idcomp, idcomppasaran string, idtrx int) (Trxkeluaran, error)
+	FindByID(ctx context.Context, idcomp, idcomppasaran string) (Trxkeluaran, error)
 	FindByIDByNomorKeluaran(ctx context.Context, idcomp, idcomppasaran string) (Trxkeluaran, error)
-	Save(ctx context.Context, trxkeluaran *Trxkeluaran, idcomp string) error
-	Update(ctx context.Context, trxkeluaran *Trxkeluaran, idcomp string) error
 }
 type TrxkeluaranService interface {
 	All(ctx context.Context, idcomp string) ([]dto.TrxkeluaranData, error)
-	Save(ctx context.Context, req dto.TrxkeluaranSave, client, idcomp string) error
 }

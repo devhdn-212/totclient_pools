@@ -18,6 +18,7 @@ import (
 	jwtMid "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/etag"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
@@ -47,6 +48,17 @@ func main() {
 	app := fiber.New()
 	app.Use(requestid.New())
 	app.Use(etag.New())
+	app.Use(limiter.New(limiter.Config{
+		Max:        20,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).
+				JSON(dto.CreateResponseError(fiber.StatusTooManyRequests, "too many requests"))
+		},
+	}))
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
@@ -124,13 +136,14 @@ func main() {
 	currRepository := repository.NewCurrRepository(pgxExec)
 
 	pasaranRepository := repository.NewPasaranRepository(pgxExec)
+	trxkeluaranRepository := repository.NewTrxkeluaranRepository(pgxExec)
 
 	adminService := service.NewAdminService(dbPool, adminRepository)
 	adminruleService := service.NewAdminruleService(dbPool, adminruleRepository)
 	clinetruleService := service.NewClientruleService(dbPool, clientruleRepository)
 	currService := service.NewCurrService(dbPool, currRepository)
 
-	pasaranService := service.NewPasaranService(dbPool, pasaranRepository)
+	pasaranService := service.NewPasaranService(dbPool, pasaranRepository, trxkeluaranRepository)
 
 	memberinfoService := service.NewMemberinfoService()
 	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
