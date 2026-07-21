@@ -137,6 +137,7 @@ func main() {
 	trxkeluaranService := service.NewTrxkeluaranService(dbPool, trxkeluaranRepository)
 	trxkeluarandetailService := service.NewTrxkeluarandetailService(dbPool, trxkeluarandetailRepository)
 	trxkeluaranmemberService := service.NewTrxkeluaranmemberService(dbPool, trxkeluaranmemberRepository)
+	memberinfoService := service.NewMemberinfoService()
 	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
@@ -147,6 +148,7 @@ func main() {
 	api.NewTrxkeluaranApi(app, trxkeluaranService, pasaranService, jwtMidd)
 	api.NewTrxkeluarandetailApi(app, trxkeluarandetailService, jwtMidd)
 	api.NewTrxkeluaranmemberApi(app, trxkeluaranmemberService, jwtMidd)
+	api.NewMemberInfo(app, memberinfoService)
 	api.NewAuth(app, authService, jwtMidd)
 
 	go func() {

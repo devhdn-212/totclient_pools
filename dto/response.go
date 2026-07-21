@@ -20,6 +20,21 @@ func CreateResponseErrorData(status int, message string, data map[string]string)
 		Record:  data,
 	}
 }
+
+type ErrorCode struct {
+	Code int `json:"code"`
+}
+
+// CreateResponseErrorCode attaches a numeric error code to the response so
+// other servers checking this endpoint can identify that the error came
+// from this (pusat) server, independent of the HTTP status.
+func CreateResponseErrorCode(status int, code int, message string) Response[ErrorCode] {
+	return Response[ErrorCode]{
+		Status:  status,
+		Message: message,
+		Record:  ErrorCode{Code: code},
+	}
+}
 func CreateResponseSuccess[T any](data T) Response[T] {
 	return Response[T]{
 		Status:  200,
