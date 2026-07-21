@@ -13,12 +13,14 @@ type Pasaran struct {
 	IDcomppasaran                    string          `db:"idcomppasaran"`
 	IDcompany                        string          `db:"idcompany"`
 	IDpasarantogel                   string          `db:"idpasarantogel"`
+	Codecomppasaran                  string          `db:"codecomppasaran"`
 	Aliascomppasaran                 string          `db:"aliascomppasaran"`
 	URLpasaran                       string          `db:"urlpasaran"`
 	URLlogo                          string          `db:"urllogo"`
 	Pasarandiundi                    string          `db:"pasarandiundi"`
 	Pasaranlibur                     string          `db:"pasaranlibur"`
 	Display                          int             `db:"displaypasaran"`
+	Totalrevisi                      int             `db:"totalrevisi"`
 	AngkaMinbasket                   decimal.Decimal `db:"angka_minbasket"`
 	AngkaMinbet                      decimal.Decimal `db:"angka_minbet"`
 	AngkaMaxbet4d                    decimal.Decimal `db:"angka_maxbet4d"`
@@ -288,16 +290,9 @@ type Pasaranjadwal struct {
 }
 
 type PasaranRepository interface {
-	FindAll(ctx context.Context, idcomp string) ([]Pasaran, error)
-	FindSelect(ctx context.Context, idcomp string) ([]Pasaran, error)
 	FindJadwal(ctx context.Context, id string) ([]Pasaranjadwal, error)
-	FindByID(ctx context.Context, id, idcomp string) (Pasaran, error)
-	Update(ctx context.Context, pasarantoto *Pasaran) error
-	Savejadwal(ctx context.Context, jadwalpasaran *Pasaranjadwal) error
-	DeleteJadwal(ctx context.Context, id string) error
+	FindByID(ctx context.Context, idcomp, codepasaran string) (Pasaran, error)
 }
 type PasaranService interface {
-	All(ctx context.Context, id string) ([]dto.PasaranData, error)
-	Select(ctx context.Context, idcomp string) ([]dto.PasaranSelect, error)
-	Save(ctx context.Context, req dto.PasaranSave, client, idcomp string) error
+	FindID(ctx context.Context, id, codepasaran string) (dto.PasaranData, error)
 }

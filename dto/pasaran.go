@@ -7,12 +7,9 @@ import (
 type PasaranData struct {
 	IDcomppasaran                    string          `json:"pasaran_idcomppasaran"`
 	IDcompany                        string          `json:"pasaran_idcompany"`
+	Codepasaran                      string          `json:"pasaran_codecomppasaran"`
 	Aliascomppasaran                 string          `json:"pasaran_aliascomppasaran"`
-	URLpasaran                       string          `json:"pasaran_urlpasaran"`
 	URLlogo                          string          `json:"pasaran_urllogo"`
-	Pasarandiundi                    string          `json:"pasaran_pasarandiundi"`
-	Pasaranlibur                     string          `json:"pasaran_pasaranlibur"`
-	Display                          int             `json:"pasaran_displaypasaran"`
 	AngkaMinbasket                   decimal.Decimal `json:"pasaran_angka_minbasket"`
 	AngkaMinbet                      decimal.Decimal `json:"pasaran_angka_minbet"`
 	AngkaMaxbet4d                    decimal.Decimal `json:"pasaran_angka_maxbet4d"`
@@ -33,12 +30,12 @@ type PasaranData struct {
 	AngkaDisc2d                      decimal.Decimal `json:"pasaran_angka_disc2d"`
 	AngkaDisc2dd                     decimal.Decimal `json:"pasaran_angka_disc2dd"`
 	AngkaDisc2dt                     decimal.Decimal `json:"pasaran_angka_disc2dt"`
-	AngkaLimitbuang4d                decimal.Decimal `json:"pasaran_angka_limitbuang4d"`
-	AngkaLimitbuang3d                decimal.Decimal `json:"pasaran_angka_limitbuang3d"`
-	AngkaLimitbuang3dd               decimal.Decimal `json:"pasaran_angka_limitbuang3dd"`
-	AngkaLimitbuang2d                decimal.Decimal `json:"pasaran_angka_limitbuang2d"`
-	AngkaLimitbuang2dd               decimal.Decimal `json:"pasaran_angka_limitbuang2dd"`
-	AngkaLimitbuang2dt               decimal.Decimal `json:"pasaran_angka_limitbuang2dt"`
+	AngkaLimitbuang4d                decimal.Decimal `json:"pasaran_angka_limitglobal4d"`
+	AngkaLimitbuang3d                decimal.Decimal `json:"pasaran_angka_limitglobal3d"`
+	AngkaLimitbuang3dd               decimal.Decimal `json:"pasaran_angka_limitglobal3dd"`
+	AngkaLimitbuang2d                decimal.Decimal `json:"pasaran_angka_limitglobal2d"`
+	AngkaLimitbuang2dd               decimal.Decimal `json:"pasaran_angka_limitglobal2dd"`
+	AngkaLimitbuang2dt               decimal.Decimal `json:"pasaran_angka_limitglobal2dt"`
 	AngkaLimittotal4d                decimal.Decimal `json:"pasaran_angka_limittotal4d"`
 	AngkaLimittotal3d                decimal.Decimal `json:"pasaran_angka_limittotal3d"`
 	AngkaLimittotal3dd               decimal.Decimal `json:"pasaran_angka_limittotal3dd"`
@@ -87,24 +84,6 @@ type PasaranData struct {
 	AngkaMaxbuy2d                    decimal.Decimal `json:"pasaran_angka_maxbuy2d"`
 	AngkaMaxbuy2dd                   decimal.Decimal `json:"pasaran_angka_maxbuy2dd"`
 	AngkaMaxbuy2dt                   decimal.Decimal `json:"pasaran_angka_maxbuy2dt"`
-	AngkaMaxbet4dFullbb              decimal.Decimal `json:"pasaran_angka_maxbet4d_fullbb"`
-	AngkaMaxbet3dFullbb              decimal.Decimal `json:"pasaran_angka_maxbet3d_fullbb"`
-	AngkaMaxbet3ddFullbb             decimal.Decimal `json:"pasaran_angka_maxbet3dd_fullbb"`
-	AngkaMaxbet2dFullbb              decimal.Decimal `json:"pasaran_angka_maxbet2d_fullbb"`
-	AngkaMaxbet2ddFullbb             decimal.Decimal `json:"pasaran_angka_maxbet2dd_fullbb"`
-	AngkaMaxbet2dtFullbb             decimal.Decimal `json:"pasaran_angka_maxbet2dt_fullbb"`
-	AngkaLimitbuang4dFullbb          decimal.Decimal `json:"pasaran_angka_limitbuang4d_fullbb"`
-	AngkaLimitbuang3dFullbb          decimal.Decimal `json:"pasaran_angka_limitbuang3d_fullbb"`
-	AngkaLimitbuang3ddFullbb         decimal.Decimal `json:"pasaran_angka_limitbuang3dd_fullbb"`
-	AngkaLimitbuang2dFullbb          decimal.Decimal `json:"pasaran_angka_limitbuang2d_fullbb"`
-	AngkaLimitbuang2ddFullbb         decimal.Decimal `json:"pasaran_angka_limitbuang2dd_fullbb"`
-	AngkaLimitbuang2dtFullbb         decimal.Decimal `json:"pasaran_angka_limitbuang2dt_fullbb"`
-	AngkaLimittotal4dFullbb          decimal.Decimal `json:"pasaran_angka_limittotal4d_fullbb"`
-	AngkaLimittotal3dFullbb          decimal.Decimal `json:"pasaran_angka_limittotal3d_fullbb"`
-	AngkaLimittotal3ddFullbb         decimal.Decimal `json:"pasaran_angka_limittotal3dd_fullbb"`
-	AngkaLimittotal2dFullbb          decimal.Decimal `json:"pasaran_angka_limittotal2d_fullbb"`
-	AngkaLimittotal2ddFullbb         decimal.Decimal `json:"pasaran_angka_limittotal2dd_fullbb"`
-	AngkaLimittotal2dtFullbb         decimal.Decimal `json:"pasaran_angka_limittotal2dt_fullbb"`
 	AngkaLimitline4d                 decimal.Decimal `json:"pasaran_angka_limitline_4d"`
 	AngkaLimitline3d                 decimal.Decimal `json:"pasaran_angka_limitline_3d"`
 	AngkaLimitline2d                 decimal.Decimal `json:"pasaran_angka_limitline_2d"`
@@ -117,7 +96,7 @@ type PasaranData struct {
 	CbMaxbuy                         decimal.Decimal `json:"pasaran_cb_maxbuy"`
 	CbWin                            decimal.Decimal `json:"pasaran_cb_win"`
 	CbDisc                           decimal.Decimal `json:"pasaran_cb_disc"`
-	CbLimitbuang                     decimal.Decimal `json:"pasaran_cb_limitbuang"`
+	CbLimitbuang                     decimal.Decimal `json:"pasaran_cb_limitglobal"`
 	CbLimitotal                      decimal.Decimal `json:"pasaran_cb_limitotal"`
 	CmacauMinbet                     decimal.Decimal `json:"pasaran_cmacau_minbet"`
 	CmacauMaxbet                     decimal.Decimal `json:"pasaran_cmacau_maxbet"`
@@ -126,7 +105,7 @@ type PasaranData struct {
 	CmacauWin3digit                  decimal.Decimal `json:"pasaran_cmacau_win3digit"`
 	CmacauWin4digit                  decimal.Decimal `json:"pasaran_cmacau_win4digit"`
 	CmacauDisc                       decimal.Decimal `json:"pasaran_cmacau_disc"`
-	CmacauLimitbuang                 decimal.Decimal `json:"pasaran_cmacau_limitbuang"`
+	CmacauLimitbuang                 decimal.Decimal `json:"pasaran_cmacau_limitglobal"`
 	CmacauLimittotal                 decimal.Decimal `json:"pasaran_cmacau_limittotal"`
 	CnagaMinbet                      decimal.Decimal `json:"pasaran_cnaga_minbet"`
 	CnagaMaxbet                      decimal.Decimal `json:"pasaran_cnaga_maxbet"`
@@ -134,7 +113,7 @@ type PasaranData struct {
 	CnagaWin3digit                   decimal.Decimal `json:"pasaran_cnaga_win3digit"`
 	CnagaWin4digit                   decimal.Decimal `json:"pasaran_cnaga_win4digit"`
 	CnagaDisc                        decimal.Decimal `json:"pasaran_cnaga_disc"`
-	CnagaLimitbuang                  decimal.Decimal `json:"pasaran_cnaga_limitbuang"`
+	CnagaLimitbuang                  decimal.Decimal `json:"pasaran_cnaga_limitglobal"`
 	CnagaLimittotal                  decimal.Decimal `json:"pasaran_cnaga_limittotal"`
 	CjituMinbet                      decimal.Decimal `json:"pasaran_cjitu_minbet"`
 	CjituMaxbet                      decimal.Decimal `json:"pasaran_cjitu_maxbet"`
@@ -144,7 +123,7 @@ type PasaranData struct {
 	CjituWinkepala                   decimal.Decimal `json:"pasaran_cjitu_winkepala"`
 	CjituWinekor                     decimal.Decimal `json:"pasaran_cjitu_winekor"`
 	CjituDesic                       decimal.Decimal `json:"pasaran_cjitu_desic"`
-	CjituLimitbuang                  decimal.Decimal `json:"pasaran_cjitu_limitbuang"`
+	CjituLimitbuang                  decimal.Decimal `json:"pasaran_cjitu_limitglobal"`
 	CjituLimitotal                   decimal.Decimal `json:"pasaran_cjitu_limitotal"`
 	Umum5050Minbet                   decimal.Decimal `json:"pasaran_umum5050_minbet"`
 	Umum5050Maxbet                   decimal.Decimal `json:"pasaran_umum5050_maxbet"`
@@ -161,7 +140,7 @@ type PasaranData struct {
 	Umum5050Discganjil               decimal.Decimal `json:"pasaran_umum5050_discganjil"`
 	Umum5050Disctengah               decimal.Decimal `json:"pasaran_umum5050_disctengah"`
 	Umum5050Disctepi                 decimal.Decimal `json:"pasaran_umum5050_disctepi"`
-	Umum5050Limitbuang               decimal.Decimal `json:"pasaran_umum5050_limitbuang"`
+	Umum5050Limitbuang               decimal.Decimal `json:"pasaran_umum5050_limitglobal"`
 	Umum5050Limittotal               decimal.Decimal `json:"pasaran_umum5050_limittotal"`
 	Special5050Minbet                decimal.Decimal `json:"pasaran_special5050_minbet"`
 	Special5050Maxbet                decimal.Decimal `json:"pasaran_special5050_maxbet"`
@@ -198,7 +177,7 @@ type PasaranData struct {
 	Special5050Discekorgenap         decimal.Decimal `json:"pasaran_special5050_discekorgenap"`
 	Special5050Discekorbesar         decimal.Decimal `json:"pasaran_special5050_discekorbesar"`
 	Special5050Discekorkecil         decimal.Decimal `json:"pasaran_special5050_discekorkecil"`
-	Special5050Limitbuang            decimal.Decimal `json:"pasaran_special5050_limitbuang"`
+	Special5050Limitbuang            decimal.Decimal `json:"pasaran_special5050_limitglobal"`
 	Special5050Limittotal            decimal.Decimal `json:"pasaran_special5050_limittotal"`
 	Kombinasi5050Minbet              decimal.Decimal `json:"pasaran_kombinasi5050_minbet"`
 	Kombinasi5050Maxbet              decimal.Decimal `json:"pasaran_kombinasi5050_maxbet"`
@@ -233,14 +212,14 @@ type PasaranData struct {
 	Kombinasi5050Depandisckembang    decimal.Decimal `json:"pasaran_kombinasi5050_depandisckembang"`
 	Kombinasi5050Depandisckempis     decimal.Decimal `json:"pasaran_kombinasi5050_depandisckempis"`
 	Kombinasi5050Depandisckembar     decimal.Decimal `json:"pasaran_kombinasi5050_depandisckembar"`
-	Kombinasi5050Limitbuang          decimal.Decimal `json:"pasaran_kombinasi5050_limitbuang"`
+	Kombinasi5050Limitbuang          decimal.Decimal `json:"pasaran_kombinasi5050_limitglobal"`
 	Kombinasi5050Limittotal          decimal.Decimal `json:"pasaran_kombinasi5050_limittotal"`
 	MacaukombinasiMinbet             decimal.Decimal `json:"pasaran_macaukombinasi_minbet"`
 	MacaukombinasiMaxbet             decimal.Decimal `json:"pasaran_macaukombinasi_maxbet"`
 	MacaukombinasiMaxbuy             decimal.Decimal `json:"pasaran_macaukombinasi_maxbuy"`
 	MacaukombinasiWin                decimal.Decimal `json:"pasaran_macaukombinasi_win"`
 	MacaukombinasiDiscount           decimal.Decimal `json:"pasaran_macaukombinasi_discount"`
-	MacaukombinasiLimitbuang         decimal.Decimal `json:"pasaran_macaukombinasi_limitbuang"`
+	MacaukombinasiLimitbuang         decimal.Decimal `json:"pasaran_macaukombinasi_limitglobal"`
 	MacaukombinasiLimittotal         decimal.Decimal `json:"pasaran_macaukombinasi_limittotal"`
 	DasarMinbet                      decimal.Decimal `json:"pasaran_dasar_minbet"`
 	DasarMaxbet                      decimal.Decimal `json:"pasaran_dasar_maxbet"`
@@ -253,21 +232,17 @@ type PasaranData struct {
 	DasarDisckecil                   decimal.Decimal `json:"pasaran_dasar_disckecil"`
 	DasarDiscigenap                  decimal.Decimal `json:"pasaran_dasar_discigenap"`
 	DasarDiscganjil                  decimal.Decimal `json:"pasaran_dasar_discganjil"`
-	DasarLimitbuang                  decimal.Decimal `json:"pasaran_dasar_limitbuang"`
+	DasarLimitbuang                  decimal.Decimal `json:"pasaran_dasar_limitglobal"`
 	DasarLimittotal                  decimal.Decimal `json:"pasaran_dasar_limittotal"`
-	ShioReferal                      float64         `json:"pasaran_shio_referal"`
-	ShioShiotahunini                 string          `json:"pasaran_shio_shiotahunini"`
 	ShioMinbet                       decimal.Decimal `json:"pasaran_shio_minbet"`
 	ShioMaxbet                       decimal.Decimal `json:"pasaran_shio_maxbet"`
 	ShioMaxbuy                       decimal.Decimal `json:"pasaran_shio_maxbuy"`
 	ShioWin                          decimal.Decimal `json:"pasaran_shio_win"`
 	ShioDisc                         decimal.Decimal `json:"pasaran_shio_disc"`
-	ShioLimitbuang                   decimal.Decimal `json:"pasaran_shio_limitbuang"`
+	ShioLimitbuang                   decimal.Decimal `json:"pasaran_shio_limitglobal"`
 	ShioLimittotal                   decimal.Decimal `json:"pasaran_shio_limittotal"`
-	Jadwalpasaran                    []Pasaranjadwal `json:"jadwalpasaran"`
 	Status                           string          `json:"pasaran_status"`
-	Created                          string          `json:"pasaran_created"`
-	Update                           string          `json:"pasaran_updated"`
+	JadwalOpen                       string          `json:"pasaran_jadwal_open"`
 }
 
 type PasaranAll struct {
@@ -284,268 +259,4 @@ type Pasaranjadwal struct {
 	Jamtutup        string `json:"jadwalpasaran_jamtutup"`
 	Jamjadwal       string `json:"jadwalpasaran_jamjadwal"`
 	Jamopen         string `json:"jadwalpasaran_jamopen"`
-}
-type PasaranSave struct {
-	Type                             string          `json:"type" validate:"required"`
-	IDcomppasaran                    string          `json:"pasaran_idcomppasaran" validate:"required"`
-	IDcompany                        string          `json:"pasaran_idcompany" validate:"required"`
-	Aliascomppasaran                 string          `json:"pasaran_aliascomppasaran"`
-	URLpasaran                       string          `json:"pasaran_urlpasaran"`
-	URLlogo                          string          `json:"pasaran_urllogo"`
-	Pasarandiundi                    string          `json:"pasaran_pasarandiundi"`
-	Pasaranlibur                     string          `json:"pasaran_pasaranlibur"`
-	Status                           string          `json:"pasaran_status"`
-	Display                          int             `json:"pasaran_displaypasaran"`
-	AngkaMinbasket                   decimal.Decimal `json:"pasaran_angka_minbasket"`
-	AngkaMinbet                      decimal.Decimal `json:"pasaran_angka_minbet"`
-	AngkaMaxbet4d                    decimal.Decimal `json:"pasaran_angka_maxbet4d"`
-	AngkaMaxbet3d                    decimal.Decimal `json:"pasaran_angka_maxbet3d"`
-	AngkaMaxbet3dd                   decimal.Decimal `json:"pasaran_angka_maxbet3dd"`
-	AngkaMaxbet2d                    decimal.Decimal `json:"pasaran_angka_maxbet2d"`
-	AngkaMaxbet2dd                   decimal.Decimal `json:"pasaran_angka_maxbet2dd"`
-	AngkaMaxbet2dt                   decimal.Decimal `json:"pasaran_angka_maxbet2dt"`
-	AngkaWin4d                       decimal.Decimal `json:"pasaran_angka_win4d"`
-	AngkaWin3d                       decimal.Decimal `json:"pasaran_angka_win3d"`
-	AngkaWin3dd                      decimal.Decimal `json:"pasaran_angka_win3dd"`
-	AngkaWin2d                       decimal.Decimal `json:"pasaran_angka_win2d"`
-	AngkaWin2dd                      decimal.Decimal `json:"pasaran_angka_win2dd"`
-	AngkaWin2dt                      decimal.Decimal `json:"pasaran_angka_win2dt"`
-	AngkaDisc4d                      decimal.Decimal `json:"pasaran_angka_disc4d"`
-	AngkaDisc3d                      decimal.Decimal `json:"pasaran_angka_disc3d"`
-	AngkaDisc3dd                     decimal.Decimal `json:"pasaran_angka_disc3dd"`
-	AngkaDisc2d                      decimal.Decimal `json:"pasaran_angka_disc2d"`
-	AngkaDisc2dd                     decimal.Decimal `json:"pasaran_angka_disc2dd"`
-	AngkaDisc2dt                     decimal.Decimal `json:"pasaran_angka_disc2dt"`
-	AngkaLimitbuang4d                decimal.Decimal `json:"pasaran_angka_limitbuang4d"`
-	AngkaLimitbuang3d                decimal.Decimal `json:"pasaran_angka_limitbuang3d"`
-	AngkaLimitbuang3dd               decimal.Decimal `json:"pasaran_angka_limitbuang3dd"`
-	AngkaLimitbuang2d                decimal.Decimal `json:"pasaran_angka_limitbuang2d"`
-	AngkaLimitbuang2dd               decimal.Decimal `json:"pasaran_angka_limitbuang2dd"`
-	AngkaLimitbuang2dt               decimal.Decimal `json:"pasaran_angka_limitbuang2dt"`
-	AngkaLimittotal4d                decimal.Decimal `json:"pasaran_angka_limittotal4d"`
-	AngkaLimittotal3d                decimal.Decimal `json:"pasaran_angka_limittotal3d"`
-	AngkaLimittotal3dd               decimal.Decimal `json:"pasaran_angka_limittotal3dd"`
-	AngkaLimittotal2d                decimal.Decimal `json:"pasaran_angka_limittotal2d"`
-	AngkaLimittotal2dd               decimal.Decimal `json:"pasaran_angka_limittotal2dd"`
-	AngkaLimittotal2dt               decimal.Decimal `json:"pasaran_angka_limittotal2dt"`
-	AngkaMaxbet4dFull                decimal.Decimal `json:"pasaran_angka_maxbet4d_full"`
-	AngkaMaxbet3dFull                decimal.Decimal `json:"pasaran_angka_maxbet3d_full"`
-	AngkaMaxbet3ddFull               decimal.Decimal `json:"pasaran_angka_maxbet3dd_full"`
-	AngkaMaxbet2dFull                decimal.Decimal `json:"pasaran_angka_maxbet2d_full"`
-	AngkaMaxbet2ddFull               decimal.Decimal `json:"pasaran_angka_maxbet2dd_full"`
-	AngkaMaxbet2dtFull               decimal.Decimal `json:"pasaran_angka_maxbet2dt_full"`
-	AngkaMaxbet4dBb                  decimal.Decimal `json:"pasaran_angka_maxbet4d_bb"`
-	AngkaMaxbet3dBb                  decimal.Decimal `json:"pasaran_angka_maxbet3d_bb"`
-	AngkaMaxbet3ddBb                 decimal.Decimal `json:"pasaran_angka_maxbet3dd_bb"`
-	AngkaMaxbet2dBb                  decimal.Decimal `json:"pasaran_angka_maxbet2d_bb"`
-	AngkaMaxbet2ddBb                 decimal.Decimal `json:"pasaran_angka_maxbet2dd_bb"`
-	AngkaMaxbet2dtBb                 decimal.Decimal `json:"pasaran_angka_maxbet2dt_bb"`
-	AngkaMaxbet4dBbdisc              decimal.Decimal `json:"pasaran_angka_maxbet4d_bbdisc"`
-	AngkaMaxbet3dBbdisc              decimal.Decimal `json:"pasaran_angka_maxbet3d_bbdisc"`
-	AngkaMaxbet3ddBbdisc             decimal.Decimal `json:"pasaran_angka_maxbet3dd_bbdisc"`
-	AngkaMaxbet2dBbdisc              decimal.Decimal `json:"pasaran_angka_maxbet2d_bbdisc"`
-	AngkaMaxbet2ddBbdisc             decimal.Decimal `json:"pasaran_angka_maxbet2dd_bbdisc"`
-	AngkaMaxbet2dtBbdisc             decimal.Decimal `json:"pasaran_angka_maxbet2dt_bbdisc"`
-	AngkaWin4dnodisc                 decimal.Decimal `json:"pasaran_angka_win4dnodisc"`
-	AngkaWin3dnodisc                 decimal.Decimal `json:"pasaran_angka_win3dnodisc"`
-	AngkaWin3ddnodisc                decimal.Decimal `json:"pasaran_angka_win3ddnodisc"`
-	AngkaWin2dnodisc                 decimal.Decimal `json:"pasaran_angka_win2dnodisc"`
-	AngkaWin2ddnodisc                decimal.Decimal `json:"pasaran_angka_win2ddnodisc"`
-	AngkaWin2dtnodisc                decimal.Decimal `json:"pasaran_angka_win2dtnodisc"`
-	AngkaWin4dbbKena                 decimal.Decimal `json:"pasaran_angka_win4dbb_kena"`
-	AngkaWin3dbbKena                 decimal.Decimal `json:"pasaran_angka_win3dbb_kena"`
-	AngkaWin3ddbbKena                decimal.Decimal `json:"pasaran_angka_win3ddbb_kena"`
-	AngkaWin2dbbKena                 decimal.Decimal `json:"pasaran_angka_win2dbb_kena"`
-	AngkaWin2ddbbKena                decimal.Decimal `json:"pasaran_angka_win2ddbb_kena"`
-	AngkaWin2dtbbKena                decimal.Decimal `json:"pasaran_angka_win2dtbb_kena"`
-	AngkaWin4dbb                     decimal.Decimal `json:"pasaran_angka_win4dbb"`
-	AngkaWin3dbb                     decimal.Decimal `json:"pasaran_angka_win3dbb"`
-	AngkaWin3ddbb                    decimal.Decimal `json:"pasaran_angka_win3ddbb"`
-	AngkaWin2dbb                     decimal.Decimal `json:"pasaran_angka_win2dbb"`
-	AngkaWin2ddbb                    decimal.Decimal `json:"pasaran_angka_win2ddbb"`
-	AngkaWin2dtbb                    decimal.Decimal `json:"pasaran_angka_win2dtbb"`
-	AngkaMaxbuy4d                    decimal.Decimal `json:"pasaran_angka_maxbuy4d"`
-	AngkaMaxbuy3d                    decimal.Decimal `json:"pasaran_angka_maxbuy3d"`
-	AngkaMaxbuy3dd                   decimal.Decimal `json:"pasaran_angka_maxbuy3dd"`
-	AngkaMaxbuy2d                    decimal.Decimal `json:"pasaran_angka_maxbuy2d"`
-	AngkaMaxbuy2dd                   decimal.Decimal `json:"pasaran_angka_maxbuy2dd"`
-	AngkaMaxbuy2dt                   decimal.Decimal `json:"pasaran_angka_maxbuy2dt"`
-	AngkaMaxbet4dFullbb              decimal.Decimal `json:"pasaran_angka_maxbet4d_fullbb"`
-	AngkaMaxbet3dFullbb              decimal.Decimal `json:"pasaran_angka_maxbet3d_fullbb"`
-	AngkaMaxbet3ddFullbb             decimal.Decimal `json:"pasaran_angka_maxbet3dd_fullbb"`
-	AngkaMaxbet2dFullbb              decimal.Decimal `json:"pasaran_angka_maxbet2d_fullbb"`
-	AngkaMaxbet2ddFullbb             decimal.Decimal `json:"pasaran_angka_maxbet2dd_fullbb"`
-	AngkaMaxbet2dtFullbb             decimal.Decimal `json:"pasaran_angka_maxbet2dt_fullbb"`
-	AngkaLimitbuang4dFullbb          decimal.Decimal `json:"pasaran_angka_limitbuang4d_fullbb"`
-	AngkaLimitbuang3dFullbb          decimal.Decimal `json:"pasaran_angka_limitbuang3d_fullbb"`
-	AngkaLimitbuang3ddFullbb         decimal.Decimal `json:"pasaran_angka_limitbuang3dd_fullbb"`
-	AngkaLimitbuang2dFullbb          decimal.Decimal `json:"pasaran_angka_limitbuang2d_fullbb"`
-	AngkaLimitbuang2ddFullbb         decimal.Decimal `json:"pasaran_angka_limitbuang2dd_fullbb"`
-	AngkaLimitbuang2dtFullbb         decimal.Decimal `json:"pasaran_angka_limitbuang2dt_fullbb"`
-	AngkaLimittotal4dFullbb          decimal.Decimal `json:"pasaran_angka_limittotal4d_fullbb"`
-	AngkaLimittotal3dFullbb          decimal.Decimal `json:"pasaran_angka_limittotal3d_fullbb"`
-	AngkaLimittotal3ddFullbb         decimal.Decimal `json:"pasaran_angka_limittotal3dd_fullbb"`
-	AngkaLimittotal2dFullbb          decimal.Decimal `json:"pasaran_angka_limittotal2d_fullbb"`
-	AngkaLimittotal2ddFullbb         decimal.Decimal `json:"pasaran_angka_limittotal2dd_fullbb"`
-	AngkaLimittotal2dtFullbb         decimal.Decimal `json:"pasaran_angka_limittotal2dt_fullbb"`
-	AngkaLimitline4d                 decimal.Decimal `json:"pasaran_angka_limitline_4d"`
-	AngkaLimitline3d                 decimal.Decimal `json:"pasaran_angka_limitline_3d"`
-	AngkaLimitline2d                 decimal.Decimal `json:"pasaran_angka_limitline_2d"`
-	AngkaLimitline2dd                decimal.Decimal `json:"pasaran_angka_limitline_2dd"`
-	AngkaLimitline2dt                decimal.Decimal `json:"pasaran_angka_limitline_2dt"`
-	AngkaLimitline3dd                decimal.Decimal `json:"pasaran_angka_limitline_3dd"`
-	AngkaBbfs                        decimal.Decimal `json:"pasaran_angka_bbfs"`
-	CbMinbet                         decimal.Decimal `json:"pasaran_cb_minbet"`
-	CbMaxbet                         decimal.Decimal `json:"pasaran_cb_maxbet"`
-	CbMaxbuy                         decimal.Decimal `json:"pasaran_cb_maxbuy"`
-	CbWin                            decimal.Decimal `json:"pasaran_cb_win"`
-	CbDisc                           decimal.Decimal `json:"pasaran_cb_disc"`
-	CbLimitbuang                     decimal.Decimal `json:"pasaran_cb_limitbuang"`
-	CbLimitotal                      decimal.Decimal `json:"pasaran_cb_limitotal"`
-	CmacauMinbet                     decimal.Decimal `json:"pasaran_cmacau_minbet"`
-	CmacauMaxbet                     decimal.Decimal `json:"pasaran_cmacau_maxbet"`
-	CmacauMaxbuy                     decimal.Decimal `json:"pasaran_cmacau_maxbuy"`
-	CmacauWin2digit                  decimal.Decimal `json:"pasaran_cmacau_win2digit"`
-	CmacauWin3digit                  decimal.Decimal `json:"pasaran_cmacau_win3digit"`
-	CmacauWin4digit                  decimal.Decimal `json:"pasaran_cmacau_win4digit"`
-	CmacauDisc                       decimal.Decimal `json:"pasaran_cmacau_disc"`
-	CmacauLimitbuang                 decimal.Decimal `json:"pasaran_cmacau_limitbuang"`
-	CmacauLimittotal                 decimal.Decimal `json:"pasaran_cmacau_limittotal"`
-	CnagaMinbet                      decimal.Decimal `json:"pasaran_cnaga_minbet"`
-	CnagaMaxbet                      decimal.Decimal `json:"pasaran_cnaga_maxbet"`
-	CnagaMaxbuy                      decimal.Decimal `json:"pasaran_cnaga_maxbuy"`
-	CnagaWin3digit                   decimal.Decimal `json:"pasaran_cnaga_win3digit"`
-	CnagaWin4digit                   decimal.Decimal `json:"pasaran_cnaga_win4digit"`
-	CnagaDisc                        decimal.Decimal `json:"pasaran_cnaga_disc"`
-	CnagaLimitbuang                  decimal.Decimal `json:"pasaran_cnaga_limitbuang"`
-	CnagaLimittotal                  decimal.Decimal `json:"pasaran_cnaga_limittotal"`
-	CjituMinbet                      decimal.Decimal `json:"pasaran_cjitu_minbet"`
-	CjituMaxbet                      decimal.Decimal `json:"pasaran_cjitu_maxbet"`
-	CjituMaxbuy                      decimal.Decimal `json:"pasaran_cjitu_maxbuy"`
-	CjituWinas                       decimal.Decimal `json:"pasaran_cjitu_winas"`
-	CjituWinkop                      decimal.Decimal `json:"pasaran_cjitu_winkop"`
-	CjituWinkepala                   decimal.Decimal `json:"pasaran_cjitu_winkepala"`
-	CjituWinekor                     decimal.Decimal `json:"pasaran_cjitu_winekor"`
-	CjituDesic                       decimal.Decimal `json:"pasaran_cjitu_desic"`
-	CjituLimitbuang                  decimal.Decimal `json:"pasaran_cjitu_limitbuang"`
-	CjituLimitotal                   decimal.Decimal `json:"pasaran_cjitu_limitotal"`
-	Umum5050Minbet                   decimal.Decimal `json:"pasaran_umum5050_minbet"`
-	Umum5050Maxbet                   decimal.Decimal `json:"pasaran_umum5050_maxbet"`
-	Umum5050Maxbuy                   decimal.Decimal `json:"pasaran_umum5050_maxbuy"`
-	Umum5050Keibesar                 decimal.Decimal `json:"pasaran_umum5050_keibesar"`
-	Umum5050Keikecil                 decimal.Decimal `json:"pasaran_umum5050_keikecil"`
-	Umum5050Keigenap                 decimal.Decimal `json:"pasaran_umum5050_keigenap"`
-	Umum5050Keiganjil                decimal.Decimal `json:"pasaran_umum5050_keiganjil"`
-	Umum5050Keitengah                decimal.Decimal `json:"pasaran_umum5050_keitengah"`
-	Umum5050Keitepi                  decimal.Decimal `json:"pasaran_umum5050_keitepi"`
-	Umum5050Discbesar                decimal.Decimal `json:"pasaran_umum5050_discbesar"`
-	Umum5050Disckecil                decimal.Decimal `json:"pasaran_umum5050_disckecil"`
-	Umum5050Discgenap                decimal.Decimal `json:"pasaran_umum5050_discgenap"`
-	Umum5050Discganjil               decimal.Decimal `json:"pasaran_umum5050_discganjil"`
-	Umum5050Disctengah               decimal.Decimal `json:"pasaran_umum5050_disctengah"`
-	Umum5050Disctepi                 decimal.Decimal `json:"pasaran_umum5050_disctepi"`
-	Umum5050Limitbuang               decimal.Decimal `json:"pasaran_umum5050_limitbuang"`
-	Umum5050Limittotal               decimal.Decimal `json:"pasaran_umum5050_limittotal"`
-	Special5050Minbet                decimal.Decimal `json:"pasaran_special5050_minbet"`
-	Special5050Maxbet                decimal.Decimal `json:"pasaran_special5050_maxbet"`
-	Special5050Maxbuy                decimal.Decimal `json:"pasaran_special5050_maxbuy"`
-	Special5050Keiasganjil           decimal.Decimal `json:"pasaran_special5050_keiasganjil"`
-	Special5050Keiasgenap            decimal.Decimal `json:"pasaran_special5050_keiasgenap"`
-	Special5050Keiasbesar            decimal.Decimal `json:"pasaran_special5050_keiasbesar"`
-	Special5050Keiaskecil            decimal.Decimal `json:"pasaran_special5050_keiaskecil"`
-	Special5050Keikopganjil          decimal.Decimal `json:"pasaran_special5050_keikopganjil"`
-	Special5050Keikopgenap           decimal.Decimal `json:"pasaran_special5050_keikopgenap"`
-	Special5050Keikopbesar           decimal.Decimal `json:"pasaran_special5050_keikopbesar"`
-	Special5050Keikopkecil           decimal.Decimal `json:"pasaran_special5050_keikopkecil"`
-	Special5050Keikepalaganjil       decimal.Decimal `json:"pasaran_special5050_keikepalaganjil"`
-	Special5050Keikepalagenap        decimal.Decimal `json:"pasaran_special5050_keikepalagenap"`
-	Special5050Keikepalabesar        decimal.Decimal `json:"pasaran_special5050_keikepalabesar"`
-	Special5050Keikepalakecil        decimal.Decimal `json:"pasaran_special5050_keikepalakecil"`
-	Special5050Keiekorganjil         decimal.Decimal `json:"pasaran_special5050_keiekorganjil"`
-	Special5050Keiekorgenap          decimal.Decimal `json:"pasaran_special5050_keiekorgenap"`
-	Special5050Keiekorbesar          decimal.Decimal `json:"pasaran_special5050_keiekorbesar"`
-	Special5050Keiekorkecil          decimal.Decimal `json:"pasaran_special5050_keiekorkecil"`
-	Special5050Discasganjil          decimal.Decimal `json:"pasaran_special5050_discasganjil"`
-	Special5050Discasgenap           decimal.Decimal `json:"pasaran_special5050_discasgenap"`
-	Special5050Discasbesar           decimal.Decimal `json:"pasaran_special5050_discasbesar"`
-	Special5050Discaskecil           decimal.Decimal `json:"pasaran_special5050_discaskecil"`
-	Special5050Disckopganjil         decimal.Decimal `json:"pasaran_special5050_disckopganjil"`
-	Special5050Disckopgenap          decimal.Decimal `json:"pasaran_special5050_disckopgenap"`
-	Special5050Disckopbesar          decimal.Decimal `json:"pasaran_special5050_disckopbesar"`
-	Special5050Disckopkecil          decimal.Decimal `json:"pasaran_special5050_disckopkecil"`
-	Special5050Disckepalaganjil      decimal.Decimal `json:"pasaran_special5050_disckepalaganjil"`
-	Special5050Disckepalagenap       decimal.Decimal `json:"pasaran_special5050_disckepalagenap"`
-	Special5050Disckepalabesar       decimal.Decimal `json:"pasaran_special5050_disckepalabesar"`
-	Special5050Disckepalakecil       decimal.Decimal `json:"pasaran_special5050_disckepalakecil"`
-	Special5050Discekorganjil        decimal.Decimal `json:"pasaran_special5050_discekorganjil"`
-	Special5050Discekorgenap         decimal.Decimal `json:"pasaran_special5050_discekorgenap"`
-	Special5050Discekorbesar         decimal.Decimal `json:"pasaran_special5050_discekorbesar"`
-	Special5050Discekorkecil         decimal.Decimal `json:"pasaran_special5050_discekorkecil"`
-	Special5050Limitbuang            decimal.Decimal `json:"pasaran_special5050_limitbuang"`
-	Special5050Limittotal            decimal.Decimal `json:"pasaran_special5050_limittotal"`
-	Kombinasi5050Minbet              decimal.Decimal `json:"pasaran_kombinasi5050_minbet"`
-	Kombinasi5050Maxbet              decimal.Decimal `json:"pasaran_kombinasi5050_maxbet"`
-	Kombinasi5050Maxbuy              decimal.Decimal `json:"pasaran_kombinasi5050_maxbuy"`
-	Kombinasi5050Belakangkeimono     decimal.Decimal `json:"pasaran_kombinasi5050_belakangkeimono"`
-	Kombinasi5050Belakangkeistereo   decimal.Decimal `json:"pasaran_kombinasi5050_belakangkeistereo"`
-	Kombinasi5050Belakangkeikembang  decimal.Decimal `json:"pasaran_kombinasi5050_belakangkeikembang"`
-	Kombinasi5050Belakangkeikempis   decimal.Decimal `json:"pasaran_kombinasi5050_belakangkeikempis"`
-	Kombinasi5050Belakangkeikembar   decimal.Decimal `json:"pasaran_kombinasi5050_belakangkeikembar"`
-	Kombinasi5050Tengahkeimono       decimal.Decimal `json:"pasaran_kombinasi5050_tengahkeimono"`
-	Kombinasi5050Tengahkeistereo     decimal.Decimal `json:"pasaran_kombinasi5050_tengahkeistereo"`
-	Kombinasi5050Tengahkeikembang    decimal.Decimal `json:"pasaran_kombinasi5050_tengahkeikembang"`
-	Kombinasi5050Tengahkeikempis     decimal.Decimal `json:"pasaran_kombinasi5050_tengahkeikempis"`
-	Kombinasi5050Tengahkeikembar     decimal.Decimal `json:"pasaran_kombinasi5050_tengahkeikembar"`
-	Kombinasi5050Depankeimono        decimal.Decimal `json:"pasaran_kombinasi5050_depankeimono"`
-	Kombinasi5050Depankeistereo      decimal.Decimal `json:"pasaran_kombinasi5050_depankeistereo"`
-	Kombinasi5050Depankeikembang     decimal.Decimal `json:"pasaran_kombinasi5050_depankeikembang"`
-	Kombinasi5050Depankeikempis      decimal.Decimal `json:"pasaran_kombinasi5050_depankeikempis"`
-	Kombinasi5050Depankeikembar      decimal.Decimal `json:"pasaran_kombinasi5050_depankeikembar"`
-	Kombinasi5050Belakangdiscmono    decimal.Decimal `json:"pasaran_kombinasi5050_belakangdiscmono"`
-	Kombinasi5050Belakangdiscstereo  decimal.Decimal `json:"pasaran_kombinasi5050_belakangdiscstereo"`
-	Kombinasi5050Belakangdisckembang decimal.Decimal `json:"pasaran_kombinasi5050_belakangdisckembang"`
-	Kombinasi5050Belakangdisckempis  decimal.Decimal `json:"pasaran_kombinasi5050_belakangdisckempis"`
-	Kombinasi5050Belakangdisckembar  decimal.Decimal `json:"pasaran_kombinasi5050_belakangdisckembar"`
-	Kombinasi5050Tengahdiscmono      decimal.Decimal `json:"pasaran_kombinasi5050_tengahdiscmono"`
-	Kombinasi5050Tengahdiscstereo    decimal.Decimal `json:"pasaran_kombinasi5050_tengahdiscstereo"`
-	Kombinasi5050Tengahdisckembang   decimal.Decimal `json:"pasaran_kombinasi5050_tengahdisckembang"`
-	Kombinasi5050Tengahdisckempis    decimal.Decimal `json:"pasaran_kombinasi5050_tengahdisckempis"`
-	Kombinasi5050Tengahdisckembar    decimal.Decimal `json:"pasaran_kombinasi5050_tengahdisckembar"`
-	Kombinasi5050Depandiscmono       decimal.Decimal `json:"pasaran_kombinasi5050_depandiscmono"`
-	Kombinasi5050Depandiscstereo     decimal.Decimal `json:"pasaran_kombinasi5050_depandiscstereo"`
-	Kombinasi5050Depandisckembang    decimal.Decimal `json:"pasaran_kombinasi5050_depandisckembang"`
-	Kombinasi5050Depandisckempis     decimal.Decimal `json:"pasaran_kombinasi5050_depandisckempis"`
-	Kombinasi5050Depandisckembar     decimal.Decimal `json:"pasaran_kombinasi5050_depandisckembar"`
-	Kombinasi5050Limitbuang          decimal.Decimal `json:"pasaran_kombinasi5050_limitbuang"`
-	Kombinasi5050Limittotal          decimal.Decimal `json:"pasaran_kombinasi5050_limittotal"`
-	MacaukombinasiMinbet             decimal.Decimal `json:"pasaran_macaukombinasi_minbet"`
-	MacaukombinasiMaxbet             decimal.Decimal `json:"pasaran_macaukombinasi_maxbet"`
-	MacaukombinasiMaxbuy             decimal.Decimal `json:"pasaran_macaukombinasi_maxbuy"`
-	MacaukombinasiWin                decimal.Decimal `json:"pasaran_macaukombinasi_win"`
-	MacaukombinasiDiscount           decimal.Decimal `json:"pasaran_macaukombinasi_discount"`
-	MacaukombinasiLimitbuang         decimal.Decimal `json:"pasaran_macaukombinasi_limitbuang"`
-	MacaukombinasiLimittotal         decimal.Decimal `json:"pasaran_macaukombinasi_limittotal"`
-	DasarMinbet                      decimal.Decimal `json:"pasaran_dasar_minbet"`
-	DasarMaxbet                      decimal.Decimal `json:"pasaran_dasar_maxbet"`
-	DasarMaxbuy                      decimal.Decimal `json:"pasaran_dasar_maxbuy"`
-	DasarKeibesar                    decimal.Decimal `json:"pasaran_dasar_keibesar"`
-	DasarKeikecil                    decimal.Decimal `json:"pasaran_dasar_keikecil"`
-	DasarKeigenap                    decimal.Decimal `json:"pasaran_dasar_keigenap"`
-	DasarKeiganjil                   decimal.Decimal `json:"pasaran_dasar_keiganjil"`
-	DasarDiscbesar                   decimal.Decimal `json:"pasaran_dasar_discbesar"`
-	DasarDisckecil                   decimal.Decimal `json:"pasaran_dasar_disckecil"`
-	DasarDiscigenap                  decimal.Decimal `json:"pasaran_dasar_discigenap"`
-	DasarDiscganjil                  decimal.Decimal `json:"pasaran_dasar_discganjil"`
-	DasarLimitbuang                  decimal.Decimal `json:"pasaran_dasar_limitbuang"`
-	DasarLimittotal                  decimal.Decimal `json:"pasaran_dasar_limittotal"`
-	ShioReferal                      float64         `json:"pasaran_shio_referal"`
-	ShioShiotahunini                 string          `json:"pasaran_shio_shiotahunini"`
-	ShioMinbet                       decimal.Decimal `json:"pasaran_shio_minbet"`
-	ShioMaxbet                       decimal.Decimal `json:"pasaran_shio_maxbet"`
-	ShioMaxbuy                       decimal.Decimal `json:"pasaran_shio_maxbuy"`
-	ShioWin                          decimal.Decimal `json:"pasaran_shio_win"`
-	ShioDisc                         decimal.Decimal `json:"pasaran_shio_disc"`
-	ShioLimitbuang                   decimal.Decimal `json:"pasaran_shio_limitbuang"`
-	ShioLimittotal                   decimal.Decimal `json:"pasaran_shio_limittotal"`
-	Jadwalpasaran                    []Pasaranjadwal `json:"jadwalpasaran"`
 }

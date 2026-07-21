@@ -24,17 +24,18 @@ func init() {
 
 // GetNowJakarta adalah helper untuk mendapatkan waktu saat ini langsung dalam zona Jakarta
 func GetNowJakarta() time.Time {
-	loc, err := time.LoadLocation("Asia/Jakarta")
-	if err != nil {
-		return time.Now()
-	}
 	// Kirim langsung, pgx akan strip timezone info, simpan angka mentah
-	return time.Now().In(loc)
+	return time.Now().In(LocJakarta)
 }
 
 // FormatToJakarta membantu merubah time.Time mentah ke zona Jakarta
 func FormatToJakarta(t time.Time) time.Time {
 	return t.In(LocJakarta)
+}
+
+func HariIndonesia(t time.Time) string {
+	hari := [...]string{"MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"}
+	return hari[t.Weekday()]
 }
 
 func PgTimeToString(t pgtype.Time) string {
