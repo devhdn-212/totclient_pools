@@ -81,9 +81,9 @@ func (u *pasaranService) All(ctx context.Context, idcomp string) ([]dto.PasaranD
 			log.Error(err)
 			return nil, err
 		}
-		var record_jadwal []dto.Companyjadwalpasaran
+		var record_jadwal []dto.Pasaranjadwal
 		for _, d := range jadwal {
-			record_jadwal = append(record_jadwal, dto.Companyjadwalpasaran{
+			record_jadwal = append(record_jadwal, dto.Pasaranjadwal{
 				IDjadwalpasaran: d.IDjadwalcomppasaran,
 				Haripasaran:     d.Haripasaran,
 				Jamtutup:        util.PgTimeToString(d.Jamtutup),
@@ -403,7 +403,7 @@ func (u *pasaranService) Save(ctx context.Context, req dto.PasaranSave, client, 
 
 	// Executor transaksi native pgx
 	txExec := repository.NewPGXTxExecutor(tx)
-	txRepo := repository.NewCompanypasaranRepository(txExec)
+	txRepo := repository.NewPasaranRepository(txExec)
 	txRepoconftoto := repository.NewCompanyconftotoRepository(txExec)
 
 	flag, err := txRepo.FindByID(ctx, req.IDcomppasaran, req.IDcompany)
@@ -729,7 +729,7 @@ func (u *pasaranService) Save(ctx context.Context, req dto.PasaranSave, client, 
 			raw := strings.ReplaceAll(uuid.NewString(), "-", "")
 			date := time.Now().Format("0601")
 
-			jadwalpasarantoto := domain.Companyjadwalpasaran{
+			jadwalpasarantoto := domain.Pasaranjadwal{
 				IDjadwalcomppasaran: fmt.Sprintf("%s%s", date, raw),
 				IDcomppasaran:       req.IDcomppasaran,
 				Haripasaran:         j.Haripasaran,
