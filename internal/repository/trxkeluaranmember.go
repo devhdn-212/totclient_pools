@@ -19,9 +19,9 @@ func NewTrxkeluaranmemberRepository(db DBExecutor) domain.TrxkeluaranmemberRepos
 	}
 }
 func (a trxkeluaranmemberRepository) FindAll(ctx context.Context, idcomp string, idtrx int) ([]domain.Trxkeluaranmember, error) {
-	schema, _, _, _, tbl_trx_keluarantogel_member, _ := util.Get_mapping_totodb(idcomp)
-	query := `SELECT * FROM ` + schema + `.` + tbl_trx_keluarantogel_member + ` 
-			WHERE idtrxkeluaran = $1 
+	t := util.Get_mapping_totodb(idcomp)
+	query := `SELECT * FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
+			WHERE idtrxkeluaran = $1
 			ORDER BY createdatekeluaranmember DESC`
 
 	rows, err := a.db.Query(ctx, query, idtrx)
@@ -38,10 +38,10 @@ func (a trxkeluaranmemberRepository) FindAll(ctx context.Context, idcomp string,
 	return res, nil
 }
 func (a trxkeluaranmemberRepository) FindByID(ctx context.Context, idcomp, username string, idtrx int) (domain.Trxkeluaranmember, error) {
-	schema, _, _, _, tbl_trx_keluarantogel_member, _ := util.Get_mapping_totodb(idcomp)
-	query := `SELECT * 
-			FROM ` + schema + `.` + tbl_trx_keluarantogel_member + ` 
-			WHERE username = $1 AND idtrxkeluaran = $2 
+	t := util.Get_mapping_totodb(idcomp)
+	query := `SELECT *
+			FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
+			WHERE username = $1 AND idtrxkeluaran = $2
 			LIMIT 1`
 
 	rows, err := a.db.Query(ctx, query, idtrx, username, idtrx)
@@ -60,8 +60,8 @@ func (a trxkeluaranmemberRepository) FindByID(ctx context.Context, idcomp, usern
 	return data, nil
 }
 func (a trxkeluaranmemberRepository) Save(ctx context.Context, trxkeluaranmember *domain.Trxkeluaranmember, idcomp string) error {
-	schema, _, _, _, tbl_trx_keluarantogel_member, _ := util.Get_mapping_totodb(idcomp)
-	query := `INSERT INTO ` + schema + `.` + tbl_trx_keluarantogel_member + ` 
+	t := util.Get_mapping_totodb(idcomp)
+	query := `INSERT INTO ` + t.Schema + `.` + t.KeluarantogelMember + `
                 (idkeluaranmember, idtrxkeluaran, idcompany, 
 				username, 
 				totalbet, totalbayar, totaldiscount, totalkei, totalwin, totalpair, betround,
@@ -93,8 +93,8 @@ func (a trxkeluaranmemberRepository) Update(ctx context.Context, trxkeluaranmemb
 	var query string
 	var args []any
 
-	schema, _, _, _, tbl_trx_keluarantogel_member, _ := util.Get_mapping_totodb(idcomp)
-	query = `UPDATE ` + schema + `.` + tbl_trx_keluarantogel_member + ` SET 
+	t := util.Get_mapping_totodb(idcomp)
+	query = `UPDATE ` + t.Schema + `.` + t.KeluarantogelMember + ` SET
                     totalwin = $1, 
                     status = $2, 
                     updatekeluaranmember = $3, 

@@ -72,13 +72,20 @@ func NtToStr(nt sql.NullTime, prefix string, loc *time.Location) string {
 	return ""
 }
 
-func Get_mapping_totodb(company string) (string, string, string, string, string, string) {
-	schema := "db_tot_" + s.ToLower(company)
-	tbl_trx_keluarantogel := "tbl_trx_keluarantogel"
-	tbl_trx_keluarantogel_detail := "tbl_trx_keluarantogel_detail"
-	tbl_trx_keluarantogel_detail_reject := "tbl_trx_keluarantogel_detail_reject"
-	tbl_trx_keluarantogel_member := "tbl_trx_keluarantogel_member"
-	tbl_trx_member_invoice := "tbl_trx_member_invoice"
+type TotoTables struct {
+	Schema                    string
+	Keluarantogel             string
+	KeluarantogelDetail       string
+	KeluarantogelDetailReject string
+	KeluarantogelMember       string
+}
 
-	return schema, tbl_trx_keluarantogel, tbl_trx_keluarantogel_detail, tbl_trx_keluarantogel_detail_reject, tbl_trx_keluarantogel_member, tbl_trx_member_invoice
+func Get_mapping_totodb(company string) TotoTables {
+	return TotoTables{
+		Schema:                    "db_tot_" + s.ToLower(company),
+		Keluarantogel:             "tbl_trx_keluarantogel",
+		KeluarantogelDetail:       "tbl_trx_keluarantogel_detail",
+		KeluarantogelDetailReject: "tbl_trx_keluarantogel_detail_reject",
+		KeluarantogelMember:       "tbl_trx_keluarantogel_member",
+	}
 }

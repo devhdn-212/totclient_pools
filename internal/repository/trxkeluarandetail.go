@@ -19,10 +19,10 @@ func NewTrxkeluarandetailRepository(db DBExecutor) domain.TrxkeluarandetailRepos
 	}
 }
 func (a trxkeluarandetailRepository) FindAll(ctx context.Context, idcomp string, idtrx int) ([]domain.Trxkeluarandetail, error) {
-	schema, _, tbl_trx_keluarantogel_detail, _, _, _ := util.Get_mapping_totodb(idcomp)
-	query := `SELECT * FROM ` + schema + `.` + tbl_trx_keluarantogel_detail + ` 
-			WHERE idtrxkeluaran = $1 
-			ORDER BYcreate_at DESC`
+	t := util.Get_mapping_totodb(idcomp)
+	query := `SELECT * FROM ` + t.Schema + `.` + t.KeluarantogelDetail + `
+			WHERE idtrxkeluaran = $1
+			ORDER BY create_at DESC`
 
 	rows, err := a.db.Query(ctx, query, idtrx)
 	if err != nil {
@@ -38,10 +38,10 @@ func (a trxkeluarandetailRepository) FindAll(ctx context.Context, idcomp string,
 	return res, nil
 }
 func (a trxkeluarandetailRepository) FindByID(ctx context.Context, idcomp, idtrxkeluarandetail string, idtrx int) (domain.Trxkeluarandetail, error) {
-	schema, _, tbl_trx_keluarantogel_detail, _, _, _ := util.Get_mapping_totodb(idcomp)
-	query := `SELECT * 
-			FROM ` + schema + `.` + tbl_trx_keluarantogel_detail + ` 
-			WHERE idtrxkeluarandetail = $1 AND idtrxkeluaran = $2 
+	t := util.Get_mapping_totodb(idcomp)
+	query := `SELECT *
+			FROM ` + t.Schema + `.` + t.KeluarantogelDetail + `
+			WHERE idtrxkeluarandetail = $1 AND idtrxkeluaran = $2
 			LIMIT 1`
 
 	rows, err := a.db.Query(ctx, query, idtrx, idtrxkeluarandetail, idtrx)
@@ -60,8 +60,8 @@ func (a trxkeluarandetailRepository) FindByID(ctx context.Context, idcomp, idtrx
 	return data, nil
 }
 func (a trxkeluarandetailRepository) Save(ctx context.Context, trxkeluarandetail *domain.Trxkeluarandetail, idcomp string) error {
-	schema, _, tbl_trx_keluarantogel_detail, _, _, _ := util.Get_mapping_totodb(idcomp)
-	query := `INSERT INTO ` + schema + `.` + tbl_trx_keluarantogel_detail + ` 
+	t := util.Get_mapping_totodb(idcomp)
+	query := `INSERT INTO ` + t.Schema + `.` + t.KeluarantogelDetail + `
                 (idtrxkeluarandetail, idtrxkeluaran, idcompany, 
 				datetimedetail, 
 				username, typegame, posisitogel, nomortogel,
@@ -93,8 +93,8 @@ func (a trxkeluarandetailRepository) Update(ctx context.Context, trxkeluaran *do
 	var query string
 	var args []any
 
-	schema, _, tbl_trx_keluarantogel_detail, _, _, _ := util.Get_mapping_totodb(idcomp)
-	query = `UPDATE ` + schema + `.` + tbl_trx_keluarantogel_detail + ` SET 
+	t := util.Get_mapping_totodb(idcomp)
+	query = `UPDATE ` + t.Schema + `.` + t.KeluarantogelDetail + ` SET
                     statuskeluarandetail = $1, 
                     update_by = $2, 
                     update_at = $3 

@@ -20,11 +20,11 @@ func NewTrxkeluaranRepository(db DBExecutor) domain.TrxkeluaranRepository {
 	}
 }
 func (a trxkeluaranRepository) FindAllRunning(ctx context.Context, idcomp string) ([]domain.Trxkeluaranview, error) {
-	schema, tbl_trx_keluarantogel, _, _, _, _ := util.Get_mapping_totodb(idcomp)
+	t := util.Get_mapping_totodb(idcomp)
 	query := `SELECT
 	        A.idtrxkeluaran, A.idcomppasaran, B.aliascomppasaran as nmpasaran,
 			A.keluaranperiode, A.datekeluaran, A.total_member, A.total_bet, A. total_buangan
-			FROM ` + schema + `.` + tbl_trx_keluarantogel + ` as A
+			FROM ` + t.Schema + `.` + t.Keluarantogel + ` as A
 			INNER JOIN ` + config.DB_mst_company_pasaran + ` as B ON B.idcomppasaran = A.idcomppasaran
 			WHERE A.idcompany = $1 AND A.keluarantogel = ''
 			ORDER BY A.create_at DESC`
@@ -44,10 +44,10 @@ func (a trxkeluaranRepository) FindAllRunning(ctx context.Context, idcomp string
 	return res, nil
 }
 func (a trxkeluaranRepository) FindByID(ctx context.Context, idcomp, idcomppasaran string, idtrx int) (domain.Trxkeluaran, error) {
-	schema, tbl_trx_keluarantogel, _, _, _, _ := util.Get_mapping_totodb(idcomp)
-	query := `SELECT * 
-			FROM ` + schema + `.` + tbl_trx_keluarantogel + ` 
-			WHERE idtrxkeluaran = $1 AND idcomppasaran = $2 
+	t := util.Get_mapping_totodb(idcomp)
+	query := `SELECT *
+			FROM ` + t.Schema + `.` + t.Keluarantogel + `
+			WHERE idtrxkeluaran = $1 AND idcomppasaran = $2
 			LIMIT 1`
 
 	rows, err := a.db.Query(ctx, query, idtrx, idcomppasaran)
@@ -66,9 +66,9 @@ func (a trxkeluaranRepository) FindByID(ctx context.Context, idcomp, idcomppasar
 	return compconftoto, nil
 }
 func (a trxkeluaranRepository) FindByIDByNomorKeluaran(ctx context.Context, idcomp, idcomppasaran string) (domain.Trxkeluaran, error) {
-	schema, tbl_trx_keluarantogel, _, _, _, _ := util.Get_mapping_totodb(idcomp)
+	t := util.Get_mapping_totodb(idcomp)
 	query := `SELECT *
-			FROM ` + schema + `.` + tbl_trx_keluarantogel + `
+			FROM ` + t.Schema + `.` + t.Keluarantogel + `
 			WHERE idcomppasaran = $1 AND keluarantogel = ''
 			ORDER BY create_at DESC LIMIT 1`
 
@@ -88,8 +88,8 @@ func (a trxkeluaranRepository) FindByIDByNomorKeluaran(ctx context.Context, idco
 	return compconftoto, nil
 }
 func (a trxkeluaranRepository) Save(ctx context.Context, trxkeluaran *domain.Trxkeluaran, idcomp string) error {
-	schema, tbl_trx_keluarantogel, _, _, _, _ := util.Get_mapping_totodb(idcomp)
-	query := `INSERT INTO ` + schema + `.` + tbl_trx_keluarantogel + ` 
+	t := util.Get_mapping_totodb(idcomp)
+	query := `INSERT INTO ` + t.Schema + `.` + t.Keluarantogel + `
                 (idtrxkeluaran, idcomppasaran, idcompany, yearmonth, 
 				keluaranperiode, datekeluaran, create_by,create_at) 
               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
@@ -111,8 +111,8 @@ func (a trxkeluaranRepository) Update(ctx context.Context, trxkeluaran *domain.T
 	var query string
 	var args []any
 
-	schema, tbl_trx_keluarantogel, _, _, _, _ := util.Get_mapping_totodb(idcomp)
-	query = `UPDATE ` + schema + `.` + tbl_trx_keluarantogel + ` SET 
+	t := util.Get_mapping_totodb(idcomp)
+	query = `UPDATE ` + t.Schema + `.` + t.Keluarantogel + ` SET
                     keluarantogel = $1, 
                     create_by = $2, 
                     create_at = $3 
