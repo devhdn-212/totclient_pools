@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/devhdn-212/totagen_api/internal/config"
+	"github.com/devhdn-212/totclient_api/internal/config"
 )
 
 var (

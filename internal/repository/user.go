@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/devhdn-212/totagen_api/domain"
+	"github.com/devhdn-212/totclient_api/domain"
 	"github.com/jackc/pgx/v5"
 )
 

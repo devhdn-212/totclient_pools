@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/devhdn-212/totagen_api/domain"
-	"github.com/devhdn-212/totagen_api/dto"
-	"github.com/devhdn-212/totagen_api/internal/connection"
-	"github.com/devhdn-212/totagen_api/internal/util"
+	"github.com/devhdn-212/totclient_api/domain"
+	"github.com/devhdn-212/totclient_api/dto"
+	"github.com/devhdn-212/totclient_api/internal/connection"
+	"github.com/devhdn-212/totclient_api/internal/util"
 
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"

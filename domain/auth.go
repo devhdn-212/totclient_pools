@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	"github.com/devhdn-212/totagen_api/dto"
+	"github.com/devhdn-212/totclient_api/dto"
 )
 
 type AuthService interface {

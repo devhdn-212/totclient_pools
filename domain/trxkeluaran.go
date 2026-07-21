@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/devhdn-212/totagen_api/dto"
+	"github.com/devhdn-212/totclient_api/dto"
 	"github.com/shopspring/decimal"
 )
 

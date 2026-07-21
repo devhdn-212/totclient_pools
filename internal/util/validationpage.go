@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/devhdn-212/totagen_api/internal/connection"
+	"github.com/devhdn-212/totclient_api/internal/connection"
 )
 
 const (
