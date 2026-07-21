@@ -27,7 +27,9 @@ type TrxkeluarandetailData struct {
 	Created              string          `json:"trxkeluarandetail_created"`
 	Update               string          `json:"trxkeluarandetail_updated"`
 }
-
+type TrxkeluarandetailAll struct {
+	IDtrxkeluaran int `json:"trxkeluarandetail_idtrxkeluaran" validate:"required"`
+}
 type TrxkeluarandetailSave struct {
 	Type          string `json:"type" validate:"required"`
 	ID            string `json:"trxkeluarandetail_id" `

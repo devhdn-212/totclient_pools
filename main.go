@@ -125,6 +125,8 @@ func main() {
 
 	pasaranRepository := repository.NewPasaranRepository(pgxExec)
 	trxkeluaranRepository := repository.NewTrxkeluaranRepository(pgxExec)
+	trxkeluarandetailRepository := repository.NewTrxkeluarandetailRepository(pgxExec)
+	trxkeluaranmemberRepository := repository.NewTrxkeluaranmemberRepository(pgxExec)
 
 	adminService := service.NewAdminService(dbPool, adminRepository)
 	adminruleService := service.NewAdminruleService(dbPool, adminruleRepository)
@@ -133,6 +135,8 @@ func main() {
 
 	pasaranService := service.NewPasaranService(dbPool, pasaranRepository)
 	trxkeluaranService := service.NewTrxkeluaranService(dbPool, trxkeluaranRepository)
+	trxkeluarandetailService := service.NewTrxkeluarandetailService(dbPool, trxkeluarandetailRepository)
+	trxkeluaranmemberService := service.NewTrxkeluaranmemberService(dbPool, trxkeluaranmemberRepository)
 	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
 
 	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
@@ -141,6 +145,8 @@ func main() {
 	api.NewCurrApi(app, currService, jwtMidd)
 	api.NewPasaranApi(app, pasaranService, jwtMidd)
 	api.NewTrxkeluaranApi(app, trxkeluaranService, pasaranService, jwtMidd)
+	api.NewTrxkeluarandetailApi(app, trxkeluarandetailService, jwtMidd)
+	api.NewTrxkeluaranmemberApi(app, trxkeluaranmemberService, jwtMidd)
 	api.NewAuth(app, authService, jwtMidd)
 
 	go func() {

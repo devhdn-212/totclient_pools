@@ -124,7 +124,7 @@ func (u *trxkeluarandetailService) Save(ctx context.Context, req dto.Trxkeluaran
 		playerinvoice_temp, err := strconv.Atoi(playerinvoice)
 
 		raw := strings.ReplaceAll(uuid.NewString(), "-", "")
-		date := time.Now().Format("0601")
+		date := now.Format("0601")
 		idtrxkeluarandetail := fmt.Sprintf("%s%s", date, raw)
 
 		flag.ID = idtrxkeluarandetail
