@@ -14,9 +14,7 @@ const (
 	DB_tbl_companyconftoto     string = "tbl_company_conf_toto"
 	DB_mst_company_pasaran     string = "tbl_mst_company_pasaran"
 	DB_mst_company_jadwaltogel string = "tbl_mst_company_jadwaltogel"
-	DB_tbl_companywallet       string = "tbl_company_wallet"
-	DB_mst_pasaran_togel       string = "tbl_mst_pasaran_togel"
-	DB_mst_pasaran_jadwaltogel string = "tbl_mst_pasaran_jadwaltogel"
+	DB_tbl_trx_member_invoice  string = "tbl_trx_member_invoice"
 )
 const Sourcechar string = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 !@#$%^&*()-_=+[]{};:,.<>?/`
 
