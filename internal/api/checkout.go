@@ -17,15 +17,17 @@ import (
 
 type checkoutApi struct {
 	checkoutService domain.CheckoutService
+	settingService  domain.SettingService
 }
 
 // NewCheckoutApi — public route, no JWT authmidle. Player identity/session
 // is the raw launch token itself (checked against the pusat/wallet server
 // inside the service), same as /api/servicetoken — there's no separate
 // player JWT in this system.
-func NewCheckoutApi(app *fiber.App, checkoutService domain.CheckoutService) {
+func NewCheckoutApi(app *fiber.App, checkoutService domain.CheckoutService, settingService domain.SettingService) {
 	aa := &checkoutApi{
 		checkoutService: checkoutService,
+		settingService:  settingService,
 	}
 	checkout := app.Group("/api/checkout")
 	checkout.Post("", aa.Submit)
@@ -36,6 +38,13 @@ func (a checkoutApi) Submit(ctx *fiber.Ctx) error {
 	// than the usual 10s endpoint timeout.
 	c, cancel := context.WithTimeout(ctx.Context(), 30*time.Second)
 	defer cancel()
+
+	// Server-side gate — the frontend already blocks play off the
+	// /api/servicetoken alert, but a tab left open from before maintenance
+	// started must not be able to slip a bet through anyway.
+	if handled, err := respondIfMaintenance(ctx, c, a.settingService, "checkout"); handled {
+		return err
+	}
 
 	var req dto.CheckoutRequest
 	if err := ctx.BodyParser(&req); err != nil {
@@ -67,6 +76,10 @@ func (a checkoutApi) Submit(ctx *fiber.Ctx) error {
 	if errors.Is(err, domain.ErrInsufficientBalance) {
 		return ctx.Status(http.StatusBadRequest).
 			JSON(dto.CreateResponseErrorCode(http.StatusBadRequest, dto.ErrCodeInsufficientBalancePusat, "insufficient balance"))
+	}
+	if errors.Is(err, domain.ErrPasaranOffline) {
+		return ctx.Status(http.StatusBadRequest).
+			JSON(dto.CreateResponseErrorCode(http.StatusBadRequest, dto.ErrCodePasaranOfflinePusat, "pasaran sedang tutup"))
 	}
 	if errors.Is(err, util.ErrNotFound) {
 		return ctx.Status(http.StatusBadRequest).

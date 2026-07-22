@@ -116,6 +116,9 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	if err != nil {
 		return dto.CheckoutResponse{}, err
 	}
+	if pasaran.Status != "ONLINE" {
+		return dto.CheckoutResponse{}, domain.ErrPasaranOffline
+	}
 
 	trxkeluaran, err := s.trxkeluaranRepo.FindByID(ctx, idcomp, req.PasaranIdcomp)
 	if err != nil {

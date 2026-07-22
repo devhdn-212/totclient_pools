@@ -18,6 +18,7 @@ const (
 
 	// Pusat: checkout
 	ErrCodeInsufficientBalancePusat = 10002
+	ErrCodePasaranOfflinePusat      = 10003
 
 	// Local
 	ErrCodeInternalLocal = 90001

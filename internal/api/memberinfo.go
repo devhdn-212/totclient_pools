@@ -17,12 +17,15 @@ import (
 
 type memberinfoApi struct {
 	memberinfoService domain.MemberinfoService
+	settingService    domain.SettingService
 }
 
 func NewMemberInfo(app *fiber.App,
-	memberinfoService domain.MemberinfoService) {
+	memberinfoService domain.MemberinfoService,
+	settingService domain.SettingService) {
 	aa := &memberinfoApi{
 		memberinfoService: memberinfoService,
+		settingService:    settingService,
 	}
 	memberinfo := app.Group("/api/servicetoken")
 	memberinfo.Post("", aa.Checktoken)
@@ -30,6 +33,10 @@ func NewMemberInfo(app *fiber.App,
 func (a memberinfoApi) Checktoken(ctx *fiber.Ctx) error {
 	c, cancel := context.WithTimeout(ctx.Context(), 10*time.Second)
 	defer cancel()
+
+	if handled, err := respondIfMaintenance(ctx, c, a.settingService, "servicetoken"); handled {
+		return err
+	}
 
 	var req dto.MemberinfoResponse
 	if err := ctx.BodyParser(&req); err != nil {

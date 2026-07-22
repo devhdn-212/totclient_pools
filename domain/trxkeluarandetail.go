@@ -44,7 +44,6 @@ type TrxkeluarandetailRepository interface {
 	FindByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]Trxkeluarandetail, error)
 	FindByID(ctx context.Context, idcomp, idtrxdetail string, idtrx int) (Trxkeluarandetail, error)
 	Save(ctx context.Context, trxkeluarandetail *Trxkeluarandetail, idcomp string) error
-	Update(ctx context.Context, trxkeluarandetail *Trxkeluarandetail, idcomp string) error
 }
 type TrxkeluarandetailService interface {
 	All(ctx context.Context, idcomp string, idtrx int) ([]dto.TrxkeluarandetailData, error)

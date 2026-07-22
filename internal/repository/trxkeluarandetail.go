@@ -130,32 +130,3 @@ func (a trxkeluarandetailRepository) Save(ctx context.Context, trxkeluarandetail
 	)
 	return err
 }
-
-func (a trxkeluarandetailRepository) Update(ctx context.Context, trxkeluaran *domain.Trxkeluarandetail, idcomp string) error {
-	var query string
-	var args []any
-
-	t := util.Get_mapping_totodb(idcomp)
-	query = `UPDATE ` + t.Schema + `.` + t.KeluarantogelDetail + ` SET
-                    statuskeluarandetail = $1, 
-                    update_by = $2, 
-                    update_at = $3 
-                  WHERE idtrxkeluarandetail = $4 AND idtrxkeluaran=$5 `
-	args = []any{
-		trxkeluaran.Statuskeluarandetail,
-		trxkeluaran.Update,
-		trxkeluaran.UpdateAt,
-		trxkeluaran.ID,
-		trxkeluaran.IDtrxkeluaran,
-	}
-
-	res, err := a.db.Exec(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-
-	if res.RowsAffected() == 0 {
-		return pgx.ErrNoRows
-	}
-	return nil
-}

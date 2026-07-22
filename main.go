@@ -94,16 +94,18 @@ func main() {
 	trxkeluaranRepository := repository.NewTrxkeluaranRepository(pgxExec)
 	trxkeluarandetailRepository := repository.NewTrxkeluarandetailRepository(pgxExec)
 	trxkeluaranmemberRepository := repository.NewTrxkeluaranmemberRepository(pgxExec)
+	settingRepository := repository.NewSettingRepository(pgxExec)
 	pasaranService := service.NewPasaranService(dbPool, pasaranRepository, trxkeluaranRepository)
 	memberinfoService := service.NewMemberinfoService()
+	settingService := service.NewSettingService(settingRepository)
 
 	checkoutService := service.NewCheckoutService(dbPool, trxkeluaranRepository, pasaranService, memberinfoService)
 	trxkeluarandetailService := service.NewTrxkeluarandetailService(dbPool, trxkeluarandetailRepository)
 	trxkeluaranmemberService := service.NewTrxkeluaranmemberService(dbPool, trxkeluaranmemberRepository)
 	riwayatTransaksiService := service.NewRiwayatTransaksiService(pasaranService, trxkeluaranRepository, trxkeluarandetailService, trxkeluaranmemberService, memberinfoService)
 
-	api.NewMemberInfo(app, memberinfoService)
-	api.NewCheckoutApi(app, checkoutService)
+	api.NewMemberInfo(app, memberinfoService, settingService)
+	api.NewCheckoutApi(app, checkoutService, settingService)
 	api.NewRiwayatTransaksiApi(app, riwayatTransaksiService)
 	api.NewServiceinit(app, pasaranService)
 

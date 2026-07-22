@@ -1,13 +1,6 @@
 package config
 
 const (
-	DB_tbl_admin               string = "tbl_admin"
-	DB_tbl_adminrule           string = "tbl_adminrole"
-	DB_tbl_clientrule          string = "tbl_clientrule"
-	DB_tbl_currency            string = "tbl_currency"
-	DB_tbl_uom                 string = "tbl_mst_uom"
-	DB_tbl_bank                string = "tbl_bank"
-	DB_tbl_domain              string = "tbl_mst_domain"
 	DB_tbl_groupcompany        string = "tbl_groupcompany"
 	DB_tbl_company             string = "tbl_company"
 	DB_tbl_companyadmin        string = "tbl_company_admin"
@@ -15,6 +8,7 @@ const (
 	DB_mst_company_pasaran     string = "tbl_mst_company_pasaran"
 	DB_mst_company_jadwaltogel string = "tbl_mst_company_jadwaltogel"
 	DB_tbl_trx_member_invoice  string = "tbl_trx_member_invoice"
+	DB_tbl_mst_setting         string = "tbl_mst_setting"
 )
 const Sourcechar string = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 !@#$%^&*()-_=+[]{};:,.<>?/`
 

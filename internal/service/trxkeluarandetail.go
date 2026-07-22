@@ -208,8 +208,6 @@ func (u *trxkeluarandetailService) Save(ctx context.Context, req dto.Trxkeluaran
 			fmt.Println("Error New Trxkeluarandetail: ", err)
 			return err
 		}
-	} else if req.Type == "Edit" {
-
 	}
 
 	// Commit transaksi
