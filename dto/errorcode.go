@@ -16,6 +16,9 @@ const (
 	// Pusat: memberinfo
 	ErrCodeInvalidTokenPusat = 10001
 
+	// Pusat: checkout
+	ErrCodeInsufficientBalancePusat = 10002
+
 	// Local
 	ErrCodeInternalLocal = 90001
 )

@@ -15,7 +15,6 @@ import (
 	"github.com/devhdn-212/totclient_api/internal/repository"
 	"github.com/devhdn-212/totclient_api/internal/service"
 
-	jwtMid "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/etag"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -89,73 +88,24 @@ func main() {
 		return err
 	})
 
-	jwtMidd := jwtMid.New(jwtMid.Config{
-		SigningKey: jwtMid.SigningKey{Key: []byte(cnf.Jwt.Key), JWTAlg: "HS256"},
-		SuccessHandler: func(c *fiber.Ctx) error {
-			token, ok := c.Locals("user").(*jwt.Token)
-			if !ok || token == nil {
-				return c.Status(fiber.StatusUnauthorized).
-					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
-			}
-			claims, ok := token.Claims.(jwt.MapClaims)
-			if !ok {
-				return c.Status(fiber.StatusUnauthorized).
-					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
-			}
-			username, ok := claims["client_agen"].(string)
-			c.Locals("client_agen", username)
-			if !ok || username == "" {
-				return c.Status(fiber.StatusUnauthorized).
-					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token - Username"))
-			}
-			jti, ok := claims["jti"].(string)
-			if !ok || jti == "" {
-				return c.Status(fiber.StatusUnauthorized).
-					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
-			}
-			isBlacklisted, err := connection.IsJWTBlacklisted(jti)
-			if err != nil || isBlacklisted {
-				return c.Status(fiber.StatusUnauthorized).
-					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
-			}
-			if !validateJwtClaims(claims, cnf.Jwt.Issuer, cnf.Jwt.Audience) {
-				return c.Status(fiber.StatusUnauthorized).
-					JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "invalid token"))
-			}
-			return c.Next()
-		},
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			return c.Status(fiber.StatusUnauthorized).
-				JSON(dto.CreateResponseError(fiber.StatusUnauthorized, "missing token, please login"))
-		},
-	})
 	pgxExec := repository.NewPGXExecutor(dbPool)
-	adminRepository := repository.NewAdminRepository(pgxExec)
-	adminruleRepository := repository.NewAdminruleRepository(pgxExec)
-	clientruleRepository := repository.NewClientruleRepository(pgxExec)
-	currRepository := repository.NewCurrRepository(pgxExec)
 
 	pasaranRepository := repository.NewPasaranRepository(pgxExec)
 	trxkeluaranRepository := repository.NewTrxkeluaranRepository(pgxExec)
-
-	adminService := service.NewAdminService(dbPool, adminRepository)
-	adminruleService := service.NewAdminruleService(dbPool, adminruleRepository)
-	clinetruleService := service.NewClientruleService(dbPool, clientruleRepository)
-	currService := service.NewCurrService(dbPool, currRepository)
-
+	trxkeluarandetailRepository := repository.NewTrxkeluarandetailRepository(pgxExec)
+	trxkeluaranmemberRepository := repository.NewTrxkeluaranmemberRepository(pgxExec)
 	pasaranService := service.NewPasaranService(dbPool, pasaranRepository, trxkeluaranRepository)
-
 	memberinfoService := service.NewMemberinfoService()
-	authService := service.NewAuth(dbPool, cnf, adminRepository, adminruleRepository)
 
-	api.NewAdminApi(app, adminService, adminruleService, jwtMidd)
-	api.NewAdminruleApi(app, adminruleService, jwtMidd)
-	api.NewClientruleApi(app, clinetruleService, jwtMidd)
-	api.NewCurrApi(app, currService, jwtMidd)
+	checkoutService := service.NewCheckoutService(dbPool, trxkeluaranRepository, pasaranService, memberinfoService)
+	trxkeluarandetailService := service.NewTrxkeluarandetailService(dbPool, trxkeluarandetailRepository)
+	trxkeluaranmemberService := service.NewTrxkeluaranmemberService(dbPool, trxkeluaranmemberRepository)
+	riwayatTransaksiService := service.NewRiwayatTransaksiService(pasaranService, trxkeluaranRepository, trxkeluarandetailService, trxkeluaranmemberService, memberinfoService)
 
 	api.NewMemberInfo(app, memberinfoService)
+	api.NewCheckoutApi(app, checkoutService)
+	api.NewRiwayatTransaksiApi(app, riwayatTransaksiService)
 	api.NewServiceinit(app, pasaranService)
-	api.NewAuth(app, authService, jwtMidd)
 
 	go func() {
 		appsPort := cnf.Server.Port

@@ -21,8 +21,18 @@ import (
 )
 
 const (
-	RedisTrxkeluarandetail = "agen:trxkeluarandetail"
+	RedisTrxkeluarandetail       = "agen:trxkeluarandetail"
+	RedisTrxkeluarandetailByUser = "client:trxkeluarandetail"
 )
+
+// trxkeluarandetailByUserCacheKey is shared with the checkout service, which
+// deletes this exact key after a successful checkout so the player's
+// "Transaksi" list is never stale — cached per username+idtrxkeluaran, not
+// just per idtrxkeluaran, since this is the player's own history, not the
+// admin's full list.
+func trxkeluarandetailByUserCacheKey(idcomp string, idtrx int, username string) string {
+	return RedisTrxkeluarandetailByUser + ":" + strings.ToLower(idcomp) + ":" + strconv.Itoa(idtrx) + ":" + username
+}
 
 type trxkeluarandetailService struct {
 	db   *pgxpool.Pool
@@ -89,6 +99,57 @@ func (u *trxkeluarandetailService) All(ctx context.Context, idcomp string, idtrx
 	}
 	go connection.SetRedis(RedisTrxkeluarandetail+":"+strings.ToLower(idcomp)+":"+strconv.Itoa(idtrx), record, 24*time.Hour)
 	connection.Log.Info("Returning data Database - Trxkeluarandetail")
+	return record, nil
+}
+
+func (u *trxkeluarandetailService) AllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]dto.TrxkeluarandetailData, error) {
+	cacheKey := trxkeluarandetailByUserCacheKey(idcomp, idtrx, username)
+	cached, found, err := connection.GetRedis(cacheKey)
+	if err != nil {
+		return nil, err
+	}
+	var record []dto.TrxkeluarandetailData
+	if found {
+		if err := json.Unmarshal([]byte(cached), &record); err == nil {
+			connection.Log.Info("Returning data from Redis - Trxkeluarandetail (by username)")
+			return record, nil
+		}
+	}
+
+	trxkeluarandetail, err := u.repo.FindByUsername(ctx, idcomp, idtrx, username)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	for _, v := range trxkeluarandetail {
+		var datekeluarandetail, createdAt string
+		if v.Datekeluarandetail.Valid {
+			datekeluarandetail = v.Datekeluarandetail.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
+		}
+		if v.CreatedAt.Valid {
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
+		}
+		record = append(record, dto.TrxkeluarandetailData{
+			ID:                   v.ID,
+			IDtrxkeluaran:        v.IDtrxkeluaran,
+			Datekeluarandetail:   datekeluarandetail,
+			Username:             v.Username,
+			Typegame:             v.Typegame,
+			Nomortogel:           v.Nomortogel,
+			Posisitogel:          v.Posisitogel,
+			Bet:                  v.Bet,
+			Diskon:               v.Diskon,
+			Kei:                  v.Kei,
+			Win:                  v.Win,
+			Winhasil:             v.Winhasil,
+			Statuskeluarandetail: v.Statuskeluarandetail,
+			Playerinvoice:        v.Playerinvoice,
+			Created:              createdAt,
+		})
+	}
+	go connection.SetRedis(cacheKey, record, 24*time.Hour)
+	connection.Log.Info("Returning data Database - Trxkeluarandetail (by username)")
 	return record, nil
 }
 

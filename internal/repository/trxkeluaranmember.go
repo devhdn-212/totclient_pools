@@ -9,6 +9,15 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// trxkeluaranmemberColumns lists exactly the columns
+// domain.Trxkeluaranmember has fields for — see trxkeluarandetailColumns for
+// why SELECT * isn't used here.
+const trxkeluaranmemberColumns = `idkeluaranmember, idtrxkeluaran, idcompany,
+	username, totalbet, totalbayar, totaldiscount, totalkei, totalwin,
+	totalpair, betround, playerinvoice, status,
+	createkeluaranmember, createdatekeluaranmember,
+	COALESCE(updatekeluaranmember, '') AS updatekeluaranmember, updatedatekeluaranmember`
+
 type trxkeluaranmemberRepository struct {
 	db DBExecutor
 }
@@ -20,7 +29,7 @@ func NewTrxkeluaranmemberRepository(db DBExecutor) domain.TrxkeluaranmemberRepos
 }
 func (a trxkeluaranmemberRepository) FindAll(ctx context.Context, idcomp string, idtrx int) ([]domain.Trxkeluaranmember, error) {
 	t := util.Get_mapping_totodb(idcomp)
-	query := `SELECT * FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
+	query := `SELECT ` + trxkeluaranmemberColumns + ` FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
 			WHERE idtrxkeluaran = $1
 			ORDER BY createdatekeluaranmember DESC`
 
@@ -30,16 +39,35 @@ func (a trxkeluaranmemberRepository) FindAll(ctx context.Context, idcomp string,
 	}
 	defer rows.Close()
 
-	res, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Trxkeluaranmember])
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[domain.Trxkeluaranmember])
 	if err != nil {
 		return nil, err
 	}
 
 	return res, nil
 }
+func (a trxkeluaranmemberRepository) FindAllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]domain.Trxkeluaranmember, error) {
+	t := util.Get_mapping_totodb(idcomp)
+	query := `SELECT ` + trxkeluaranmemberColumns + ` FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
+			WHERE idtrxkeluaran = $1 AND username = $2
+			ORDER BY createdatekeluaranmember DESC
+			LIMIT 100`
+
+	rows, err := a.db.Query(ctx, query, idtrx, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[domain.Trxkeluaranmember])
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
 func (a trxkeluaranmemberRepository) FindByID(ctx context.Context, idcomp, username string, idtrx int) (domain.Trxkeluaranmember, error) {
 	t := util.Get_mapping_totodb(idcomp)
-	query := `SELECT *
+	query := `SELECT ` + trxkeluaranmemberColumns + `
 			FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
 			WHERE username = $1 AND idtrxkeluaran = $2
 			LIMIT 1`
@@ -50,7 +78,7 @@ func (a trxkeluaranmemberRepository) FindByID(ctx context.Context, idcomp, usern
 	}
 	defer rows.Close()
 
-	data, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[domain.Trxkeluaranmember])
+	data, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByNameLax[domain.Trxkeluaranmember])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Trxkeluaranmember{}, nil

@@ -5,6 +5,7 @@ import (
 )
 
 type PasaranData struct {
+	IDcomppasaran                    string          `json:"pasaran_idcomppasaran"`
 	Codepasaran                      string          `json:"pasaran_codecomppasaran"`
 	Aliascomppasaran                 string          `json:"pasaran_aliascomppasaran"`
 	URLlogo                          string          `json:"pasaran_urllogo"`

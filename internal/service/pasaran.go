@@ -129,6 +129,7 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 	}
 
 	record = dto.PasaranData{
+		IDcomppasaran:                    v.IDcomppasaran,
 		Codepasaran:                      v.Codecomppasaran,
 		Aliascomppasaran:                 v.Aliascomppasaran,
 		URLlogo:                          v.URLlogo,

@@ -16,6 +16,7 @@ type TrxkeluarandetailData struct {
 	Diskon               decimal.Decimal `json:"trxkeluarandetail_diskon"`
 	Kei                  decimal.Decimal `json:"trxkeluarandetail_kei"`
 	Win                  decimal.Decimal `json:"trxkeluarandetail_win"`
+	Winhasil             decimal.Decimal `json:"trxkeluarandetail_winhasil"`
 	Winrev               decimal.Decimal `json:"trxkeluarandetail_winrev"`
 	Betround             int             `json:"trxkeluarandetail_betround"`
 	Browser              string          `json:"trxkeluarandetail_browsertogel"`

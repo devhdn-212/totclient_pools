@@ -30,10 +30,12 @@ type Trxkeluaranmember struct {
 type TrxkeluaranmemberRepository interface {
 	FindAll(ctx context.Context, idcomp string, idtrx int) ([]Trxkeluaranmember, error)
 	FindByID(ctx context.Context, idcomp, idtrxdetail string, idtrx int) (Trxkeluaranmember, error)
+	FindAllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]Trxkeluaranmember, error)
 	Save(ctx context.Context, trxkeluaranmember *Trxkeluaranmember, idcomp string) error
 	Update(ctx context.Context, trxkeluaranmember *Trxkeluaranmember, idcomp string) error
 }
 type TrxkeluaranmemberService interface {
 	All(ctx context.Context, idcomp string, idtrx int) ([]dto.TrxkeluaranmemberData, error)
+	AllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]dto.TrxkeluaranmemberData, error)
 	Save(ctx context.Context, req dto.TrxkeluaranmemberSave, client, idcomp string) error
 }

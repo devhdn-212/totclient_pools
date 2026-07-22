@@ -21,8 +21,16 @@ import (
 )
 
 const (
-	RedisTrxkeluaranmember = "agen:trxkeluaranmember"
+	RedisTrxkeluaranmember       = "agen:trxkeluaranmember"
+	RedisTrxkeluaranmemberByUser = "client:trxkeluaranmember"
 )
+
+// trxkeluaranmemberByUserCacheKey is shared with the checkout service, which
+// deletes this exact key after a successful checkout — mirrors
+// trxkeluarandetailByUserCacheKey.
+func trxkeluaranmemberByUserCacheKey(idcomp string, idtrx int, username string) string {
+	return RedisTrxkeluaranmemberByUser + ":" + strings.ToLower(idcomp) + ":" + strconv.Itoa(idtrx) + ":" + username
+}
 
 type trxkeluaranmemberService struct {
 	db   *pgxpool.Pool
@@ -87,6 +95,52 @@ func (u *trxkeluaranmemberService) All(ctx context.Context, idcomp string, idtrx
 	}
 	go connection.SetRedis(RedisTrxkeluaranmember+":"+strings.ToLower(idcomp)+":"+strconv.Itoa(idtrx), record, 24*time.Hour)
 	connection.Log.Info("Returning data Database - Trxkeluaranmember")
+	return record, nil
+}
+
+func (u *trxkeluaranmemberService) AllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]dto.TrxkeluaranmemberData, error) {
+	cacheKey := trxkeluaranmemberByUserCacheKey(idcomp, idtrx, username)
+	cached, found, err := connection.GetRedis(cacheKey)
+	if err != nil {
+		return nil, err
+	}
+	var record []dto.TrxkeluaranmemberData
+	if found {
+		if err := json.Unmarshal([]byte(cached), &record); err == nil {
+			connection.Log.Info("Returning data from Redis - Trxkeluaranmember (by username)")
+			return record, nil
+		}
+	}
+
+	rows, err := u.repo.FindAllByUsername(ctx, idcomp, idtrx, username)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	for _, v := range rows {
+		var createdAt string
+		if v.CreatedAt.Valid {
+			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
+		}
+		record = append(record, dto.TrxkeluaranmemberData{
+			ID:            v.ID,
+			IDtrxkeluaran: v.IDtrxkeluaran,
+			Username:      v.Username,
+			Totalbet:      v.Totalbet,
+			Totalbayar:    v.Totalbayar,
+			Totaldiscount: v.Totaldiscount,
+			Totalkei:      v.Totalkei,
+			Totalwin:      v.Totalwin,
+			Totalpair:     v.Totalpair,
+			Betround:      v.Betround,
+			Playerinvoice: v.Playerinvoice,
+			Status:        v.Status,
+			Created:       createdAt,
+		})
+	}
+	go connection.SetRedis(cacheKey, record, 24*time.Hour)
+	connection.Log.Info("Returning data Database - Trxkeluaranmember (by username)")
 	return record, nil
 }
 
