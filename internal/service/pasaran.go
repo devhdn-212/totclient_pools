@@ -89,19 +89,24 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 	tglHariIni := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, util.LocJakarta)
 
 	status := "ONLINE"
-	var jadwalOpen string
+	var jadwalOpen, jadwalTutup string
 
-	hariIni := util.HariIndonesia(now)
+	hariKeluaran := util.HariIndonesia(tglKeluaran)
 	for _, d := range jadwal {
-		if d.Haripasaran == hariIni && d.Jamopen.Valid {
-			jadwalOpen = tglHariIni.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond).Format("2006-01-02 15:04:05")
+		if d.Haripasaran != hariKeluaran {
+			continue
+		}
+		if d.Jamopen.Valid {
+			jadwalOpen = tglAwal.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond).Format("2006-01-02 15:04:05")
+		}
+		if d.Jamtutup.Valid {
+			jadwalTutup = tglAwal.Add(time.Duration(d.Jamtutup.Microseconds) * time.Microsecond).Format("2006-01-02 15:04:05")
 		}
 	}
 
 	if tglAwal.Before(tglHariIni) {
 		status = "OFFLINE"
 	} else {
-		hariKeluaran := util.HariIndonesia(tglKeluaran)
 		for _, d := range jadwal {
 			if d.Haripasaran != hariKeluaran || !d.Jamtutup.Valid || !d.Jamopen.Valid {
 				continue
@@ -109,16 +114,20 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 
 			tutupTime := tglAwal.Add(time.Duration(d.Jamtutup.Microseconds) * time.Microsecond)
 			openTime := tglAwal.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond)
+			if d.Jamopen.Microseconds > d.Jamtutup.Microseconds {
+				openTime = openTime.AddDate(0, 0, -1)
+			}
 
-			if !now.Before(tutupTime) && now.Before(openTime) {
+			if openTime.After(now) {
 				status = "OFFLINE"
-			} else {
+			} else if tutupTime.After(now) {
 				status = "ONLINE"
+			} else {
+				status = "OFFLINE"
 			}
 		}
 	}
 
-	fmt.Println("idcompasaran : ", v.IDcomppasaran)
 	record = dto.PasaranData{
 		Codepasaran:                      v.Codecomppasaran,
 		Aliascomppasaran:                 v.Aliascomppasaran,
@@ -131,6 +140,18 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 		AngkaMaxbet2d:                    v.AngkaMaxbet2d,
 		AngkaMaxbet2dd:                   v.AngkaMaxbet2dd,
 		AngkaMaxbet2dt:                   v.AngkaMaxbet2dt,
+		AngkaMaxbet4dFull:                v.AngkaMaxbet4dFull,
+		AngkaMaxbet3dFull:                v.AngkaMaxbet3dFull,
+		AngkaMaxbet3ddFull:               v.AngkaMaxbet3ddFull,
+		AngkaMaxbet2dFull:                v.AngkaMaxbet2dFull,
+		AngkaMaxbet2ddFull:               v.AngkaMaxbet2ddFull,
+		AngkaMaxbet2dtFull:               v.AngkaMaxbet2dtFull,
+		AngkaMaxbet4dBb:                  v.AngkaMaxbet4dBb,
+		AngkaMaxbet3dBb:                  v.AngkaMaxbet3dBb,
+		AngkaMaxbet3ddBb:                 v.AngkaMaxbet3ddBb,
+		AngkaMaxbet2dBb:                  v.AngkaMaxbet2dBb,
+		AngkaMaxbet2ddBb:                 v.AngkaMaxbet2ddBb,
+		AngkaMaxbet2dtBb:                 v.AngkaMaxbet2dtBb,
 		AngkaWin4d:                       v.AngkaWin4d,
 		AngkaWin3d:                       v.AngkaWin3d,
 		AngkaWin3dd:                      v.AngkaWin3dd,
@@ -155,24 +176,6 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 		AngkaLimittotal2d:                v.AngkaLimittotal2d,
 		AngkaLimittotal2dd:               v.AngkaLimittotal2dd,
 		AngkaLimittotal2dt:               v.AngkaLimittotal2dt,
-		AngkaMaxbet4dFull:                v.AngkaMaxbet4dFull,
-		AngkaMaxbet3dFull:                v.AngkaMaxbet3dFull,
-		AngkaMaxbet3ddFull:               v.AngkaMaxbet3ddFull,
-		AngkaMaxbet2dFull:                v.AngkaMaxbet2dFull,
-		AngkaMaxbet2ddFull:               v.AngkaMaxbet2ddFull,
-		AngkaMaxbet2dtFull:               v.AngkaMaxbet2dtFull,
-		AngkaMaxbet4dBb:                  v.AngkaMaxbet4dBb,
-		AngkaMaxbet3dBb:                  v.AngkaMaxbet3dBb,
-		AngkaMaxbet3ddBb:                 v.AngkaMaxbet3ddBb,
-		AngkaMaxbet2dBb:                  v.AngkaMaxbet2dBb,
-		AngkaMaxbet2ddBb:                 v.AngkaMaxbet2ddBb,
-		AngkaMaxbet2dtBb:                 v.AngkaMaxbet2dtBb,
-		AngkaMaxbet4dBbdisc:              v.AngkaMaxbet4dBbdisc,
-		AngkaMaxbet3dBbdisc:              v.AngkaMaxbet3dBbdisc,
-		AngkaMaxbet3ddBbdisc:             v.AngkaMaxbet3ddBbdisc,
-		AngkaMaxbet2dBbdisc:              v.AngkaMaxbet2dBbdisc,
-		AngkaMaxbet2ddBbdisc:             v.AngkaMaxbet2ddBbdisc,
-		AngkaMaxbet2dtBbdisc:             v.AngkaMaxbet2dtBbdisc,
 		AngkaWin4dnodisc:                 v.AngkaWin4dnodisc,
 		AngkaWin3dnodisc:                 v.AngkaWin3dnodisc,
 		AngkaWin3ddnodisc:                v.AngkaWin3ddnodisc,
@@ -356,6 +359,7 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 		ShioLimittotal:                   v.ShioLimittotal,
 		Status:                           status,
 		JadwalOpen:                       jadwalOpen,
+		JadwalTutup:                      jadwalTutup,
 		IDtrxkeluaran:                    trxkeluaran.ID,
 		Keluaranperiode:                  trxkeluaran.Keluaranperiode,
 		Datekeluaran:                     trxkeluaran.Datekeluaran.Format("2006-01-02"),

@@ -46,7 +46,7 @@ func (a trxkeluaranRepository) FindAllRunning(ctx context.Context, idcomp string
 func (a trxkeluaranRepository) FindByID(ctx context.Context, idcomp, idcomppasaran string) (domain.Trxkeluaran, error) {
 	t := util.Get_mapping_totodb(idcomp)
 	query := `SELECT
-	        A.idtrxkeluaran, A.idcomppasaran, A.keluaranperiode, A.datekeluaran 
+	        A.idtrxkeluaran, A.idcomppasaran, A.keluaranperiode, A.datekeluaran, A.keluarantogel 
 			FROM ` + t.Schema + `.` + t.Keluarantogel + ` as A
 			WHERE A.idcompany = $1
 			AND A.idcomppasaran = $2

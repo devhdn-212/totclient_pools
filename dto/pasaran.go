@@ -16,6 +16,18 @@ type PasaranData struct {
 	AngkaMaxbet2d                    decimal.Decimal `json:"pasaran_angka_maxbet2d"`
 	AngkaMaxbet2dd                   decimal.Decimal `json:"pasaran_angka_maxbet2dd"`
 	AngkaMaxbet2dt                   decimal.Decimal `json:"pasaran_angka_maxbet2dt"`
+	AngkaMaxbet4dFull                decimal.Decimal `json:"pasaran_angka_maxbet4d_full"`
+	AngkaMaxbet3dFull                decimal.Decimal `json:"pasaran_angka_maxbet3d_full"`
+	AngkaMaxbet3ddFull               decimal.Decimal `json:"pasaran_angka_maxbet3dd_full"`
+	AngkaMaxbet2dFull                decimal.Decimal `json:"pasaran_angka_maxbet2d_full"`
+	AngkaMaxbet2ddFull               decimal.Decimal `json:"pasaran_angka_maxbet2dd_full"`
+	AngkaMaxbet2dtFull               decimal.Decimal `json:"pasaran_angka_maxbet2dt_full"`
+	AngkaMaxbet4dBb                  decimal.Decimal `json:"pasaran_angka_maxbet4d_bb"`
+	AngkaMaxbet3dBb                  decimal.Decimal `json:"pasaran_angka_maxbet3d_bb"`
+	AngkaMaxbet3ddBb                 decimal.Decimal `json:"pasaran_angka_maxbet3dd_bb"`
+	AngkaMaxbet2dBb                  decimal.Decimal `json:"pasaran_angka_maxbet2d_bb"`
+	AngkaMaxbet2ddBb                 decimal.Decimal `json:"pasaran_angka_maxbet2dd_bb"`
+	AngkaMaxbet2dtBb                 decimal.Decimal `json:"pasaran_angka_maxbet2dt_bb"`
 	AngkaWin4d                       decimal.Decimal `json:"pasaran_angka_win4d"`
 	AngkaWin3d                       decimal.Decimal `json:"pasaran_angka_win3d"`
 	AngkaWin3dd                      decimal.Decimal `json:"pasaran_angka_win3dd"`
@@ -40,24 +52,6 @@ type PasaranData struct {
 	AngkaLimittotal2d                decimal.Decimal `json:"pasaran_angka_limittotal2d"`
 	AngkaLimittotal2dd               decimal.Decimal `json:"pasaran_angka_limittotal2dd"`
 	AngkaLimittotal2dt               decimal.Decimal `json:"pasaran_angka_limittotal2dt"`
-	AngkaMaxbet4dFull                decimal.Decimal `json:"pasaran_angka_maxbet4d_full"`
-	AngkaMaxbet3dFull                decimal.Decimal `json:"pasaran_angka_maxbet3d_full"`
-	AngkaMaxbet3ddFull               decimal.Decimal `json:"pasaran_angka_maxbet3dd_full"`
-	AngkaMaxbet2dFull                decimal.Decimal `json:"pasaran_angka_maxbet2d_full"`
-	AngkaMaxbet2ddFull               decimal.Decimal `json:"pasaran_angka_maxbet2dd_full"`
-	AngkaMaxbet2dtFull               decimal.Decimal `json:"pasaran_angka_maxbet2dt_full"`
-	AngkaMaxbet4dBb                  decimal.Decimal `json:"pasaran_angka_maxbet4d_bb"`
-	AngkaMaxbet3dBb                  decimal.Decimal `json:"pasaran_angka_maxbet3d_bb"`
-	AngkaMaxbet3ddBb                 decimal.Decimal `json:"pasaran_angka_maxbet3dd_bb"`
-	AngkaMaxbet2dBb                  decimal.Decimal `json:"pasaran_angka_maxbet2d_bb"`
-	AngkaMaxbet2ddBb                 decimal.Decimal `json:"pasaran_angka_maxbet2dd_bb"`
-	AngkaMaxbet2dtBb                 decimal.Decimal `json:"pasaran_angka_maxbet2dt_bb"`
-	AngkaMaxbet4dBbdisc              decimal.Decimal `json:"pasaran_angka_maxbet4d_bbdisc"`
-	AngkaMaxbet3dBbdisc              decimal.Decimal `json:"pasaran_angka_maxbet3d_bbdisc"`
-	AngkaMaxbet3ddBbdisc             decimal.Decimal `json:"pasaran_angka_maxbet3dd_bbdisc"`
-	AngkaMaxbet2dBbdisc              decimal.Decimal `json:"pasaran_angka_maxbet2d_bbdisc"`
-	AngkaMaxbet2ddBbdisc             decimal.Decimal `json:"pasaran_angka_maxbet2dd_bbdisc"`
-	AngkaMaxbet2dtBbdisc             decimal.Decimal `json:"pasaran_angka_maxbet2dt_bbdisc"`
 	AngkaWin4dnodisc                 decimal.Decimal `json:"pasaran_angka_win4dnodisc"`
 	AngkaWin3dnodisc                 decimal.Decimal `json:"pasaran_angka_win3dnodisc"`
 	AngkaWin3ddnodisc                decimal.Decimal `json:"pasaran_angka_win3ddnodisc"`
@@ -241,6 +235,7 @@ type PasaranData struct {
 	ShioLimittotal                   decimal.Decimal `json:"pasaran_shio_limittotal"`
 	Status                           string          `json:"pasaran_status"`
 	JadwalOpen                       string          `json:"pasaran_jadwal_open"`
+	JadwalTutup                      string          `json:"pasaran_jadwal_tutup"`
 	IDtrxkeluaran                    int             `json:"pasaran_invoice"`
 	Keluaranperiode                  int             `json:"pasaran_keluaranperiode"`
 	Datekeluaran                     string          `json:"pasaran_datekeluaran"`
