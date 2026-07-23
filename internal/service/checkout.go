@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/devhdn-212/totclient_api/domain"
 	"github.com/devhdn-212/totclient_api/dto"
@@ -15,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 type checkoutService struct {
@@ -165,13 +167,56 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	var totalbet, totalbayar, totaldiscount, totalkei decimal.Decimal
 	var totalpair int
 
+	// limittotal/limitglobal counters live in Redis, not tbl_counter — a key
+	// per (period, user/global, tipe, nomor) would be millions of rows under
+	// real traffic. The TTL below is a memory cleanup safety net, not a
+	// correctness mechanism: nmCounter already embeds idtrxkeluaran, so a new
+	// market period always gets a brand new key regardless of TTL.
+	limitTTL := 48 * time.Hour
+	if closeAt, err := time.ParseInLocation("2006-01-02 15:04:05", pasaran.JadwalTutup, util.LocJakarta); err == nil {
+		if remaining := closeAt.Sub(now); remaining > 0 {
+			limitTTL = remaining + 24*time.Hour // buffer for late settlement/audit reads after close
+		}
+	}
+
+	// Redis increments happen outside the Postgres tx below, so they don't
+	// get undone for free by tx.Rollback(ctx) if something later in this
+	// call fails. Track every accepted increment here and compensate them
+	// all in the deferred cleanup unless the tx actually commits.
+	type redisLimitIncrement struct {
+		key    string
+		amount int64
+	}
+	var redisIncrements []redisLimitIncrement
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		// Detached context: the request ctx may already be canceled/expired
+		// on this path (that's often *why* we're unwinding), but the
+		// compensating decrement still has to go through.
+		cleanupCtx := context.Background()
+		for _, inc := range redisIncrements {
+			if derr := util.DecrementCounterRedis(cleanupCtx, inc.key, inc.amount); derr != nil {
+				connection.Log.Error("failed to roll back redis limit counter after checkout failure",
+					zap.String("key", inc.key), zap.Int64("amount", inc.amount), zap.Error(derr))
+			}
+		}
+	}()
+
 	for _, item := range req.Data {
 		limittotal, limitglobal := resolveLimits(pasaran, item.Permainan)
 		bet := int64(item.Bet)
 
+		nomorForLimit := stripAsterisks(item.Nomor)
+
 		memberKey := "limittotal_" + strings.ToLower(req.Company) + "_" + strconv.Itoa(idtrxkeluaran) +
 			"_" + username + "_" + item.Permainan + "_" + item.Nomor
-		currentMember, okMember, err := util.CheckAndIncrementLimitTx(ctx, tx, memberKey, bet, limittotal.IntPart())
+		memberSeed := func(seedCtx context.Context) (int64, error) {
+			return detailRepo.SumBet(seedCtx, req.Company, idtrxkeluaran, trxkeluaran.Datekeluaran, username, item.Permainan, nomorForLimit)
+		}
+		currentMember, okMember, err := util.CheckAndIncrementLimitRedis(ctx, memberKey, bet, limittotal.IntPart(), limitTTL, memberSeed)
 		if err != nil {
 			return dto.CheckoutResponse{}, err
 		}
@@ -189,17 +234,22 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 			})
 			continue
 		}
+		redisIncrements = append(redisIncrements, redisLimitIncrement{memberKey, bet})
 
 		globalKey := "limitglobal_" + strings.ToLower(req.Company) + "_" + strconv.Itoa(idtrxkeluaran) +
 			"_" + item.Permainan + "_" + item.Nomor
-		currentGlobal, okGlobal, err := util.CheckAndIncrementLimitTx(ctx, tx, globalKey, bet, limitglobal.IntPart())
+		globalSeed := func(seedCtx context.Context) (int64, error) {
+			return detailRepo.SumBet(seedCtx, req.Company, idtrxkeluaran, trxkeluaran.Datekeluaran, "", item.Permainan, nomorForLimit)
+		}
+		currentGlobal, okGlobal, err := util.CheckAndIncrementLimitRedis(ctx, globalKey, bet, limitglobal.IntPart(), limitTTL, globalSeed)
 		if err != nil {
 			return dto.CheckoutResponse{}, err
 		}
 		if !okGlobal {
-			if err := util.DecrementCounterTx(ctx, tx, memberKey, bet); err != nil {
+			if err := util.DecrementCounterRedis(ctx, memberKey, bet); err != nil {
 				return dto.CheckoutResponse{}, err
 			}
+			redisIncrements = redisIncrements[:len(redisIncrements)-1]
 			sisa := limitglobal.Sub(decimal.NewFromInt(currentGlobal))
 			if sisa.IsNegative() {
 				sisa = decimal.Zero
@@ -210,6 +260,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 			})
 			continue
 		}
+		redisIncrements = append(redisIncrements, redisLimitIncrement{globalKey, bet})
 
 		// Recomputed server-side from the live pasaran rates — item.Diskon /
 		// item.Win / item.Kei / item.Bayar from the client are display-only
@@ -225,7 +276,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 			Ipaddress:            ipaddress,
 			Username:             username,
 			Typegame:             item.Permainan,
-			Nomortogel:           stripAsterisks(item.Nomor),
+			Nomortogel:           nomorForLimit,
 			Posisitogel:          item.Tipetoto,
 			Bet:                  item.Bet,
 			Diskon:               payout.Disc,
@@ -277,6 +328,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	if err := tx.Commit(ctx); err != nil {
 		return dto.CheckoutResponse{}, err
 	}
+	committed = true
 
 	// Drop the player's cached "Transaksi" list so their next fetch reflects
 	// this checkout instead of stale data.

@@ -14,12 +14,31 @@ import (
 	"github.com/devhdn-212/totclient_api/internal/config"
 )
 
+// LimitCounterDB is the logical Redis DB that limittotal/limitglobal
+// counters live in — kept separate from the main DB (settings cache, JWT
+// blacklist, etc.) since checkout traffic can churn through a lot more keys
+// than everything else combined, and the two shouldn't compete for eviction
+// or get accidentally wiped together.
+const LimitCounterDB = 2
+
 var (
 	RDB *redis.Client
-	ctx = context.Background()
+	// RDBLimit is a dedicated, long-lived client pointed at LimitCounterDB —
+	// deliberately NOT built through getClient()/SetRedis() below, since
+	// those open+close a fresh connection per call and the limit-counter
+	// path (two Lua script calls per bet item, every checkout) is far too
+	// hot for that.
+	RDBLimit *redis.Client
+	ctx      = context.Background()
+
+	// redisConf is the config InitRedis connected with — kept around so
+	// getClient() can build a client for a different logical DB against the
+	// same real host/port/password instead of an empty config.Redis{}.
+	redisConf config.Redis
 )
 
 func InitRedis(conf config.Redis) error {
+	redisConf = conf
 	host := conf.Host
 	port := conf.Port
 	pwd := conf.Pass
@@ -42,18 +61,31 @@ func InitRedis(conf config.Redis) error {
 	if _, err := RDB.Ping(ctx).Result(); err != nil {
 		return fmt.Errorf("cannot connect to Redis: %v", err)
 	}
+
+	RDBLimit = redis.NewClient(&redis.Options{
+		Addr:     host + ":" + port,
+		Password: pwd,
+		DB:       LimitCounterDB,
+	})
+	if _, err := RDBLimit.Ping(ctx).Result(); err != nil {
+		return fmt.Errorf("cannot connect to Redis (limit counter DB %d): %v", LimitCounterDB, err)
+	}
+
 	Log.Info("Connected to Redis")
 	return nil
 }
 func RedisHealth() bool {
-	if RDB == nil {
+	if RDB == nil || RDBLimit == nil {
 		Log.Fatal("Redis client not initialized. Call InitRedis() first.")
 		return false
 	}
 
-	_, err := RDB.Ping(ctx).Result()
-	if err != nil {
+	if _, err := RDB.Ping(ctx).Result(); err != nil {
 		Log.Fatal("Redis health check failed: ", zap.Error(err))
+		return false
+	}
+	if _, err := RDBLimit.Ping(ctx).Result(); err != nil {
+		Log.Fatal("Redis health check failed (limit counter DB): ", zap.Error(err))
 		return false
 	}
 
@@ -61,7 +93,6 @@ func RedisHealth() bool {
 	return true
 }
 func getClient(db int) *redis.Client {
-	var conf config.Redis
 	if db == 0 {
 		if RDB == nil {
 			Log.Panic("Redis client not initialized. Call InitRedis() first.")
@@ -69,11 +100,9 @@ func getClient(db int) *redis.Client {
 		return RDB
 	}
 	// temporary client untuk DB lain
-	dbHost := conf.Host + ":" + conf.Port
-	dbPass := conf.Pass
 	return redis.NewClient(&redis.Options{
-		Addr:     dbHost,
-		Password: dbPass,
+		Addr:     redisConf.Host + ":" + redisConf.Port,
+		Password: redisConf.Pass,
 		DB:       db,
 	})
 }

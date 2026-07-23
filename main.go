@@ -39,6 +39,7 @@ func main() {
 		logger.Fatal("Failed to init Redis", zap.Error(err))
 	}
 	defer connection.RDB.Close()
+	defer connection.RDBLimit.Close()
 
 	if !connection.RedisHealth() {
 		logger.Fatal("Redis is not healthy")

@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/devhdn-212/totclient_api/dto"
 	"github.com/shopspring/decimal"
@@ -44,6 +45,17 @@ type TrxkeluarandetailRepository interface {
 	FindByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]Trxkeluarandetail, error)
 	FindByID(ctx context.Context, idcomp, idtrxdetail string, idtrx int) (Trxkeluarandetail, error)
 	Save(ctx context.Context, trxkeluarandetail *Trxkeluarandetail, idcomp string) error
+	// SumBet totals up bet across every already-persisted row matching
+	// (idtrx, typegame, nomortogel), optionally narrowed to one username —
+	// used to reseed a limittotal/limitglobal Redis counter from the
+	// permanent ledger when Redis has no memory of it (fresh key, e.g. after
+	// a Redis restart). username == "" sums across every player (limitglobal);
+	// a non-empty username scopes it to just that player (limittotal).
+	// datekeluaran is the draw date for idtrx — the table is partitioned by
+	// month on datetimedetail, so passing it lets Postgres prune straight to
+	// the relevant partition(s) instead of scanning every partition ever
+	// created.
+	SumBet(ctx context.Context, idcomp string, idtrx int, datekeluaran time.Time, username, typegame, nomortogel string) (int64, error)
 }
 type TrxkeluarandetailService interface {
 	All(ctx context.Context, idcomp string, idtrx int) ([]dto.TrxkeluarandetailData, error)

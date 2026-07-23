@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/devhdn-212/totclient_api/domain"
 	"github.com/devhdn-212/totclient_api/internal/util"
@@ -95,6 +96,43 @@ func (a trxkeluarandetailRepository) FindByID(ctx context.Context, idcomp, idtrx
 	}
 	return data, nil
 }
+func (a trxkeluarandetailRepository) SumBet(ctx context.Context, idcomp string, idtrx int, datekeluaran time.Time, username, typegame, nomortogel string) (int64, error) {
+	t := util.Get_mapping_totodb(idcomp)
+
+	// datekeluaran is a plain `date` column — pgx hands it back as midnight
+	// UTC, not midnight Jakarta. datetimedetail is `timestamptz`, compared by
+	// absolute instant, so AddDate()-ing the raw UTC-labeled value and using
+	// it directly would shift the boundary by the UTC+7 offset relative to
+	// what "5 days before the draw date" actually means in Jakarta. Re-anchor
+	// to LocJakarta first — same pattern pasaran.go uses for this exact
+	// column — so the comparison lines up with when bets are really placed.
+	dayStart := time.Date(datekeluaran.Year(), datekeluaran.Month(), datekeluaran.Day(), 0, 0, 0, 0, util.LocJakarta)
+
+	// Bets against one idtrxkeluaran can land anywhere from a few days before
+	// the draw date up through the draw date itself (players bet ahead, and
+	// the market can close past midnight) — so the pruning window has to
+	// cover that whole range, not just datekeluaran's own day, or it'd
+	// silently miss real rows and undercount the reseeded limit. -5/+2 days
+	// is a deliberately generous margin around the real betting window.
+	from := dayStart.AddDate(0, 0, -5)
+	to := dayStart.AddDate(0, 0, 3)
+
+	query := `SELECT COALESCE(SUM(bet), 0) FROM ` + t.Schema + `.` + t.KeluarantogelDetail + `
+			WHERE idtrxkeluaran = $1 AND typegame = $2 AND nomortogel = $3
+			AND datetimedetail >= $4 AND datetimedetail < $5`
+	args := []interface{}{idtrx, typegame, nomortogel, from, to}
+	if username != "" {
+		query += ` AND username = $6`
+		args = append(args, username)
+	}
+
+	var total int64
+	if err := a.db.QueryRow(ctx, query, args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
 func (a trxkeluarandetailRepository) Save(ctx context.Context, trxkeluarandetail *domain.Trxkeluarandetail, idcomp string) error {
 	t := util.Get_mapping_totodb(idcomp)
 	query := `INSERT INTO ` + t.Schema + `.` + t.KeluarantogelDetail + `

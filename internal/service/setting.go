@@ -12,7 +12,7 @@ import (
 
 const (
 	RedisSettingKey = "client:setting"
-	settingCacheTTL = 5 * time.Minute
+	settingCacheTTL = 24 * time.Hour
 )
 
 // settingCache is the small JSON-safe shape actually cached in Redis —
