@@ -20,19 +20,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const (
-	RedisTrxkeluarandetail       = "agen:trxkeluarandetail"
-	RedisTrxkeluarandetailByUser = "client:trxkeluarandetail"
-)
-
-// trxkeluarandetailByUserCacheKey is shared with the checkout service, which
-// deletes this exact key after a successful checkout so the player's
-// "Transaksi" list is never stale — cached per username+idtrxkeluaran, not
-// just per idtrxkeluaran, since this is the player's own history, not the
-// admin's full list.
-func trxkeluarandetailByUserCacheKey(idcomp string, idtrx int, username string) string {
-	return RedisTrxkeluarandetailByUser + ":" + strings.ToLower(idcomp) + ":" + strconv.Itoa(idtrx) + ":" + username
-}
+const RedisTrxkeluarandetail = "agen:trxkeluarandetail"
 
 type trxkeluarandetailService struct {
 	db   *pgxpool.Pool
@@ -102,19 +90,13 @@ func (u *trxkeluarandetailService) All(ctx context.Context, idcomp string, idtrx
 	return record, nil
 }
 
-func (u *trxkeluarandetailService) AllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]dto.TrxkeluarandetailData, error) {
-	cacheKey := trxkeluarandetailByUserCacheKey(idcomp, idtrx, username)
-	cached, found, err := connection.GetRedis(cacheKey)
-	if err != nil {
-		return nil, err
-	}
+// AllByUsername is not cached: idtrx narrows to whichever single period the
+// client just opened, so a cache keyed by idcomppasaran+username alone would
+// serve one period's rows back for a different period's request. The query
+// itself is already cheap (idtrx is normally a single ID, filtered further by
+// username), so it isn't worth a per-idtrx cache key either.
+func (u *trxkeluarandetailService) AllByUsername(ctx context.Context, idcomp, idcomppasaran string, idtrx []int, username string) ([]dto.TrxkeluarandetailData, error) {
 	var record []dto.TrxkeluarandetailData
-	if found {
-		if err := json.Unmarshal([]byte(cached), &record); err == nil {
-			connection.Log.Info("Returning data from Redis - Trxkeluarandetail (by username)")
-			return record, nil
-		}
-	}
 
 	trxkeluarandetail, err := u.repo.FindByUsername(ctx, idcomp, idtrx, username)
 	if err != nil {
@@ -148,7 +130,6 @@ func (u *trxkeluarandetailService) AllByUsername(ctx context.Context, idcomp str
 			Created:              createdAt,
 		})
 	}
-	go connection.SetRedis(cacheKey, record, 24*time.Hour)
 	connection.Log.Info("Returning data Database - Trxkeluarandetail (by username)")
 	return record, nil
 }

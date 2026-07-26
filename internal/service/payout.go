@@ -68,10 +68,6 @@ var cjituWinField = map[string]func(dto.PasaranData) decimal.Decimal{
 	"ekor":   func(p dto.PasaranData) decimal.Decimal { return p.CjituWinekor },
 }
 
-func pct(raw decimal.Decimal) decimal.Decimal {
-	return raw.Div(decimal.NewFromInt(100))
-}
-
 // fieldDecimal reads a decimal.Decimal field off Pasaran by Go field name —
 // used only for 50/50 Special/Kombinasi, whose rate field names are built
 // from a posisi+jenis/kondisi combination (dozens of them) that's not worth
@@ -101,24 +97,27 @@ type payoutRates struct {
 	HasKei   bool
 }
 
+// resolveRates reads disc/kei straight off the pasaran config — those
+// columns already hold the fraction (0.66 means 66%), not a raw percentage
+// number, so no /100 conversion happens here.
 func resolveRates(p dto.PasaranData, typegame, nomor string) payoutRates {
 	if f, ok := fourDDiscField[typegame]; ok {
-		return payoutRates{DiscRate: pct(f(p))}
+		return payoutRates{DiscRate: f(p)}
 	}
 	if f, ok := flatDiscField[typegame]; ok {
-		return payoutRates{DiscRate: pct(f(p))}
+		return payoutRates{DiscRate: f(p)}
 	}
 
 	if typegame == "DASAR" {
 		switch nomor {
 		case "BESAR":
-			return payoutRates{DiscRate: pct(p.DasarDiscbesar), KeiRate: pct(p.DasarKeibesar), HasKei: true}
+			return payoutRates{DiscRate: p.DasarDiscbesar, KeiRate: p.DasarKeibesar, HasKei: true}
 		case "KECIL":
-			return payoutRates{DiscRate: pct(p.DasarDisckecil), KeiRate: pct(p.DasarKeikecil), HasKei: true}
+			return payoutRates{DiscRate: p.DasarDisckecil, KeiRate: p.DasarKeikecil, HasKei: true}
 		case "GENAP":
-			return payoutRates{DiscRate: pct(p.DasarDiscigenap), KeiRate: pct(p.DasarKeigenap), HasKei: true}
+			return payoutRates{DiscRate: p.DasarDiscigenap, KeiRate: p.DasarKeigenap, HasKei: true}
 		case "GANJIL":
-			return payoutRates{DiscRate: pct(p.DasarDiscganjil), KeiRate: pct(p.DasarKeiganjil), HasKei: true}
+			return payoutRates{DiscRate: p.DasarDiscganjil, KeiRate: p.DasarKeiganjil, HasKei: true}
 		}
 		return payoutRates{}
 	}
@@ -126,17 +125,17 @@ func resolveRates(p dto.PasaranData, typegame, nomor string) payoutRates {
 	if typegame == "50_50_UMUM" {
 		switch nomor {
 		case "BESAR":
-			return payoutRates{DiscRate: pct(p.Umum5050Discbesar), KeiRate: pct(p.Umum5050Keibesar), HasKei: true}
+			return payoutRates{DiscRate: p.Umum5050Discbesar, KeiRate: p.Umum5050Keibesar, HasKei: true}
 		case "KECIL":
-			return payoutRates{DiscRate: pct(p.Umum5050Disckecil), KeiRate: pct(p.Umum5050Keikecil), HasKei: true}
+			return payoutRates{DiscRate: p.Umum5050Disckecil, KeiRate: p.Umum5050Keikecil, HasKei: true}
 		case "GENAP":
-			return payoutRates{DiscRate: pct(p.Umum5050Discgenap), KeiRate: pct(p.Umum5050Keigenap), HasKei: true}
+			return payoutRates{DiscRate: p.Umum5050Discgenap, KeiRate: p.Umum5050Keigenap, HasKei: true}
 		case "GANJIL":
-			return payoutRates{DiscRate: pct(p.Umum5050Discganjil), KeiRate: pct(p.Umum5050Keiganjil), HasKei: true}
+			return payoutRates{DiscRate: p.Umum5050Discganjil, KeiRate: p.Umum5050Keiganjil, HasKei: true}
 		case "TENGAH":
-			return payoutRates{DiscRate: pct(p.Umum5050Disctengah), KeiRate: pct(p.Umum5050Keitengah), HasKei: true}
+			return payoutRates{DiscRate: p.Umum5050Disctengah, KeiRate: p.Umum5050Keitengah, HasKei: true}
 		case "TEPI":
-			return payoutRates{DiscRate: pct(p.Umum5050Disctepi), KeiRate: pct(p.Umum5050Keitepi), HasKei: true}
+			return payoutRates{DiscRate: p.Umum5050Disctepi, KeiRate: p.Umum5050Keitepi, HasKei: true}
 		}
 		return payoutRates{}
 	}
@@ -152,7 +151,7 @@ func resolveRates(p dto.PasaranData, typegame, nomor string) payoutRates {
 		suffix := strings.ToLower(pos) + strings.ToLower(kondisi)
 		disc := fieldDecimal(p, "Special5050Disc"+suffix)
 		kei := fieldDecimal(p, "Special5050Kei"+suffix)
-		return payoutRates{DiscRate: pct(disc), KeiRate: pct(kei), HasKei: true}
+		return payoutRates{DiscRate: disc, KeiRate: kei, HasKei: true}
 	}
 
 	// Kombinasi5050 numbers are "{POSISI}_{JENIS}" (BELAKANG/TENGAH/DEPAN x
@@ -168,7 +167,7 @@ func resolveRates(p dto.PasaranData, typegame, nomor string) payoutRates {
 		j := strings.ToLower(jenis)
 		disc := fieldDecimal(p, "Kombinasi5050"+p1+"disc"+j)
 		kei := fieldDecimal(p, "Kombinasi5050"+p1+"kei"+j)
-		return payoutRates{DiscRate: pct(disc), KeiRate: pct(kei), HasKei: true}
+		return payoutRates{DiscRate: disc, KeiRate: kei, HasKei: true}
 	}
 
 	return payoutRates{}
@@ -230,10 +229,19 @@ func resolveWinValue(p dto.PasaranData, typegame, nomor, tipetoto string) decima
 }
 
 type payoutResult struct {
-	Disc   decimal.Decimal
-	Kei    decimal.Decimal
-	Win    decimal.Decimal
-	Payout decimal.Decimal
+	// Disc/Kei are the computed money amounts (bet * rate) — used for the
+	// invoice's totaldiscount/totalkei/payout math.
+	Disc decimal.Decimal
+	Kei  decimal.Decimal
+	// DiscRate/KeiRate are the raw rate straight from the pasaran config
+	// (e.g. 0.66, -0.015) — this is what gets persisted onto the detail
+	// row's diskon/kei columns, not the computed amount, so the row records
+	// what rate was in effect rather than a number that only makes sense
+	// combined with that bet's size.
+	DiscRate decimal.Decimal
+	KeiRate  decimal.Decimal
+	Win      decimal.Decimal
+	Payout   decimal.Decimal
 }
 
 // calculatePayout mirrors calculatePayout in utils.ts: DISC applies
@@ -252,11 +260,13 @@ func calculatePayout(p dto.PasaranData, typegame, nomor string, bet int, tipetot
 	if rates.HasKei {
 		kei := betDecimal.Mul(rates.KeiRate).Neg()
 		return payoutResult{
-			Disc:   disc,
-			Kei:    kei,
-			Win:    win,
-			Payout: betDecimal.Add(kei).Sub(disc),
+			Disc:     disc,
+			Kei:      kei,
+			DiscRate: rates.DiscRate,
+			KeiRate:  rates.KeiRate,
+			Win:      win,
+			Payout:   betDecimal.Add(kei).Sub(disc),
 		}
 	}
-	return payoutResult{Disc: disc, Win: win, Payout: betDecimal.Sub(disc)}
+	return payoutResult{Disc: disc, DiscRate: rates.DiscRate, Win: win, Payout: betDecimal.Sub(disc)}
 }

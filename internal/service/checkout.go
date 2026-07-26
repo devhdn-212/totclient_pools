@@ -90,6 +90,27 @@ func stripAsterisks(nomor string) string {
 	return strings.ReplaceAll(nomor, "*", "")
 }
 
+// isPasaranAcceptingBets re-derives whether the pasaran is open for betting
+// RIGHT NOW instead of trusting p.Status — that field is baked into
+// pasaranService.FindID's 24h cache at whatever moment the cache was last
+// populated, so a market that has since passed its closing time could still
+// read back as "ONLINE" for up to 24h. JadwalOpen/JadwalTutup are absolute
+// timestamps for today's session (safe to cache — they don't change during
+// the day), so comparing them against the live current time here is always
+// accurate no matter how stale the surrounding cached PasaranData is.
+//
+// Falls back to the cached Status only when no (parseable) schedule exists
+// for this pasaran/day — some markets run without a jam-buka/tutup window
+// and rely solely on the admin-set status flag.
+func isPasaranAcceptingBets(p dto.PasaranData, now time.Time) bool {
+	openAt, errOpen := time.ParseInLocation("2006-01-02 15:04:05", p.JadwalOpen, util.LocJakarta)
+	closeAt, errClose := time.ParseInLocation("2006-01-02 15:04:05", p.JadwalTutup, util.LocJakarta)
+	if errOpen != nil || errClose != nil {
+		return p.Status == "ONLINE"
+	}
+	return !now.Before(openAt) && now.Before(closeAt)
+}
+
 func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, ipaddress string) (dto.CheckoutResponse, error) {
 	// idcompany/codecomppasaran are stored uppercase — /api/servicetoken and
 	// /api/serviceinit already uppercase these before calling upstream, but
@@ -118,7 +139,9 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	if err != nil {
 		return dto.CheckoutResponse{}, err
 	}
-	if pasaran.Status != "ONLINE" {
+
+	now := util.GetNowJakarta()
+	if !isPasaranAcceptingBets(pasaran, now) {
 		return dto.CheckoutResponse{}, domain.ErrPasaranOffline
 	}
 
@@ -140,6 +163,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	txExec := repository.NewPGXTxExecutor(tx)
 	detailRepo := repository.NewTrxkeluarandetailRepository(txExec)
 	memberRepo := repository.NewTrxkeluaranmemberRepository(txExec)
+	trxkeluaranTxRepo := repository.NewTrxkeluaranRepository(txExec)
 
 	invoiceCounterKey := "tbl_trx_keluarantogel_detail_" + strings.ToLower(req.Company) + "_" + strconv.Itoa(idtrxkeluaran)
 	invoiceCounter, err := util.GetNextCounterManualTx(ctx, tx, invoiceCounterKey)
@@ -161,7 +185,10 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	}
 	betround := int(betroundCounter)
 
-	now := util.GetNowJakarta()
+	// now was captured earlier (right before isPasaranAcceptingBets) — reused
+	// here rather than re-reading the clock, so every "now"-relative decision
+	// in this one checkout call agrees with the exact instant it was actually
+	// let through the open/closed gate.
 	results := make([]dto.CheckoutItemResult, 0, len(req.Data))
 
 	var totalbet, totalbayar, totaldiscount, totalkei decimal.Decimal
@@ -279,9 +306,9 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 			Nomortogel:           nomorForLimit,
 			Posisitogel:          item.Tipetoto,
 			Bet:                  item.Bet,
-			Diskon:               payout.Disc,
+			Diskon:               payout.DiscRate,
 			Win:                  payout.Win,
-			Kei:                  payout.Kei,
+			Kei:                  payout.KeiRate,
 			Browsertogel:         req.Devicemember,
 			Devicetogel:          req.Devicemember,
 			Statuskeluarandetail: "RUNNING",
@@ -304,6 +331,25 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	}
 
 	if totalpair > 0 {
+		// Serializes concurrent checkouts from the SAME player for the SAME
+		// period, so the ExistsByUsername check below can't race with
+		// itself — two simultaneous requests both seeing "no prior row" and
+		// both incrementing total_member. Scoped to this exact
+		// (idtrxkeluaran, username) pair and released automatically when the
+		// transaction ends (commit or rollback), so it never blocks a
+		// DIFFERENT player's checkout for this same period.
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1, hashtext($2))`, idtrxkeluaran, username); err != nil {
+			return dto.CheckoutResponse{}, err
+		}
+
+		// Checked before this checkout's own member row is saved below — a
+		// repeat checkout by a player who already has a row for this period
+		// must not count toward total_member again.
+		hadPriorInvoice, err := memberRepo.ExistsByUsername(ctx, idcomp, idtrxkeluaran, username)
+		if err != nil {
+			return dto.CheckoutResponse{}, err
+		}
+
 		member := &domain.Trxkeluaranmember{
 			ID:            now.Format("0601") + strings.ReplaceAll(uuid.NewString(), "-", ""),
 			IDtrxkeluaran: idtrxkeluaran,
@@ -323,6 +369,17 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		if err := memberRepo.Save(ctx, member, req.Company); err != nil {
 			return dto.CheckoutResponse{}, err
 		}
+
+		newMember := 0
+		if !hadPriorInvoice {
+			newMember = 1
+		}
+		if err := trxkeluaranTxRepo.IncrementTotals(
+			ctx, idcomp, idtrxkeluaran, newMember,
+			totalbet, decimal.NewFromInt(int64(totalpair)), totalbayar,
+		); err != nil {
+			return dto.CheckoutResponse{}, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -330,10 +387,19 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	}
 	committed = true
 
-	// Drop the player's cached "Transaksi" list so their next fetch reflects
-	// this checkout instead of stale data.
-	go connection.DeleteRedis(trxkeluarandetailByUserCacheKey(idcomp, idtrxkeluaran, username))
-	go connection.DeleteRedis(trxkeluaranmemberByUserCacheKey(idcomp, idtrxkeluaran, username))
+	// Drop the player's cached member summary so their next "Transaksi" fetch
+	// reflects this checkout instead of stale data. Detail rows aren't
+	// cached (see trxkeluarandetailService.AllByUsername), so there's
+	// nothing to invalidate for those.
+	go connection.DeleteRedis(trxkeluaranmemberByUserCacheKey(idcomp, req.PasaranIdcomp, username))
+
+	// This checkout just changed total_member/total_bet/total_pairs/
+	// total_payout on the period row (see IncrementTotals above) — drop the
+	// agen dashboard's cached copies of it (shared Redis, same key format
+	// totagen_api's own trxkeluaran.go writes/invalidates under) so agents
+	// see the updated totals instead of a stale snapshot.
+	go connection.DeleteRedis(RedisTrxkeluaran + ":" + strings.ToLower(idcomp))
+	go connection.DeleteRedis(RedisTrxkeluaranDetail + ":" + strings.ToLower(idcomp) + ":" + strconv.Itoa(idtrxkeluaran))
 
 	return dto.CheckoutResponse{
 		Playerinvoice: playerinvoice,

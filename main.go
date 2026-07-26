@@ -103,11 +103,13 @@ func main() {
 	checkoutService := service.NewCheckoutService(dbPool, trxkeluaranRepository, pasaranService, memberinfoService)
 	trxkeluarandetailService := service.NewTrxkeluarandetailService(dbPool, trxkeluarandetailRepository)
 	trxkeluaranmemberService := service.NewTrxkeluaranmemberService(dbPool, trxkeluaranmemberRepository)
-	riwayatTransaksiService := service.NewRiwayatTransaksiService(pasaranService, trxkeluaranRepository, trxkeluarandetailService, trxkeluaranmemberService, memberinfoService)
+	riwayatTransaksiService := service.NewRiwayatTransaksiService(pasaranService, trxkeluarandetailService, trxkeluaranmemberService, memberinfoService)
+	resultService := service.NewResultService(pasaranService, trxkeluaranRepository, memberinfoService)
 
 	api.NewMemberInfo(app, memberinfoService, settingService)
 	api.NewCheckoutApi(app, checkoutService, settingService)
 	api.NewRiwayatTransaksiApi(app, riwayatTransaksiService)
+	api.NewResultApi(app, resultService)
 	api.NewServiceinit(app, pasaranService)
 
 	go func() {

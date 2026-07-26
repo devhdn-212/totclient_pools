@@ -15,6 +15,12 @@ import (
 
 const (
 	RedisTrxkeluaran = "agen:trxkeluaran"
+	// RedisTrxkeluaranDetail mirrors the agen dashboard's own per-period
+	// cache key (see totagen_api's trxkeluaran.go) — keyed by idtrxkeluaran,
+	// not just idcomp. checkout.go invalidates this alongside RedisTrxkeluaran
+	// since both go stale on the agen side the moment
+	// total_member/total_bet/total_pairs/total_payout change here.
+	RedisTrxkeluaranDetail = RedisTrxkeluaran + ":detail"
 )
 
 type trxkeluaranService struct {

@@ -34,9 +34,11 @@ func NewCheckoutApi(app *fiber.App, checkoutService domain.CheckoutService, sett
 }
 
 func (a checkoutApi) Submit(ctx *fiber.Ctx) error {
-	// Chunked baskets can run to thousands of rows — give this more room
-	// than the usual 10s endpoint timeout.
-	c, cancel := context.WithTimeout(ctx.Context(), 30*time.Second)
+	// Chunked baskets can run to hundreds of rows per chunk, each costing up
+	// to ~4 sequential Redis round-trips (limittotal + limitglobal, each an
+	// EXISTS check plus a Lua script call against a remote Redis) — give
+	// this more room than the usual 10s endpoint timeout.
+	c, cancel := context.WithTimeout(ctx.Context(), 60*time.Second)
 	defer cancel()
 
 	// Server-side gate — the frontend already blocks play off the

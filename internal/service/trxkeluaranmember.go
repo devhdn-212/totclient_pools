@@ -25,11 +25,18 @@ const (
 	RedisTrxkeluaranmemberByUser = "client:trxkeluaranmember"
 )
 
-// trxkeluaranmemberByUserCacheKey is shared with the checkout service, which
-// deletes this exact key after a successful checkout — mirrors
-// trxkeluarandetailByUserCacheKey.
-func trxkeluaranmemberByUserCacheKey(idcomp string, idtrx int, username string) string {
-	return RedisTrxkeluaranmemberByUser + ":" + strings.ToLower(idcomp) + ":" + strconv.Itoa(idtrx) + ":" + username
+// trxkeluaranmemberByUserCacheKey is keyed by idcomppasaran (not idtrx) so it
+// stays valid across period rollovers — checkout.go deletes this exact key
+// after a successful checkout.
+//
+// The ":vN" segment must be bumped every time dto.TrxkeluaranmemberPeriodData's
+// shape changes (most recently: v4 switches to aggregated per-period rows
+// with totalpair/totalbayar/totalwin). Without it, a pre-existing 24h-TTL
+// cache entry unmarshals fine into the new struct and just silently leaves
+// the new fields blank — bumping this makes old entries simply miss instead
+// of serving stale data.
+func trxkeluaranmemberByUserCacheKey(idcomp, idcomppasaran, username string) string {
+	return RedisTrxkeluaranmemberByUser + ":v4:" + strings.ToLower(idcomp) + ":" + idcomppasaran + ":" + username
 }
 
 type trxkeluaranmemberService struct {
@@ -98,49 +105,45 @@ func (u *trxkeluaranmemberService) All(ctx context.Context, idcomp string, idtrx
 	return record, nil
 }
 
-func (u *trxkeluaranmemberService) AllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]dto.TrxkeluaranmemberData, error) {
-	cacheKey := trxkeluaranmemberByUserCacheKey(idcomp, idtrx, username)
+func (u *trxkeluaranmemberService) Periods(ctx context.Context, idcomp, idcomppasaran, username string) ([]dto.TrxkeluaranmemberPeriodData, error) {
+	cacheKey := trxkeluaranmemberByUserCacheKey(idcomp, idcomppasaran, username)
 	cached, found, err := connection.GetRedis(cacheKey)
 	if err != nil {
 		return nil, err
 	}
-	var record []dto.TrxkeluaranmemberData
+	var record []dto.TrxkeluaranmemberPeriodData
 	if found {
 		if err := json.Unmarshal([]byte(cached), &record); err == nil {
-			connection.Log.Info("Returning data from Redis - Trxkeluaranmember (by username)")
+			connection.Log.Info("Returning data from Redis - Trxkeluaranmember (periods)")
 			return record, nil
 		}
 	}
 
-	rows, err := u.repo.FindAllByUsername(ctx, idcomp, idtrx, username)
+	rows, err := u.repo.FindPeriodsByUsername(ctx, idcomp, idcomppasaran, username)
 	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
 
 	for _, v := range rows {
-		var createdAt string
-		if v.CreatedAt.Valid {
-			createdAt = v.Created + ", " + v.CreatedAt.Time.In(util.LocJakarta).Format("2006-01-02 15:04:05")
+		status := "pending"
+		if v.Keluarantogel != "" {
+			status = "complete"
 		}
-		record = append(record, dto.TrxkeluaranmemberData{
-			ID:            v.ID,
-			IDtrxkeluaran: v.IDtrxkeluaran,
-			Username:      v.Username,
-			Totalbet:      v.Totalbet,
-			Totalbayar:    v.Totalbayar,
-			Totaldiscount: v.Totaldiscount,
-			Totalkei:      v.Totalkei,
-			Totalwin:      v.Totalwin,
-			Totalpair:     v.Totalpair,
-			Betround:      v.Betround,
-			Playerinvoice: v.Playerinvoice,
-			Status:        v.Status,
-			Created:       createdAt,
+		record = append(record, dto.TrxkeluaranmemberPeriodData{
+			IDtrxkeluaran:    v.IDtrxkeluaran,
+			Datekeluaran:     v.Datekeluaran.In(util.LocJakarta).Format("2006-01-02"),
+			Keluaranperiode:  v.Keluaranperiode,
+			Aliascomppasaran: v.Aliascomppasaran,
+			Codecomppasaran:  v.Codecomppasaran,
+			Totalpair:        v.Totalpair,
+			Totalbayar:       v.Totalbayar,
+			Totalwin:         v.Totalwin,
+			Status:           status,
 		})
 	}
 	go connection.SetRedis(cacheKey, record, 24*time.Hour)
-	connection.Log.Info("Returning data Database - Trxkeluaranmember (by username)")
+	connection.Log.Info("Returning data Database - Trxkeluaranmember (periods)")
 	return record, nil
 }
 

@@ -54,12 +54,25 @@ func (a trxkeluarandetailRepository) FindAll(ctx context.Context, idcomp string,
 
 	return res, nil
 }
-func (a trxkeluarandetailRepository) FindByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]domain.Trxkeluarandetail, error) {
+
+// FindByUsername takes idtrx as the exact set of periods to fetch — the
+// caller (riwayatTransaksiService) sources that list from
+// TrxkeluaranmemberRepository.FindAllByUsername first, since that table
+// already has exactly one row per idtrxkeluaran the player was active in.
+// That keeps this query a plain indexed lookup instead of a second join
+// against the (much larger) keluarantogel table.
+//
+// No LIMIT: with idtrx spanning every period the player has ever
+// transacted in for a pasaran, a flat row cap ordered by create_at would
+// silently truncate whole bet types (e.g. a player's COLOK_BEBAS/COLOK_JITU
+// rows dropping out once their more frequent 4D/3D/2D rows fill the cap) —
+// the query is already scoped tightly enough (idtrx set + username) that an
+// artificial ceiling isn't needed.
+func (a trxkeluarandetailRepository) FindByUsername(ctx context.Context, idcomp string, idtrx []int, username string) ([]domain.Trxkeluarandetail, error) {
 	t := util.Get_mapping_totodb(idcomp)
 	query := `SELECT ` + trxkeluarandetailColumns + ` FROM ` + t.Schema + `.` + t.KeluarantogelDetail + `
-			WHERE idtrxkeluaran = $1 AND username = $2
-			ORDER BY create_at DESC
-			LIMIT 100`
+			WHERE idtrxkeluaran = ANY($1) AND username = $2
+			ORDER BY create_at DESC`
 
 	rows, err := a.db.Query(ctx, query, idtrx, username)
 	if err != nil {

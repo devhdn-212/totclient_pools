@@ -42,7 +42,11 @@ type Trxkeluarandetail struct {
 }
 type TrxkeluarandetailRepository interface {
 	FindAll(ctx context.Context, idcomp string, idtrx int) ([]Trxkeluarandetail, error)
-	FindByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]Trxkeluarandetail, error)
+	// FindByUsername matches against every idtrxkeluaran in idtrx — the
+	// caller sources that list from TrxkeluaranmemberRepository.FindAllByUsername
+	// (every period the player was active in for a pasaran), so this covers
+	// the player's full "Transaksi" history across period rollovers.
+	FindByUsername(ctx context.Context, idcomp string, idtrx []int, username string) ([]Trxkeluarandetail, error)
 	FindByID(ctx context.Context, idcomp, idtrxdetail string, idtrx int) (Trxkeluarandetail, error)
 	Save(ctx context.Context, trxkeluarandetail *Trxkeluarandetail, idcomp string) error
 	// SumBet totals up bet across every already-persisted row matching
@@ -59,6 +63,9 @@ type TrxkeluarandetailRepository interface {
 }
 type TrxkeluarandetailService interface {
 	All(ctx context.Context, idcomp string, idtrx int) ([]dto.TrxkeluarandetailData, error)
-	AllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]dto.TrxkeluarandetailData, error)
+	// AllByUsername is not cached — idtrx is normally a single period the
+	// client just asked to open, so it varies call-to-call for the same
+	// idcomppasaran+username. See the implementation for why.
+	AllByUsername(ctx context.Context, idcomp, idcomppasaran string, idtrx []int, username string) ([]dto.TrxkeluarandetailData, error)
 	Save(ctx context.Context, req dto.TrxkeluarandetailSave, client, idcomp string) error
 }

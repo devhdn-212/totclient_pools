@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/devhdn-212/totclient_api/domain"
+	"github.com/devhdn-212/totclient_api/internal/config"
 	"github.com/devhdn-212/totclient_api/internal/util"
 	"github.com/jackc/pgx/v5"
 )
@@ -46,20 +47,45 @@ func (a trxkeluaranmemberRepository) FindAll(ctx context.Context, idcomp string,
 
 	return res, nil
 }
-func (a trxkeluaranmemberRepository) FindAllByUsername(ctx context.Context, idcomp string, idtrx int, username string) ([]domain.Trxkeluaranmember, error) {
-	t := util.Get_mapping_totodb(idcomp)
-	query := `SELECT ` + trxkeluaranmemberColumns + ` FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
-			WHERE idtrxkeluaran = $1 AND username = $2
-			ORDER BY createdatekeluaranmember DESC
-			LIMIT 100`
 
-	rows, err := a.db.Query(ctx, query, idtrx, username)
+// FindPeriodsByUsername aggregates every member row per idtrxkeluaran
+// (totalpair/totalbayar/totalwin summed across playerinvoices) instead of
+// returning one row per invoice — a player's "Transaksi" period list only
+// ever needs one card per period, so grouping happens in SQL rather than
+// pulling every raw row and grouping client-side. Joins to keluarantogel
+// (idcomppasaran scoping + keluarantogel/datekeluaran/keluaranperiode) and
+// tbl_mst_company_pasaran (the pasaran's name/code for the exact period
+// being shown, instead of the client assuming it's always whatever pasaran
+// happens to be currently active).
+//
+// keluarantogel (empty = draw not decided yet) is what the caller uses to
+// resolve a single pending/complete verdict for the period.
+//
+// No LIMIT: this result set is the period list itself, so truncating it
+// would drop whole periods from the player's "Transaksi" history, not just
+// old rows.
+func (a trxkeluaranmemberRepository) FindPeriodsByUsername(ctx context.Context, idcomp, idcomppasaran, username string) ([]domain.TrxkeluaranmemberPeriod, error) {
+	t := util.Get_mapping_totodb(idcomp)
+	query := `SELECT M.idtrxkeluaran,
+			K.datekeluaran, K.keluaranperiode, K.keluarantogel,
+			P.aliascomppasaran, P.codecomppasaran,
+			SUM(M.totalpair) AS totalpair,
+			SUM(M.totalbayar) AS totalbayar,
+			SUM(M.totalwin) AS totalwin
+			FROM ` + t.Schema + `.` + t.KeluarantogelMember + ` AS M
+			INNER JOIN ` + t.Schema + `.` + t.Keluarantogel + ` AS K ON K.idtrxkeluaran = M.idtrxkeluaran
+			INNER JOIN ` + config.DB_mst_company_pasaran + ` AS P ON P.idcomppasaran = K.idcomppasaran
+			WHERE K.idcompany = $1 AND K.idcomppasaran = $2 AND M.username = $3
+			GROUP BY M.idtrxkeluaran, K.datekeluaran, K.keluaranperiode, K.keluarantogel, P.aliascomppasaran, P.codecomppasaran
+			ORDER BY K.datekeluaran DESC`
+
+	rows, err := a.db.Query(ctx, query, idcomp, idcomppasaran, username)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[domain.Trxkeluaranmember])
+	res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[domain.TrxkeluaranmemberPeriod])
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +113,23 @@ func (a trxkeluaranmemberRepository) FindByID(ctx context.Context, idcomp, usern
 	}
 	return data, nil
 }
+
+// ExistsByUsername reports whether username already has a member row for
+// idtrxkeluaran — checkout checks this before saving its own member row to
+// decide whether this invoice is the player's first for the period.
+func (a trxkeluaranmemberRepository) ExistsByUsername(ctx context.Context, idcomp string, idtrxkeluaran int, username string) (bool, error) {
+	t := util.Get_mapping_totodb(idcomp)
+	query := `SELECT EXISTS(
+			SELECT 1 FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
+			WHERE idtrxkeluaran = $1 AND username = $2)`
+
+	var exists bool
+	if err := a.db.QueryRow(ctx, query, idtrxkeluaran, username).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 func (a trxkeluaranmemberRepository) Save(ctx context.Context, trxkeluaranmember *domain.Trxkeluaranmember, idcomp string) error {
 	t := util.Get_mapping_totodb(idcomp)
 	query := `INSERT INTO ` + t.Schema + `.` + t.KeluarantogelMember + `
