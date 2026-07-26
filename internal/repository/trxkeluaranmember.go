@@ -114,22 +114,6 @@ func (a trxkeluaranmemberRepository) FindByID(ctx context.Context, idcomp, usern
 	return data, nil
 }
 
-// ExistsByUsername reports whether username already has a member row for
-// idtrxkeluaran — checkout checks this before saving its own member row to
-// decide whether this invoice is the player's first for the period.
-func (a trxkeluaranmemberRepository) ExistsByUsername(ctx context.Context, idcomp string, idtrxkeluaran int, username string) (bool, error) {
-	t := util.Get_mapping_totodb(idcomp)
-	query := `SELECT EXISTS(
-			SELECT 1 FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
-			WHERE idtrxkeluaran = $1 AND username = $2)`
-
-	var exists bool
-	if err := a.db.QueryRow(ctx, query, idtrxkeluaran, username).Scan(&exists); err != nil {
-		return false, err
-	}
-	return exists, nil
-}
-
 func (a trxkeluaranmemberRepository) Save(ctx context.Context, trxkeluaranmember *domain.Trxkeluaranmember, idcomp string) error {
 	t := util.Get_mapping_totodb(idcomp)
 	query := `INSERT INTO ` + t.Schema + `.` + t.KeluarantogelMember + `

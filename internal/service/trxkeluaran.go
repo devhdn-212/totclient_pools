@@ -2,15 +2,13 @@ package service
 
 import (
 	"context"
-	"encoding/json"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/devhdn-212/totclient_api/domain"
-	"github.com/devhdn-212/totclient_api/dto"
 	"github.com/devhdn-212/totclient_api/internal/connection"
-	"github.com/gofiber/fiber/v2/log"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 const (
@@ -21,53 +19,67 @@ const (
 	// since both go stale on the agen side the moment
 	// total_member/total_bet/total_pairs/total_payout change here.
 	RedisTrxkeluaranDetail = RedisTrxkeluaran + ":detail"
+
+	// RedisTotalsDirty is a Redis SET of "idcomp|idtrxkeluaran" members —
+	// periods whose total_member/total_bet/total_pairs/total_payout need
+	// recomputing. checkout.go adds to it (MarkTotalsDirty) instead of
+	// updating those columns inline, so many concurrent checkouts against
+	// the same period no longer serialize on that row's lock. A background
+	// ticker (see main.go) drains it periodically via FlushDirtyTotals.
+	RedisTotalsDirty = "internal:totals:dirty"
 )
 
-type trxkeluaranService struct {
-	db   *pgxpool.Pool
-	repo domain.TrxkeluaranRepository
-}
-
-func NewTrxkeluaranService(db *pgxpool.Pool, repo domain.TrxkeluaranRepository) domain.TrxkeluaranService {
-	return &trxkeluaranService{
-		db:   db,
-		repo: repo,
+// MarkTotalsDirty schedules idtrxkeluaran's summary columns for a background
+// recompute — fire-and-forget, never blocks the checkout that calls it.
+func MarkTotalsDirty(idcomp string, idtrxkeluaran int) {
+	member := strings.ToLower(idcomp) + "|" + strconv.Itoa(idtrxkeluaran)
+	if err := connection.RDB.SAdd(context.Background(), RedisTotalsDirty, member).Err(); err != nil {
+		connection.Log.Error("MarkTotalsDirty: SAdd failed", zap.Error(err), zap.String("member", member))
 	}
 }
 
-func (u *trxkeluaranService) All(ctx context.Context, idcomp string) ([]dto.TrxkeluaranData, error) {
-	cached, found, err := connection.GetRedis(RedisTrxkeluaran + ":" + strings.ToLower(idcomp))
-	if err != nil {
-		return nil, err
+// FlushDirtyTotals drains every period marked dirty since the last call and
+// recomputes its totals via TrxkeluaranRepository.RefreshTotals. Called from
+// a ticker in main.go rather than inline in checkout — this is what turns N
+// concurrent checkouts against one period's row lock into at most one UPDATE
+// per period per tick.
+//
+// SPopN atomically pops (not just reads) up to count members, so a checkout
+// that marks a period dirty while a flush is in flight is never lost — it
+// just stays in the set for the next tick instead of being wiped by a
+// read-then-delete race.
+func FlushDirtyTotals(ctx context.Context, repo domain.TrxkeluaranRepository) {
+	members, err := connection.RDB.SPopN(ctx, RedisTotalsDirty, 1000).Result()
+	if err != nil && err != redis.Nil {
+		connection.Log.Error("FlushDirtyTotals: SPopN failed", zap.Error(err))
+		return
 	}
-	var record []dto.TrxkeluaranData
-	if found {
-		if err := json.Unmarshal([]byte(cached), &record); err == nil {
-			connection.Log.Info("Returning data from Redis - Trxkeluaran")
-			return record, nil
+
+	for _, m := range members {
+		idcomp, idtrxStr, found := strings.Cut(m, "|")
+		if !found {
+			continue
 		}
-	}
+		idtrxkeluaran, err := strconv.Atoi(idtrxStr)
+		if err != nil {
+			continue
+		}
 
-	trxkeluaran, err := u.repo.FindAllRunning(ctx, idcomp)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
+		if err := repo.RefreshTotals(ctx, idcomp, idtrxkeluaran); err != nil {
+			connection.Log.Error("FlushDirtyTotals: RefreshTotals failed",
+				zap.Error(err), zap.String("idcomp", idcomp), zap.Int("idtrxkeluaran", idtrxkeluaran))
+			// Transient DB error — re-mark dirty so this period isn't
+			// silently dropped, instead of picked up again next tick.
+			MarkTotalsDirty(idcomp, idtrxkeluaran)
+			continue
+		}
 
-	for _, v := range trxkeluaran {
-
-		record = append(record, dto.TrxkeluaranData{
-			ID:            v.ID,
-			IDcompasaran:  v.IDcomppasaran,
-			Nmpasaran:     v.Nmpasaran,
-			Datekeluaran:  v.Datekeluaran.Format("2006-01-02"),
-			Periode:       v.Keluaranperiode,
-			Total_member:  v.Total_member,
-			Total_bet:     v.Total_bet,
-			Total_buangan: v.Total_buangan,
-		})
+		// The totals just changed in Postgres — bust the agen dashboard's
+		// cached copies now that there's something new to read. checkout.go
+		// no longer busts these itself (it only marks the period dirty),
+		// since doing so before this recompute ran would just repopulate the
+		// cache with the same pre-checkout numbers.
+		go connection.DeleteRedis(RedisTrxkeluaran + ":" + idcomp)
+		go connection.DeleteRedis(RedisTrxkeluaranDetail + ":" + idcomp + ":" + strconv.Itoa(idtrxkeluaran))
 	}
-	go connection.SetRedis(RedisTrxkeluaran+":"+strings.ToLower(idcomp), record, 24*time.Hour)
-	connection.Log.Info("Returning data Database - Trxkeluaran")
-	return record, nil
 }

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/devhdn-212/totclient_api/dto"
 	"github.com/shopspring/decimal"
 )
 
@@ -34,21 +33,6 @@ type Trxkeluaran struct {
 	Update            string          `db:"update_by"`
 	UpdateAt          sql.NullTime    `db:"update_at"`
 }
-type Trxkeluaranview struct {
-	ID                int             `db:"idtrxkeluaran"`
-	IDcomppasaran     string          `db:"idcomppasaran"`
-	IDcomp            string          `db:"idcompany"`
-	Nmpasaran         string          `db:"nmpasaran"`
-	Keluaranperiode   int             `db:"keluaranperiode"`
-	Datekeluaran      time.Time       `db:"datekeluaran"`
-	Total_member      int             `db:"total_member"`
-	Total_bet         decimal.Decimal `db:"total_bet"`
-	Total_outstanding decimal.Decimal `db:"total_pairs"`
-	Total_win         decimal.Decimal `db:"total_win"`
-	Total_lose        decimal.Decimal `db:"total_lose"`
-	Total_buangan     decimal.Decimal `db:"total_payout"`
-	Total_reject      decimal.Decimal `db:"total_reject"`
-}
 
 // TrxkeluaranResultRow is one decided period (keluarantogel != ”) within a
 // month range — the "Result" menu's past-draw-numbers list.
@@ -61,20 +45,20 @@ type TrxkeluaranResultRow struct {
 }
 
 type TrxkeluaranRepository interface {
-	FindAllRunning(ctx context.Context, idcomp string) ([]Trxkeluaranview, error)
 	FindByID(ctx context.Context, idcomp, idcomppasaran string) (Trxkeluaran, error)
 	FindByIDByNomorKeluaran(ctx context.Context, idcomp, idcomppasaran string) (Trxkeluaran, error)
-	// IncrementTotals adds this checkout's contribution to the period's
-	// running totals via a single "col = col + $delta" UPDATE rather than a
-	// read-modify-write, so concurrent checkouts from many different players
-	// against the same period can't stomp on each other — Postgres row-locks
-	// the row for the statement's duration and serializes competing writers.
-	IncrementTotals(ctx context.Context, idcomp string, idtrxkeluaran, totalMember int, totalBet, totalOutstanding, totalBuangan decimal.Decimal) error
+	// RefreshTotals recomputes total_member/total_bet/total_pairs/
+	// total_payout for idtrxkeluaran straight from the source rows in
+	// tbl_trx_keluarantogel_member (COUNT DISTINCT username / SUM totalbet /
+	// SUM totalpair / SUM totalbayar) and writes the absolute result — not an
+	// increment. Self-healing by design: called repeatedly (see
+	// service.FlushDirtyTotals) or out of order, it always converges on the
+	// same correct totals with no drift, unlike the old per-checkout
+	// increment which serialized every concurrent checkout for a period on
+	// one contended row lock.
+	RefreshTotals(ctx context.Context, idcomp string, idtrxkeluaran int) error
 	// FindResultsByMonth returns every period whose draw result has been
 	// decided (keluarantogel != '') with datekeluaran in [start, end) for
 	// idcomppasaran, newest first.
 	FindResultsByMonth(ctx context.Context, idcomp, idcomppasaran string, start, end time.Time) ([]TrxkeluaranResultRow, error)
-}
-type TrxkeluaranService interface {
-	All(ctx context.Context, idcomp string) ([]dto.TrxkeluaranData, error)
 }

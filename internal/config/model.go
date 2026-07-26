@@ -5,6 +5,7 @@ type Config struct {
 	Database Database
 	Jwt      Jwt
 	Redis    Redis
+	Telegram Telegram
 }
 
 type Server struct {
@@ -32,4 +33,11 @@ type Redis struct {
 	Port string
 	Pass string
 	Name string
+}
+
+// Telegram holds the bot credentials used to alert on server-side errors —
+// empty values disable alerting (see util.SendTelegramAlert).
+type Telegram struct {
+	BotToken string
+	ChatID   string
 }

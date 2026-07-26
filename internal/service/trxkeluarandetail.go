@@ -14,10 +14,10 @@ import (
 	"github.com/devhdn-212/totclient_api/internal/connection"
 	"github.com/devhdn-212/totclient_api/internal/repository"
 	"github.com/devhdn-212/totclient_api/internal/util"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 const RedisTrxkeluarandetail = "agen:trxkeluarandetail"
@@ -49,7 +49,7 @@ func (u *trxkeluarandetailService) All(ctx context.Context, idcomp string, idtrx
 
 	trxkeluarandetail, err := u.repo.FindAll(ctx, idcomp, idtrx)
 	if err != nil {
-		log.Error(err)
+		connection.Log.Error("trxkeluarandetailRepository.FindAll failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -100,7 +100,7 @@ func (u *trxkeluarandetailService) AllByUsername(ctx context.Context, idcomp, id
 
 	trxkeluarandetail, err := u.repo.FindByUsername(ctx, idcomp, idtrx, username)
 	if err != nil {
-		log.Error(err)
+		connection.Log.Error("trxkeluarandetailRepository.FindByUsername failed", zap.Error(err))
 		return nil, err
 	}
 

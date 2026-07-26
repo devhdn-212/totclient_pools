@@ -163,7 +163,6 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	txExec := repository.NewPGXTxExecutor(tx)
 	detailRepo := repository.NewTrxkeluarandetailRepository(txExec)
 	memberRepo := repository.NewTrxkeluaranmemberRepository(txExec)
-	trxkeluaranTxRepo := repository.NewTrxkeluaranRepository(txExec)
 
 	invoiceCounterKey := "tbl_trx_keluarantogel_detail_" + strings.ToLower(req.Company) + "_" + strconv.Itoa(idtrxkeluaran)
 	invoiceCounter, err := util.GetNextCounterManualTx(ctx, tx, invoiceCounterKey)
@@ -331,25 +330,6 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	}
 
 	if totalpair > 0 {
-		// Serializes concurrent checkouts from the SAME player for the SAME
-		// period, so the ExistsByUsername check below can't race with
-		// itself — two simultaneous requests both seeing "no prior row" and
-		// both incrementing total_member. Scoped to this exact
-		// (idtrxkeluaran, username) pair and released automatically when the
-		// transaction ends (commit or rollback), so it never blocks a
-		// DIFFERENT player's checkout for this same period.
-		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1, hashtext($2))`, idtrxkeluaran, username); err != nil {
-			return dto.CheckoutResponse{}, err
-		}
-
-		// Checked before this checkout's own member row is saved below — a
-		// repeat checkout by a player who already has a row for this period
-		// must not count toward total_member again.
-		hadPriorInvoice, err := memberRepo.ExistsByUsername(ctx, idcomp, idtrxkeluaran, username)
-		if err != nil {
-			return dto.CheckoutResponse{}, err
-		}
-
 		member := &domain.Trxkeluaranmember{
 			ID:            now.Format("0601") + strings.ReplaceAll(uuid.NewString(), "-", ""),
 			IDtrxkeluaran: idtrxkeluaran,
@@ -369,17 +349,6 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		if err := memberRepo.Save(ctx, member, req.Company); err != nil {
 			return dto.CheckoutResponse{}, err
 		}
-
-		newMember := 0
-		if !hadPriorInvoice {
-			newMember = 1
-		}
-		if err := trxkeluaranTxRepo.IncrementTotals(
-			ctx, idcomp, idtrxkeluaran, newMember,
-			totalbet, decimal.NewFromInt(int64(totalpair)), totalbayar,
-		); err != nil {
-			return dto.CheckoutResponse{}, err
-		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -393,13 +362,13 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	// nothing to invalidate for those.
 	go connection.DeleteRedis(trxkeluaranmemberByUserCacheKey(idcomp, req.PasaranIdcomp, username))
 
-	// This checkout just changed total_member/total_bet/total_pairs/
-	// total_payout on the period row (see IncrementTotals above) — drop the
-	// agen dashboard's cached copies of it (shared Redis, same key format
-	// totagen_api's own trxkeluaran.go writes/invalidates under) so agents
-	// see the updated totals instead of a stale snapshot.
-	go connection.DeleteRedis(RedisTrxkeluaran + ":" + strings.ToLower(idcomp))
-	go connection.DeleteRedis(RedisTrxkeluaranDetail + ":" + strings.ToLower(idcomp) + ":" + strconv.Itoa(idtrxkeluaran))
+	// total_member/total_bet/total_pairs/total_payout on the period row are
+	// no longer updated inline here — that used to mean every concurrent
+	// checkout against the same period queued up on one contended row lock.
+	// Instead, mark the period dirty for a background recompute (see
+	// MarkTotalsDirty/FlushDirtyTotals in trxkeluaran.go), which busts the
+	// agen dashboard's cache itself once the numbers are actually refreshed.
+	MarkTotalsDirty(idcomp, idtrxkeluaran)
 
 	return dto.CheckoutResponse{
 		Playerinvoice: playerinvoice,

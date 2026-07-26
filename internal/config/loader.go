@@ -43,5 +43,9 @@ func Get() *Config {
 			Pass: os.Getenv("DB_REDIS_PASSWORD"),
 			Name: os.Getenv("DB_REDIS_NAME"),
 		},
+		Telegram: Telegram{
+			BotToken: os.Getenv("TELEGRAM_BOT_TOKEN"),
+			ChatID:   os.Getenv("TELEGRAM_CHAT_ID"),
+		},
 	}
 }

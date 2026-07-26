@@ -14,10 +14,10 @@ import (
 	"github.com/devhdn-212/totclient_api/internal/connection"
 	"github.com/devhdn-212/totclient_api/internal/repository"
 	"github.com/devhdn-212/totclient_api/internal/util"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 const (
@@ -66,7 +66,7 @@ func (u *trxkeluaranmemberService) All(ctx context.Context, idcomp string, idtrx
 
 	trxkeluarandetail, err := u.repo.FindAll(ctx, idcomp, idtrx)
 	if err != nil {
-		log.Error(err)
+		connection.Log.Error("trxkeluaranmemberRepository.FindAll failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -121,7 +121,7 @@ func (u *trxkeluaranmemberService) Periods(ctx context.Context, idcomp, idcomppa
 
 	rows, err := u.repo.FindPeriodsByUsername(ctx, idcomp, idcomppasaran, username)
 	if err != nil {
-		log.Error(err)
+		connection.Log.Error("trxkeluaranmemberRepository.FindPeriodsByUsername failed", zap.Error(err))
 		return nil, err
 	}
 

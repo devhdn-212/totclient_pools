@@ -14,10 +14,12 @@ import (
 	"github.com/devhdn-212/totclient_api/internal/connection"
 	"github.com/devhdn-212/totclient_api/internal/repository"
 	"github.com/devhdn-212/totclient_api/internal/service"
+	"github.com/devhdn-212/totclient_api/internal/util"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/etag"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
@@ -25,11 +27,11 @@ import (
 )
 
 func main() {
-	logger := NewGCPLogger()
+	cnf := config.Get()
+	logger := NewGCPLogger(cnf.Telegram)
 
 	connection.SetLogger(logger)
 
-	cnf := config.Get()
 	// 3. Koneksi Database (pgxpool)
 	dbPool := connection.GetDatabase(cnf.Database)
 	defer dbPool.Close()
@@ -47,6 +49,20 @@ func main() {
 
 	app := fiber.New()
 	app.Use(requestid.New())
+	// Fiber v2 does not recover from panics on its own — without this, a
+	// panic anywhere in a handler takes down the whole process instead of
+	// just failing that one request. Routed through connection.Log.Error so
+	// it also fires the Telegram alert hook below.
+	app.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e any) {
+			connection.Log.Error("panic recovered",
+				zap.Any("panic", e),
+				zap.String("method", c.Method()),
+				zap.String("path", c.Path()),
+			)
+		},
+	}))
 	app.Use(etag.New())
 	app.Use(limiter.New(limiter.Config{
 		Max:        20,
@@ -119,6 +135,22 @@ func main() {
 		}
 	}()
 
+	// Drains periods checkout marked dirty (service.MarkTotalsDirty) and
+	// recomputes their total_member/total_bet/total_pairs/total_payout — see
+	// trxkeluaran.go for why this replaced an inline per-checkout increment
+	// (that serialized every concurrent checkout for a period on one row
+	// lock). These numbers only feed a display-only agen dashboard (not live
+	// business logic — limit checks use their own separate Redis counters),
+	// so 1 minute of staleness is fine; a longer interval also means more
+	// checkouts for a busy period get batched into a single recompute.
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			service.FlushDirtyTotals(context.Background(), trxkeluaranRepository)
+		}
+	}()
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
@@ -182,7 +214,7 @@ func validateJwtClaims(claims jwt.MapClaims, issuer, audience string) bool {
 	return true
 }
 
-func NewGCPLogger() *zap.Logger {
+func NewGCPLogger(tg config.Telegram) *zap.Logger {
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.TimeKey = "time"
 	encoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
@@ -198,5 +230,16 @@ func NewGCPLogger() *zap.Logger {
 		zap.InfoLevel,
 	)
 
-	return zap.New(core, zap.AddCaller())
+	return zap.New(core, zap.AddCaller(), zap.Hooks(func(entry zapcore.Entry) error {
+		// Every Error/Fatal log anywhere in the app (including panics
+		// recovered above) flows through here — entry.Caller pinpoints the
+		// exact file:line so the alert says where to look, not just what
+		// broke. Fire-and-forget: never let a slow Telegram API delay the
+		// request that produced the log.
+		if entry.Level < zapcore.ErrorLevel {
+			return nil
+		}
+		go util.SendTelegramAlert(tg, entry.Level.CapitalString(), entry.Caller.String(), entry.Message)
+		return nil
+	}))
 }

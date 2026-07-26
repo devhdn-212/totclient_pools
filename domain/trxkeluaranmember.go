@@ -55,11 +55,6 @@ type TrxkeluaranmemberRepository interface {
 	// ever transacted in for idcomppasaran, not just the currently-open one,
 	// so a player's full "Transaksi" history survives period rollovers.
 	FindPeriodsByUsername(ctx context.Context, idcomp, idcomppasaran, username string) ([]TrxkeluaranmemberPeriod, error)
-	// ExistsByUsername reports whether username already has a member row for
-	// idtrxkeluaran — checkout uses this (checked before it saves its own
-	// member row) to decide whether this invoice is the player's first for
-	// the period, so the period's total_member should count them once.
-	ExistsByUsername(ctx context.Context, idcomp string, idtrxkeluaran int, username string) (bool, error)
 	Save(ctx context.Context, trxkeluaranmember *Trxkeluaranmember, idcomp string) error
 	Update(ctx context.Context, trxkeluaranmember *Trxkeluaranmember, idcomp string) error
 }

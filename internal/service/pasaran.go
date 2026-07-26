@@ -11,8 +11,8 @@ import (
 	"github.com/devhdn-212/totclient_api/dto"
 	"github.com/devhdn-212/totclient_api/internal/connection"
 	"github.com/devhdn-212/totclient_api/internal/util"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -64,7 +64,7 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 
 	v, err := u.repo.FindByID(ctx, idcomp, strings.ToUpper(codepasaran))
 	if err != nil {
-		log.Error(err)
+		connection.Log.Error("pasaranRepository.FindByID failed", zap.Error(err))
 		return dto.PasaranData{}, err
 	}
 	if v.IDcomppasaran == "" {
@@ -73,13 +73,13 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 
 	jadwal, err := u.repo.FindJadwal(ctx, v.IDcomppasaran)
 	if err != nil {
-		log.Error(err)
+		connection.Log.Error("pasaranRepository.FindJadwal failed", zap.Error(err))
 		return dto.PasaranData{}, err
 	}
 
 	trxkeluaran, err := u.trxRepo.FindByID(ctx, strings.ToUpper(idcomp), v.IDcomppasaran)
 	if err != nil {
-		log.Error(err)
+		connection.Log.Error("trxkeluaranRepository.FindByID failed", zap.Error(err))
 		return dto.PasaranData{}, err
 	}
 

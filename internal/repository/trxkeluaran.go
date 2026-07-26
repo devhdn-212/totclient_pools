@@ -9,7 +9,6 @@ import (
 	"github.com/devhdn-212/totclient_api/internal/config"
 	"github.com/devhdn-212/totclient_api/internal/util"
 	"github.com/jackc/pgx/v5"
-	"github.com/shopspring/decimal"
 )
 
 type trxkeluaranRepository struct {
@@ -20,30 +19,6 @@ func NewTrxkeluaranRepository(db DBExecutor) domain.TrxkeluaranRepository {
 	return &trxkeluaranRepository{
 		db: db,
 	}
-}
-func (a trxkeluaranRepository) FindAllRunning(ctx context.Context, idcomp string) ([]domain.Trxkeluaranview, error) {
-	t := util.Get_mapping_totodb(idcomp)
-	query := `SELECT
-	        A.idtrxkeluaran, A.idcomppasaran, B.aliascomppasaran as nmpasaran,
-			A.keluaranperiode, A.datekeluaran, A.total_member, A.total_bet, A.total_payout
-			FROM ` + t.Schema + `.` + t.Keluarantogel + ` as A
-			INNER JOIN ` + config.DB_mst_company_pasaran + ` as B ON B.idcomppasaran = A.idcomppasaran
-			WHERE A.idcompany = $1 AND A.keluarantogel = ''
-			ORDER BY A.create_at DESC`
-
-	rows, err := a.db.Query(ctx, query, idcomp)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	// Otomatis mapping ke struct domain.Admin
-	res, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[domain.Trxkeluaranview])
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
 }
 func (a trxkeluaranRepository) FindByID(ctx context.Context, idcomp, idcomppasaran string) (domain.Trxkeluaran, error) {
 	t := util.Get_mapping_totodb(idcomp)
@@ -72,22 +47,34 @@ func (a trxkeluaranRepository) FindByID(ctx context.Context, idcomp, idcomppasar
 	return trxkeluaran, nil
 }
 
-// IncrementTotals adds this checkout's contribution to the period row's
-// running totals via "col = col + $delta" in a single UPDATE — not a
-// SELECT-then-UPDATE — so concurrent checkouts from many different players
-// against the same idtrxkeluaran can't lose each other's updates: Postgres
-// takes a row lock for the statement's duration and serializes competing
-// writers automatically.
-func (a trxkeluaranRepository) IncrementTotals(ctx context.Context, idcomp string, idtrxkeluaran, totalMember int, totalBet, totalOutstanding, totalBuangan decimal.Decimal) error {
+// RefreshTotals recomputes total_member/total_bet/total_pairs/total_payout
+// for idtrxkeluaran as an absolute value straight from
+// tbl_trx_keluarantogel_member — COUNT(DISTINCT username) naturally handles
+// "a repeat checkout by the same player doesn't count twice" for free, since
+// it doesn't matter how many invoice rows one username has. Self-healing: run
+// it twice, or out of order with another period's refresh, and it always
+// lands on the same correct numbers — unlike the old "col = col + $delta"
+// increment this replaced, which had every concurrent checkout for the same
+// period queue up on one row lock (see service.MarkTotalsDirty/FlushDirtyTotals
+// for why this is now called from a background ticker instead of inline).
+func (a trxkeluaranRepository) RefreshTotals(ctx context.Context, idcomp string, idtrxkeluaran int) error {
 	t := util.Get_mapping_totodb(idcomp)
-	query := `UPDATE ` + t.Schema + `.` + t.Keluarantogel + `
-			SET total_member = total_member + $1,
-			    total_bet = total_bet + $2,
-			    total_pairs = total_pairs + $3,
-			    total_payout = total_payout + $4
-			WHERE idtrxkeluaran = $5`
+	query := `UPDATE ` + t.Schema + `.` + t.Keluarantogel + ` AS k
+			SET total_member = COALESCE(agg.cnt_member, 0),
+			    total_bet = COALESCE(agg.sum_bet, 0),
+			    total_pairs = COALESCE(agg.sum_pair, 0),
+			    total_payout = COALESCE(agg.sum_bayar, 0)
+			FROM (
+			    SELECT COUNT(DISTINCT username) AS cnt_member,
+			           SUM(totalbet) AS sum_bet,
+			           SUM(totalpair) AS sum_pair,
+			           SUM(totalbayar) AS sum_bayar
+			    FROM ` + t.Schema + `.` + t.KeluarantogelMember + `
+			    WHERE idtrxkeluaran = $1
+			) AS agg
+			WHERE k.idtrxkeluaran = $1`
 
-	_, err := a.db.Exec(ctx, query, totalMember, totalBet, totalOutstanding, totalBuangan, idtrxkeluaran)
+	_, err := a.db.Exec(ctx, query, idtrxkeluaran)
 	return err
 }
 
