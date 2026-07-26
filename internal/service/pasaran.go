@@ -92,17 +92,6 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 	var jadwalOpen, jadwalTutup string
 
 	hariKeluaran := util.HariIndonesia(tglKeluaran)
-	for _, d := range jadwal {
-		if d.Haripasaran != hariKeluaran {
-			continue
-		}
-		if d.Jamopen.Valid {
-			jadwalOpen = tglAwal.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond).Format("2006-01-02 15:04:05")
-		}
-		if d.Jamtutup.Valid {
-			jadwalTutup = tglAwal.Add(time.Duration(d.Jamtutup.Microseconds) * time.Microsecond).Format("2006-01-02 15:04:05")
-		}
-	}
 
 	if tglAwal.Before(tglHariIni) {
 		status = "OFFLINE"
@@ -114,9 +103,18 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 
 			tutupTime := tglAwal.Add(time.Duration(d.Jamtutup.Microseconds) * time.Microsecond)
 			openTime := tglAwal.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond)
+			// Jadwal "overnight" (buka sore hari-H-1, tutup siang hari-H, mis.
+			// buka 15:45 tutup 14:30) — jam buka mundur satu hari dari
+			// tanggal keluaran. jadwalOpen/jadwalTutup HARUS dihitung dari
+			// openTime/tutupTime yang sama dengan yang dipakai status di
+			// bawah, supaya checkout.go (yang memverifikasi lewat string ini,
+			// bukan status) tidak menolak checkout yang sebenarnya online.
 			if d.Jamopen.Microseconds > d.Jamtutup.Microseconds {
 				openTime = openTime.AddDate(0, 0, -1)
 			}
+
+			jadwalOpen = openTime.Format("2006-01-02 15:04:05")
+			jadwalTutup = tutupTime.Format("2006-01-02 15:04:05")
 
 			if openTime.After(now) {
 				status = "OFFLINE"
