@@ -108,12 +108,13 @@ func main() {
 	pgxExec := repository.NewPGXExecutor(dbPool)
 
 	pasaranRepository := repository.NewPasaranRepository(pgxExec)
+	companyRepository := repository.NewCompanyRepository(pgxExec)
 	trxkeluaranRepository := repository.NewTrxkeluaranRepository(pgxExec)
 	trxkeluarandetailRepository := repository.NewTrxkeluarandetailRepository(pgxExec)
 	trxkeluaranmemberRepository := repository.NewTrxkeluaranmemberRepository(pgxExec)
 	settingRepository := repository.NewSettingRepository(pgxExec)
 	pasaranService := service.NewPasaranService(dbPool, pasaranRepository, trxkeluaranRepository)
-	memberinfoService := service.NewMemberinfoService()
+	memberinfoService := service.NewMemberinfoService(companyRepository, pasaranRepository)
 	settingService := service.NewSettingService(settingRepository)
 
 	checkoutService := service.NewCheckoutService(dbPool, trxkeluaranRepository, pasaranService, memberinfoService)

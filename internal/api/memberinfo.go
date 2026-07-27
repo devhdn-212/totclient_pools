@@ -62,6 +62,14 @@ func (a memberinfoApi) Checktoken(ctx *fiber.Ctx) error {
 		return ctx.Status(http.StatusUnauthorized).
 			JSON(dto.CreateResponseErrorCode(http.StatusUnauthorized, dto.ErrCodeInvalidTokenPusat, "invalid token"))
 	}
+	if errors.Is(err, domain.ErrInvalidAgent) {
+		return ctx.Status(http.StatusNotFound).
+			JSON(dto.CreateResponseErrorCode(http.StatusNotFound, dto.ErrCodeInvalidAgentPusat, "Agent tidak ditemukan. Please Contact Admin."))
+	}
+	if errors.Is(err, domain.ErrInvalidMarket) {
+		return ctx.Status(http.StatusNotFound).
+			JSON(dto.CreateResponseErrorCode(http.StatusNotFound, dto.ErrCodeInvalidMarketPusat, "Market tidak ditemukan. Please Contact Admin."))
+	}
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).
 			JSON(dto.CreateResponseErrorCode(http.StatusInternalServerError, dto.ErrCodeInternalLocal, err.Error()))

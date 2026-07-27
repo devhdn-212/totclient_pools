@@ -14,7 +14,9 @@ package dto
 // cases are introduced.
 const (
 	// Pusat: memberinfo
-	ErrCodeInvalidTokenPusat = 10001
+	ErrCodeInvalidTokenPusat  = 10001
+	ErrCodeInvalidAgentPusat  = 10004
+	ErrCodeInvalidMarketPusat = 10005
 
 	// Pusat: checkout
 	ErrCodeInsufficientBalancePusat = 10002
