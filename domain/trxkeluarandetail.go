@@ -23,7 +23,6 @@ type Trxkeluarandetail struct {
 	Diskon               decimal.Decimal `db:"diskon"`
 	Win                  decimal.Decimal `db:"win"`
 	Winhasil             decimal.Decimal `db:"winhasil"`
-	Cancelbet            decimal.Decimal `db:"cancelbet"`
 	Kei                  decimal.Decimal `db:"kei"`
 	Browsertogel         string          `db:"browsertogel"`
 	Devicetogel          string          `db:"devicetogel"`
