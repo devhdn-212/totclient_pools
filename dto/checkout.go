@@ -9,7 +9,7 @@ type CheckoutItem struct {
 	ID           string          `json:"id" validate:"required"`
 	Nomor        string          `json:"nomor" validate:"required"`
 	Permainan    string          `json:"permainan" validate:"required"`
-	Bet          int             `json:"bet" validate:"required"`
+	Bet          int             `json:"bet" validate:"required,gt=0"`
 	Diskon       decimal.Decimal `json:"diskon"`
 	Diskonpercen decimal.Decimal `json:"diskonpercen"`
 	Bayar        decimal.Decimal `json:"bayar"`
@@ -30,7 +30,7 @@ type CheckoutRequest struct {
 	Ipaddress            string          `json:"ipaddress"`
 	Devicemember         string          `json:"devicemember"`
 	Timezone             string          `json:"timezone"`
-	Data                 []CheckoutItem  `json:"data" validate:"required"`
+	Data                 []CheckoutItem  `json:"data" validate:"required,dive"`
 	Total                decimal.Decimal `json:"total"`
 }
 

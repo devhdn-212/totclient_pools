@@ -19,7 +19,7 @@ import (
 const trxkeluarandetailColumns = `idtrxkeluarandetail, idtrxkeluaran, idcompany,
 	datetimedetail, COALESCE(ipaddress, '') AS ipaddress, username, typegame, nomortogel,
 	COALESCE(posisitogel, '') AS posisitogel,
-	bet, diskon, win, winhasil, cancelbet, kei,
+	bet, diskon, win, winhasil, kei,
 	COALESCE(browsertogel, '') AS browsertogel, COALESCE(devicetogel, '') AS devicetogel,
 	statuskeluarandetail, betround, winrev, playerinvoice,
 	COALESCE(senddata, '') AS senddata,

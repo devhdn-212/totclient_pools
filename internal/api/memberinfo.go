@@ -71,8 +71,9 @@ func (a memberinfoApi) Checktoken(ctx *fiber.Ctx) error {
 			JSON(dto.CreateResponseErrorCode(http.StatusNotFound, dto.ErrCodeInvalidMarketPusat, "Market tidak ditemukan. Please Contact Admin."))
 	}
 	if err != nil {
+		connection.Log.Error("CheckToken failed: " + err.Error())
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseErrorCode(http.StatusInternalServerError, dto.ErrCodeInternalLocal, err.Error()))
+			JSON(dto.CreateResponseErrorCode(http.StatusInternalServerError, dto.ErrCodeInternalLocal, dto.MsgInternalError))
 	}
 	return ctx.JSON(fiber.Map{
 		"status":   fiber.StatusOK,

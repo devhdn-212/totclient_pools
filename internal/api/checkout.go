@@ -88,9 +88,9 @@ func (a checkoutApi) Submit(ctx *fiber.Ctx) error {
 			JSON(dto.CreateResponseError(http.StatusBadRequest, "pasaran tidak ditemukan"))
 	}
 	if err != nil {
-		connection.Log.Error("Checkout failed", zap.String("error", err.Error()))
+		connection.Log.Error("Checkout failed: " + err.Error())
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseErrorCode(http.StatusInternalServerError, dto.ErrCodeInternalLocal, err.Error()))
+			JSON(dto.CreateResponseErrorCode(http.StatusInternalServerError, dto.ErrCodeInternalLocal, dto.MsgInternalError))
 	}
 
 	return ctx.Status(http.StatusOK).JSON(dto.CreateResponseSuccess(res))

@@ -25,3 +25,11 @@ const (
 	// Local
 	ErrCodeInternalLocal = 90001
 )
+
+// MsgInternalError is the only text a client ever sees for a Local
+// (ErrCodeInternalLocal) failure — raw Go/SQL error strings must never reach
+// the player (they can leak schema/query details, and are meaningless to a
+// player anyway). The real err.Error() still has to go somewhere useful:
+// callers log it via connection.Log.Error(...) (console + Telegram alert)
+// right before returning this message.
+const MsgInternalError = "Aplikasi bermasalah, Please Contact Admin"

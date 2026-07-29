@@ -56,8 +56,9 @@ func (a serviceinitApi) Init(ctx *fiber.Ctx) error {
 			JSON(dto.CreateResponseErrorCode(http.StatusUnauthorized, dto.ErrCodeInvalidTokenPusat, "invalid token"))
 	}
 	if err != nil {
+		connection.Log.Error("ServiceInit failed: " + err.Error())
 		return ctx.Status(http.StatusInternalServerError).
-			JSON(dto.CreateResponseErrorCode(http.StatusInternalServerError, dto.ErrCodeInternalLocal, err.Error()))
+			JSON(dto.CreateResponseErrorCode(http.StatusInternalServerError, dto.ErrCodeInternalLocal, dto.MsgInternalError))
 	}
 	return ctx.JSON(fiber.Map{
 		"status":      fiber.StatusOK,

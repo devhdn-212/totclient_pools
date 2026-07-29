@@ -127,9 +127,6 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	if err != nil {
 		return dto.CheckoutResponse{}, err
 	}
-	if req.Total.GreaterThan(decimal.NewFromInt(memberinfo.Balance)) {
-		return dto.CheckoutResponse{}, domain.ErrInsufficientBalance
-	}
 	username := memberinfo.Username
 
 	// Cached (24h TTL + singleflight) — every player betting on the same
@@ -153,6 +150,51 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		return dto.CheckoutResponse{}, fmt.Errorf("trxkeluaran %w", util.ErrNotFound)
 	}
 	idtrxkeluaran := trxkeluaran.ID
+
+	// All-or-nothing format/range validation, checked before any counter is
+	// allocated or the transaction even opens: a client hitting this endpoint
+	// directly (bypassing the frontend's own validation) could otherwise get
+	// a malformed nomor or an out-of-range bet persisted as an "accepted" bet
+	// (see betformat.go/betrange.go doc comments). Per product decision, one
+	// bad item voids the *entire* chunk, not just that item — so the player
+	// sees exactly what was wrong instead of silently losing the rest of
+	// their basket to something they never typed.
+	itemReasons := make(map[string]string, len(req.Data))
+	for _, item := range req.Data {
+		if reason := checkoutItemRejectReason(pasaran, item); reason != "" {
+			itemReasons[item.ID] = reason
+		}
+	}
+	if len(itemReasons) > 0 {
+		results := make([]dto.CheckoutItemResult, 0, len(req.Data))
+		for _, item := range req.Data {
+			reason, isCulprit := itemReasons[item.ID]
+			if !isCulprit {
+				reason = "Checkout dibatalkan karena ada item lain yang tidak valid"
+			}
+			results = append(results, dto.CheckoutItemResult{ID: item.ID, Status: "rejected", Reason: reason})
+		}
+		return dto.CheckoutResponse{Items: results}, nil
+	}
+
+	// Balance is checked against a total recomputed from req.Data itself, not
+	// req.Total — that field is whatever the client claims (meant to be the
+	// whole basket's running total across every chunk, since the server only
+	// ever sees one chunk at a time), and nothing here cross-checks it. A
+	// client could declare a tiny req.Total while this chunk's actual items
+	// add up to far more, sailing past a balance check that trusted req.Total
+	// as-is. This only bounds *this chunk* against the balance — it can't by
+	// itself guarantee the whole multi-chunk basket stays under balance,
+	// since nothing here tracks how much prior chunks already spent; that
+	// has to be enforced by whatever wallet system ultimately backs
+	// memberinfoService.CheckToken (currently a fixed stub balance).
+	var chunkTotal decimal.Decimal
+	for _, item := range req.Data {
+		chunkTotal = chunkTotal.Add(calculatePayout(pasaran, item.Permainan, item.Nomor, item.Bet, item.Tipetoto).Payout)
+	}
+	if chunkTotal.GreaterThan(decimal.NewFromInt(memberinfo.Balance)) {
+		return dto.CheckoutResponse{}, domain.ErrInsufficientBalance
+	}
 
 	tx, err := s.db.Begin(ctx)
 	if err != nil {

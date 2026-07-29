@@ -25,6 +25,8 @@ func TransalateTaq(fd validator.FieldError) string {
 		return fmt.Sprintf("Field %s must be lowercase", fd.Field())
 	case "alphanum":
 		return fmt.Sprintf("Field %s may contain only letters and numbers", fd.Field())
+	case "gt":
+		return fmt.Sprintf("Field %s must be greater than %s", fd.Field(), fd.Param())
 	}
 	return "validasi failed"
 }
