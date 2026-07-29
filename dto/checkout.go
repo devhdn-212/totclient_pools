@@ -48,4 +48,10 @@ type CheckoutResponse struct {
 	Playerinvoice int                  `json:"playerinvoice"`
 	Totalbayar    decimal.Decimal      `json:"totalbayar"`
 	Items         []CheckoutItemResult `json:"items"`
+	// Balance is the player's balance straight from mothership's transaction
+	// response (the authoritative post-debit figure) — nil when this chunk
+	// never actually reached mothership (every item in it got rejected, see
+	// checkoutService.Submit), so the client knows not to treat a missing
+	// field as "balance is zero".
+	Balance *decimal.Decimal `json:"balance,omitempty"`
 }

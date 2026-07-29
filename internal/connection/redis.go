@@ -126,7 +126,15 @@ func SetRedis(key string, data interface{}, expire time.Duration, db ...int) err
 
 	err = client.Set(ctx, key, jsonData, expire).Err()
 	if err != nil {
-		Log.Fatal("Redis Set failed : ", zap.Error(err))
+		// A transient Redis blip must not take down the whole process — this
+		// runs on every cache write during normal request handling, not just
+		// at startup (unlike RedisHealth). Log.Fatal here would call
+		// os.Exit(1) and kill totclient_api over what's usually just a failed
+		// cache write (several call sites even fire this via `go
+		// connection.SetRedis(...)` and never check the error at all) — the
+		// data still comes from Postgres on the next read either way, so
+		// failing soft is the correct behavior.
+		Log.Error("Redis Set failed", zap.String("key", key), zap.Error(err))
 		return err
 	}
 	return nil
@@ -149,7 +157,9 @@ func GetRedis(key string, db ...int) (string, bool, error) {
 	if err == redis.Nil {
 		return "", false, nil
 	} else if err != nil {
-		Log.Fatal("Redis Get failed : ", zap.Error(err))
+		// Same reasoning as SetRedis above — a Redis outage here should fall
+		// through to a database read, not crash the process.
+		Log.Error("Redis Get failed", zap.String("key", key), zap.Error(err))
 		return "", false, err
 	}
 	return result, true, nil
@@ -170,10 +180,85 @@ func DeleteRedis(key string, db ...int) (int64, error) {
 
 	deleted, err := client.Del(ctx, key).Result()
 	if err != nil {
-		Log.Fatal("Redis Delete failed : ", zap.Error(err))
+		// Same reasoning as SetRedis above — a stale/missed cache invalidation
+		// is recoverable (next read just recomputes), a crashed process isn't.
+		Log.Error("Redis Delete failed", zap.String("key", key), zap.Error(err))
 		return 0, err
 	}
 	return deleted, nil
+}
+
+// DeleteRedisByPrefix deletes every key under prefix+":*" — for cache
+// namespaces where the caller only knows a prefix (e.g. an agent code), not
+// every individual key underneath it (period, username, etc. segments the
+// caller isn't tracking). Uses SCAN (cursor-based, non-blocking) rather than
+// KEYS, since KEYS blocks the whole Redis instance while it walks a large
+// keyspace.
+func DeleteRedisByPrefix(prefix string, db ...int) (int64, error) {
+	targetDB := 0
+	if len(db) > 0 {
+		targetDB = db[0]
+	}
+
+	client := getClient(targetDB)
+	defer func() {
+		if targetDB != 0 {
+			client.Close()
+		}
+	}()
+
+	pattern := prefix + ":*"
+	var cursor uint64
+	var deleted int64
+	for {
+		keys, nextCursor, err := client.Scan(ctx, cursor, pattern, 200).Result()
+		if err != nil {
+			Log.Error("Redis Scan failed", zap.String("pattern", pattern), zap.Error(err))
+			return deleted, err
+		}
+		if len(keys) > 0 {
+			n, err := client.Del(ctx, keys...).Result()
+			if err != nil {
+				Log.Error("Redis Delete (by prefix) failed", zap.String("pattern", pattern), zap.Error(err))
+				return deleted, err
+			}
+			deleted += n
+		}
+		cursor = nextCursor
+		if cursor == 0 {
+			return deleted, nil
+		}
+	}
+}
+
+// AddRedisSet adds member to the Redis SET at key and (re)sets its TTL —
+// SADD is atomic on its own (safe to call concurrently from many goroutines
+// without a read-modify-write race, unlike "read the whole list, append,
+// write it back"), but doesn't touch TTL by itself, so EXPIRE is applied
+// right after in the same pipeline. Calling this again on an existing key
+// keeps rolling its TTL forward from "now" — intentional: a period that's
+// still receiving checkouts shouldn't have its index expire out from under it.
+func AddRedisSet(key, member string, expire time.Duration, db ...int) error {
+	targetDB := 0
+	if len(db) > 0 {
+		targetDB = db[0]
+	}
+
+	client := getClient(targetDB)
+	defer func() {
+		if targetDB != 0 {
+			client.Close()
+		}
+	}()
+
+	pipe := client.TxPipeline()
+	pipe.SAdd(ctx, key, member)
+	pipe.Expire(ctx, key, expire)
+	if _, err := pipe.Exec(ctx); err != nil {
+		Log.Error("Redis SAdd failed", zap.String("key", key), zap.String("member", member), zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 func BlacklistJWT(jti string, ttl time.Duration) error {

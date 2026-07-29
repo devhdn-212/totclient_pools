@@ -192,7 +192,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	for _, item := range req.Data {
 		chunkTotal = chunkTotal.Add(calculatePayout(pasaran, item.Permainan, item.Nomor, item.Bet, item.Tipetoto).Payout)
 	}
-	if chunkTotal.GreaterThan(decimal.NewFromInt(memberinfo.Balance)) {
+	if chunkTotal.GreaterThan(memberinfo.Balance) {
 		return dto.CheckoutResponse{}, domain.ErrInsufficientBalance
 	}
 
@@ -231,9 +231,11 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	// in this one checkout call agrees with the exact instant it was actually
 	// let through the open/closed gate.
 	results := make([]dto.CheckoutItemResult, 0, len(req.Data))
+	compileItems := make([]compileDetailItem, 0, len(req.Data))
 
 	var totalbet, totalbayar, totaldiscount, totalkei decimal.Decimal
 	var totalpair int
+	var mothershipBalance *decimal.Decimal
 
 	// limittotal/limitglobal counters live in Redis, not tbl_counter — a key
 	// per (period, user/global, tipe, nomor) would be millions of rows under
@@ -368,6 +370,18 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		totalkei = totalkei.Add(payout.Kei)
 		totalpair++
 
+		compileItems = append(compileItems, compileDetailItem{
+			Idtrxdetail:   detail.ID,
+			Playerinvoice: playerinvoiceStr,
+			Username:      username,
+			Nomor:         item.Nomor,
+			Type:          item.Permainan,
+			Posisi:        item.Tipetoto,
+			Bet:           item.Bet,
+			Payout:        payout.Payout,
+			Win:           payout.Win,
+		})
+
 		results = append(results, dto.CheckoutItemResult{ID: item.ID, Status: "accepted"})
 	}
 
@@ -391,6 +405,26 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		if err := memberRepo.Save(ctx, member, req.Company); err != nil {
 			return dto.CheckoutResponse{}, err
 		}
+
+		// Reported to mothership last, right before commit: everything checkout
+		// validates locally (limittotal/limitglobal above, chunkTotal-vs-balance
+		// earlier) only decides whether it's worth asking — mothership's answer
+		// here is the actual, authoritative debit of the player's balance. If it
+		// fails, the deferred tx.Rollback below undoes every detail/member row
+		// this chunk just staged, so nothing gets persisted for a bet that was
+		// never actually paid for.
+		txResult, err := s.memberinfoService.SubmitTransaction(ctx, domain.MothershipTransaction{
+			Invoice:       strconv.Itoa(idtrxkeluaran),
+			Pasaran:       pasaran.Aliascomppasaran,
+			Playerinvoice: playerinvoiceStr,
+			Username:      username,
+			Credit:        decimal.Zero,
+			Debit:         totalbayar,
+		})
+		if err != nil {
+			return dto.CheckoutResponse{}, err
+		}
+		mothershipBalance = &txResult.Balance
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -404,6 +438,24 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	// nothing to invalidate for those.
 	go connection.DeleteRedis(trxkeluaranmemberByUserCacheKey(idcomp, req.PasaranIdcomp, username))
 
+	// Agent-dashboard cache for this agent (trxkeluaranmemberService.All +
+	// whatever else shares the "agen:trxkeluaranmember:<idcomp>" namespace —
+	// real keys underneath it carry further segments, e.g.
+	// "...:<idtrxkeluaran>:<username>", that checkout has no reason to know
+	// individually) — separate from the player-facing cache just above, and
+	// checkout never busted any of it before, so an agent's dashboard could
+	// keep showing stale totals up to 24h after a player checks out.
+	// Prefix delete (SCAN, not KEYS) rather than one exact key.
+	go connection.DeleteRedisByPrefix(RedisTrxkeluaranmember + ":" + strings.ToLower(idcomp))
+
+	// Cache this chunk's accepted bets for the compile step (admin submits
+	// keluaran result -> settle every bet in the period) to read from Redis
+	// instead of Postgres row-by-row -- only after commit, so nothing gets
+	// cached that wasn't actually persisted/paid for. See compilecache.go.
+	if len(compileItems) > 0 {
+		go cacheCompileData(idtrxkeluaran, playerinvoiceStr, compileItems)
+	}
+
 	// total_member/total_bet/total_pairs/total_payout on the period row are
 	// no longer updated inline here — that used to mean every concurrent
 	// checkout against the same period queued up on one contended row lock.
@@ -416,5 +468,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		Playerinvoice: playerinvoice,
 		Totalbayar:    totalbayar,
 		Items:         results,
+		Balance:       mothershipBalance,
 	}, nil
 }
+

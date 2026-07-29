@@ -1,11 +1,12 @@
 package config
 
 type Config struct {
-	Server   Server
-	Database Database
-	Jwt      Jwt
-	Redis    Redis
-	Telegram Telegram
+	Server     Server
+	Database   Database
+	Jwt        Jwt
+	Redis      Redis
+	Telegram   Telegram
+	BalanceAPI BalanceAPI
 }
 
 type Server struct {
@@ -40,4 +41,13 @@ type Redis struct {
 type Telegram struct {
 	BotToken string
 	ChatID   string
+}
+
+// BalanceAPI holds the credentials for the upstream member wallet service
+// that resolves a launch token into a username + live balance (see
+// service.MemberinfoService.CheckToken). URL should include the trailing
+// slash, same convention as totclient_client's PATH_API.
+type BalanceAPI struct {
+	URL    string
+	APIKey string
 }
