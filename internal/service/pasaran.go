@@ -90,39 +90,61 @@ func (u *pasaranService) fetchPasaranData(ctx context.Context, idcomp, codepasar
 
 	status := "ONLINE"
 	var jadwalOpen, jadwalTutup string
+	var openTime, tutupTime time.Time
+	var jamOpenValid, jamTutupValid bool
 
 	hariKeluaran := util.HariIndonesia(tglKeluaran)
 
-	if tglAwal.Before(tglHariIni) {
+	// Ambil satu baris jadwal yang cocok dengan hari draw ini saja (break setelah
+	// ketemu) - supaya openTime/tutupTime yang dipakai buat keputusan ONLINE/OFFLINE
+	// dan yang ditampilkan (jadwalOpen/jadwalTutup di caller) selalu berasal dari
+	// baris yang sama (kalau ada >1 baris utk hari yang sama, tidak nyangkut campuran
+	// dua baris berbeda).
+	for _, d := range jadwal {
+		if d.Haripasaran != hariKeluaran {
+			continue
+		}
+		if d.Jamopen.Valid {
+			// Jamopen dan Jamtutup dua-duanya selalu di tanggal draw ini sendiri
+			// (tglAwal) apa adanya - walau time-of-day-nya jamopen > jamtutup (mis.
+			// buka 18:30, tutup 17:30), itu BUKAN sinyal "buka kemarin malam". Sempat
+			// dicoba di-shift -1 hari (asumsi awal yang ternyata salah), dan sempat
+			// juga dicoba anchor jeda maintenance ke tglHariIni (juga salah) -
+			// dikonfirmasi user semuanya harus anchor ke tglAwal/Datekeluaran.
+			openTime = tglAwal.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond)
+			jamOpenValid = true
+		}
+		if d.Jamtutup.Valid {
+			tutupTime = tglAwal.Add(time.Duration(d.Jamtutup.Microseconds) * time.Microsecond)
+			jamTutupValid = true
+		}
+		break
+	}
+
+	if jamOpenValid {
+		jadwalOpen = openTime.Format("2006-01-02 15:04:05")
+	}
+	if jamTutupValid {
+		jadwalTutup = tutupTime.Format("2006-01-02 15:04:05")
+	}
+
+	// Port dari logika lama (goment) yang sudah terbukti jalan di produksi:
+	//   - tutupTime.Before(tglHariIni): draw ini (tglAwal) sudah lewat harinya sama
+	//     sekali dari hari ini -> pasti OFFLINE (setara "dateNow > lastDateOpen").
+	//   - !now.Before(tutupTime) && !now.After(openTime): now ada di jeda antara jam
+	//     tutup dan jam buka draw ini (openTime, setara "lastScheduleOpen"/
+	//     "pasaran_marketopen") -> OFFLINE (jeda maintenance).
+	//   - !now.Before(openTime): now sudah lewat openTime draw ini -> ronde
+	//     berikutnya sudah buka, draw ini otomatis OFFLINE (sudah digantikan).
+	if tutupTime.Before(tglHariIni) {
 		status = "OFFLINE"
-	} else {
-		for _, d := range jadwal {
-			if d.Haripasaran != hariKeluaran || !d.Jamtutup.Valid || !d.Jamopen.Valid {
-				continue
-			}
-
-			tutupTime := tglAwal.Add(time.Duration(d.Jamtutup.Microseconds) * time.Microsecond)
-			openTime := tglAwal.Add(time.Duration(d.Jamopen.Microseconds) * time.Microsecond)
-			// Jadwal "overnight" (buka sore hari-H-1, tutup siang hari-H, mis.
-			// buka 15:45 tutup 14:30) — jam buka mundur satu hari dari
-			// tanggal keluaran. jadwalOpen/jadwalTutup HARUS dihitung dari
-			// openTime/tutupTime yang sama dengan yang dipakai status di
-			// bawah, supaya checkout.go (yang memverifikasi lewat string ini,
-			// bukan status) tidak menolak checkout yang sebenarnya online.
-			if d.Jamopen.Microseconds > d.Jamtutup.Microseconds {
-				openTime = openTime.AddDate(0, 0, -1)
-			}
-
-			jadwalOpen = openTime.Format("2006-01-02 15:04:05")
-			jadwalTutup = tutupTime.Format("2006-01-02 15:04:05")
-
-			if openTime.After(now) {
-				status = "OFFLINE"
-			} else if tutupTime.After(now) {
-				status = "ONLINE"
-			} else {
-				status = "OFFLINE"
-			}
+	} else if jamOpenValid && jamTutupValid {
+		if !now.Before(tutupTime) && !now.After(openTime) {
+			status = "OFFLINE"
+		} else if !now.Before(openTime) {
+			status = "OFFLINE"
+		} else {
+			status = "ONLINE"
 		}
 	}
 

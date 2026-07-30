@@ -99,16 +99,26 @@ func stripAsterisks(nomor string) string {
 // the day), so comparing them against the live current time here is always
 // accurate no matter how stale the surrounding cached PasaranData is.
 //
+// JadwalTutup is the only bound that matters here: it's when THIS draw's
+// betting window closes. JadwalOpen is when the schedule reopens for the
+// NEXT round (always later than JadwalTutup, e.g. tutup 17:30 lalu buka
+// lagi 18:30 hari yang sama) — it's what pasaranService uses to decide a
+// cached record has gone stale, not a second gate betting has to wait for
+// here. So even if the bandar is late inputting nomorkeluaran and JadwalOpen
+// has already passed, checkout is already correctly rejected from the
+// moment JadwalTutup passed — no extra check on the result being empty is
+// needed.
+//
 // Falls back to the cached Status only when no (parseable) schedule exists
 // for this pasaran/day — some markets run without a jam-buka/tutup window
 // and rely solely on the admin-set status flag.
 func isPasaranAcceptingBets(p dto.PasaranData, now time.Time) bool {
-	openAt, errOpen := time.ParseInLocation("2006-01-02 15:04:05", p.JadwalOpen, util.LocJakarta)
+	_, errOpen := time.ParseInLocation("2006-01-02 15:04:05", p.JadwalOpen, util.LocJakarta)
 	closeAt, errClose := time.ParseInLocation("2006-01-02 15:04:05", p.JadwalTutup, util.LocJakarta)
 	if errOpen != nil || errClose != nil {
 		return p.Status == "ONLINE"
 	}
-	return !now.Before(openAt) && now.Before(closeAt)
+	return now.Before(closeAt)
 }
 
 func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, ipaddress string) (dto.CheckoutResponse, error) {
@@ -281,7 +291,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 
 		nomorForLimit := stripAsterisks(item.Nomor)
 
-		memberKey := "limittotal_" + strings.ToLower(req.Company) + "_" + strconv.Itoa(idtrxkeluaran) +
+		memberKey := "limittotal:" + strings.ToLower(req.Company) + ":" + strconv.Itoa(idtrxkeluaran) +
 			"_" + username + "_" + item.Permainan + "_" + item.Nomor
 		memberSeed := func(seedCtx context.Context) (int64, error) {
 			return detailRepo.SumBet(seedCtx, req.Company, idtrxkeluaran, trxkeluaran.Datekeluaran, username, item.Permainan, nomorForLimit)
@@ -306,7 +316,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		}
 		redisIncrements = append(redisIncrements, redisLimitIncrement{memberKey, bet})
 
-		globalKey := "limitglobal_" + strings.ToLower(req.Company) + "_" + strconv.Itoa(idtrxkeluaran) +
+		globalKey := "limitglobal:" + strings.ToLower(req.Company) + ":" + strconv.Itoa(idtrxkeluaran) +
 			"_" + item.Permainan + "_" + item.Nomor
 		globalSeed := func(seedCtx context.Context) (int64, error) {
 			return detailRepo.SumBet(seedCtx, req.Company, idtrxkeluaran, trxkeluaran.Datekeluaran, "", item.Permainan, nomorForLimit)
@@ -453,7 +463,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 	// instead of Postgres row-by-row -- only after commit, so nothing gets
 	// cached that wasn't actually persisted/paid for. See compilecache.go.
 	if len(compileItems) > 0 {
-		go cacheCompileData(idtrxkeluaran, playerinvoiceStr, compileItems)
+		go cacheCompileData(idcomp, idtrxkeluaran, playerinvoiceStr, compileItems)
 	}
 
 	// total_member/total_bet/total_pairs/total_payout on the period row are

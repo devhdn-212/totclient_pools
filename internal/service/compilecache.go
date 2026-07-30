@@ -2,6 +2,7 @@ package service
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/devhdn-212/totclient_api/internal/connection"
@@ -34,12 +35,16 @@ type compileDetailItem struct {
 	Win           decimal.Decimal `json:"win"`
 }
 
-func compileDetailCacheKey(idtrxkeluaran int, playerinvoice string) string {
-	return "trxkeluarandetail:" + strconv.Itoa(idtrxkeluaran) + ":playerinvoice:" + playerinvoice
+// agent (idcompany, e.g. "nuk") is part of the key because idtrxkeluaran is
+// only unique within one agent's own schema (see util.Get_mapping_totodb) —
+// without it, two different agents' periods that happen to land on the same
+// idtrxkeluaran would collide and overwrite each other's cached bets.
+func compileDetailCacheKey(agent string, idtrxkeluaran int, playerinvoice string) string {
+	return "client:trxkeluarandetail:" + strings.ToLower(agent) + ":" + strconv.Itoa(idtrxkeluaran) + ":playerinvoice:" + playerinvoice
 }
 
-func compileListPlayerinvoiceCacheKey(idtrxkeluaran int) string {
-	return "trxkeluarandetail:" + strconv.Itoa(idtrxkeluaran) + ":listplayerinvoice"
+func compileListPlayerinvoiceCacheKey(agent string, idtrxkeluaran int) string {
+	return "client:trxkeluarandetail:" + strings.ToLower(agent) + ":" + strconv.Itoa(idtrxkeluaran) + ":listplayerinvoice"
 }
 
 // cacheCompileData writes one checkout chunk's accepted bets to Redis for a
@@ -52,12 +57,12 @@ func compileListPlayerinvoiceCacheKey(idtrxkeluaran int) string {
 // checkouts for the same period can commit concurrently from many
 // goroutines, and SADD is atomic on its own; a read-modify-write JSON array
 // would silently drop entries under that concurrency.
-func cacheCompileData(idtrxkeluaran int, playerinvoice string, items []compileDetailItem) {
+func cacheCompileData(agent string, idtrxkeluaran int, playerinvoice string, items []compileDetailItem) {
 	if len(items) == 0 {
 		return
 	}
-	if err := connection.SetRedis(compileDetailCacheKey(idtrxkeluaran, playerinvoice), items, compileCacheTTL); err != nil {
+	if err := connection.SetRedis(compileDetailCacheKey(agent, idtrxkeluaran, playerinvoice), items, compileCacheTTL); err != nil {
 		return
 	}
-	_ = connection.AddRedisSet(compileListPlayerinvoiceCacheKey(idtrxkeluaran), playerinvoice, compileCacheTTL)
+	_ = connection.AddRedisSet(compileListPlayerinvoiceCacheKey(agent, idtrxkeluaran), playerinvoice, compileCacheTTL)
 }

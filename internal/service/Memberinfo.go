@@ -155,12 +155,16 @@ func (d *MemberinfoService) SubmitTransaction(ctx context.Context, req domain.Mo
 		"debit":         req.Debit.InexactFloat64(),
 	})
 	if err != nil {
+		fmt.Println("Wallet API - GAGAL playerinvoice:", req.Playerinvoice, "build request body:", err)
 		return nil, fmt.Errorf("build mothership transaction request body: %w", err)
 	}
 
 	url := strings.TrimRight(d.balanceAPI.URL, "/") + "/api/public/transaction"
+	fmt.Println("Wallet API - kirim playerinvoice:", req.Playerinvoice, "url:", url, "payload:", string(body))
+
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
+		fmt.Println("Wallet API - GAGAL playerinvoice:", req.Playerinvoice, "build request:", err)
 		return nil, fmt.Errorf("build mothership transaction request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -168,21 +172,25 @@ func (d *MemberinfoService) SubmitTransaction(ctx context.Context, req domain.Mo
 
 	resp, err := d.httpClient.Do(httpReq)
 	if err != nil {
+		fmt.Println("Wallet API - GAGAL playerinvoice:", req.Playerinvoice, "call API:", err)
 		return nil, fmt.Errorf("call mothership transaction API: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		fmt.Println("Wallet API - GAGAL playerinvoice:", req.Playerinvoice, "read response:", err)
 		return nil, fmt.Errorf("read mothership transaction response: %w", err)
 	}
 
 	var parsed mothershipTransactionResponse
 	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		fmt.Println("Wallet API - GAGAL playerinvoice:", req.Playerinvoice, "decode response:", err)
 		return nil, fmt.Errorf("decode mothership transaction response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK || parsed.Status != http.StatusOK {
+		fmt.Println("Wallet API - GAGAL playerinvoice:", req.Playerinvoice, "username:", req.Username, "pesan:", parsed.Message)
 		if parsed.Message == "insufficient balance" {
 			return nil, domain.ErrInsufficientBalance
 		}
@@ -194,9 +202,11 @@ func (d *MemberinfoService) SubmitTransaction(ctx context.Context, req domain.Mo
 
 	balance, err := decimal.NewFromString(parsed.Record.Balance)
 	if err != nil {
+		fmt.Println("Wallet API - GAGAL playerinvoice:", req.Playerinvoice, "parse balance:", parsed.Record.Balance, err)
 		return nil, fmt.Errorf("parse balance %q from mothership transaction response: %w", parsed.Record.Balance, err)
 	}
 
+	fmt.Println("Wallet API - BERHASIL playerinvoice:", req.Playerinvoice, "username:", req.Username, "balance:", balance.String())
 	return &domain.MothershipTransactionResult{Balance: balance, Status: parsed.Record.Status}, nil
 }
 
