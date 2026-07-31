@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	"github.com/devhdn-212/totclient_api/dto"
+	"github.com/devhdn-212/totclient_pools/dto"
 )
 
 // ResultService resolves a pasaran's past draw results (keluarantogel) for

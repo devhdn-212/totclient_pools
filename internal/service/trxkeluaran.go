@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devhdn-212/totclient_api/domain"
-	"github.com/devhdn-212/totclient_api/internal/connection"
+	"github.com/devhdn-212/totclient_pools/domain"
+	"github.com/devhdn-212/totclient_pools/internal/connection"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )

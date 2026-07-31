@@ -48,7 +48,6 @@ func Get() *Config {
 			ChatID:   os.Getenv("TELEGRAM_CHAT_ID"),
 		},
 		BalanceAPI: BalanceAPI{
-			URL:    os.Getenv("BALANCE_API_URL"),
 			APIKey: os.Getenv("BALANCE_API_KEY"),
 		},
 	}

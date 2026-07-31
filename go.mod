@@ -1,4 +1,4 @@
-module github.com/devhdn-212/totclient_api
+module github.com/devhdn-212/totclient_pools
 
 go 1.25.0
 

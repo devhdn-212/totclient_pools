@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devhdn-212/totclient_api/domain"
-	"github.com/devhdn-212/totclient_api/dto"
-	"github.com/devhdn-212/totclient_api/internal/connection"
-	"github.com/devhdn-212/totclient_api/internal/repository"
-	"github.com/devhdn-212/totclient_api/internal/util"
+	"github.com/devhdn-212/totclient_pools/domain"
+	"github.com/devhdn-212/totclient_pools/dto"
+	"github.com/devhdn-212/totclient_pools/internal/connection"
+	"github.com/devhdn-212/totclient_pools/internal/repository"
+	"github.com/devhdn-212/totclient_pools/internal/util"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
@@ -424,6 +424,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		// this chunk just staged, so nothing gets persisted for a bet that was
 		// never actually paid for.
 		txResult, err := s.memberinfoService.SubmitTransaction(ctx, domain.MothershipTransaction{
+			Idcompany:     idcomp,
 			Invoice:       strconv.Itoa(idtrxkeluaran),
 			Pasaran:       pasaran.Aliascomppasaran,
 			Playerinvoice: playerinvoiceStr,

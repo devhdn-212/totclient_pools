@@ -3,9 +3,10 @@ package domain
 import "context"
 
 type Company struct {
-	IDcompany   string `db:"idcompany"`
-	Compname    string `db:"compname"`
-	Compstatus  string `db:"compstatus"`
+	IDcompany  string `db:"idcompany"`
+	Compname   string `db:"compname"`
+	Compstatus string `db:"compstatus"`
+	Urlapitoto string `db:"urlapitoto"`
 }
 
 type CompanyRepository interface {

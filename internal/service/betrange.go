@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"github.com/devhdn-212/totclient_api/dto"
+	"github.com/devhdn-212/totclient_pools/dto"
 	"github.com/shopspring/decimal"
 )
 

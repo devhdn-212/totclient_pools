@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/devhdn-212/totclient_api/internal/config"
+	"github.com/devhdn-212/totclient_pools/internal/config"
 )
 
 // SendTelegramAlert notifies the ops Telegram chat about a server-side error.

@@ -10,17 +10,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devhdn-212/totclient_api/domain"
-	"github.com/devhdn-212/totclient_api/dto"
-	"github.com/devhdn-212/totclient_api/internal/config"
-	"github.com/devhdn-212/totclient_api/internal/connection"
+	"github.com/devhdn-212/totclient_pools/domain"
+	"github.com/devhdn-212/totclient_pools/dto"
+	"github.com/devhdn-212/totclient_pools/internal/config"
+	"github.com/devhdn-212/totclient_pools/internal/connection"
 	"github.com/shopspring/decimal"
+	"golang.org/x/sync/singleflight"
 
 	"go.uber.org/zap"
 )
 
 const (
 	RedisMemberInfo = "client:memberinfo"
+	RedisCompany    = "client:company"
 )
 
 type MemberinfoService struct {
@@ -28,6 +30,7 @@ type MemberinfoService struct {
 	pasaranRepo domain.PasaranRepository
 	balanceAPI  config.BalanceAPI
 	httpClient  *http.Client
+	sf          singleflight.Group
 }
 
 func NewMemberinfoService(
@@ -41,6 +44,44 @@ func NewMemberinfoService(
 		balanceAPI:  balanceAPI,
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
 	}
+}
+
+// getCompany looks up a company by idcompany, cached in Redis for 24h (same
+// pattern as pasaranService.FindID) — this is called on every CheckToken and
+// every checkout's SubmitTransaction, so it can't hit Postgres every time.
+// Urlapitoto (the per-agent wallet API base URL) comes from here now instead
+// of a single global .env value, since each agent/idcompany can point at its
+// own wallet API.
+func (d *MemberinfoService) getCompany(ctx context.Context, idcompany string) (domain.Company, error) {
+	redisKey := RedisCompany + ":" + strings.ToLower(idcompany)
+
+	cached, found, err := connection.GetRedis(redisKey)
+	if err != nil {
+		return domain.Company{}, err
+	}
+	var record domain.Company
+	if found {
+		if err := json.Unmarshal([]byte(cached), &record); err == nil {
+			return record, nil
+		}
+	}
+
+	result, err, _ := d.sf.Do(redisKey, func() (any, error) {
+		return d.fetchCompany(ctx, idcompany, redisKey)
+	})
+	if err != nil {
+		return domain.Company{}, err
+	}
+	return result.(domain.Company), nil
+}
+
+func (d *MemberinfoService) fetchCompany(ctx context.Context, idcompany, redisKey string) (domain.Company, error) {
+	company, err := d.companyRepo.FindByID(ctx, idcompany)
+	if err != nil {
+		return domain.Company{}, err
+	}
+	go connection.SetRedis(redisKey, company, 24*time.Hour)
+	return company, nil
 }
 
 // balanceAPIResponse mirrors the upstream member-wallet service's envelope —
@@ -65,13 +106,13 @@ type balanceAPIResponse struct {
 // treats as a dead end. Network/decode failures return a plain error instead,
 // so a transient wallet-service outage surfaces as the generic "Aplikasi
 // bermasalah" internal error (retryable), not as "token invalid".
-func (d *MemberinfoService) fetchBalance(ctx context.Context, token string) (*domain.Memberinfo, error) {
+func (d *MemberinfoService) fetchBalance(ctx context.Context, apiURL, token string) (*domain.Memberinfo, error) {
 	body, err := json.Marshal(map[string]string{"token": token})
 	if err != nil {
 		return nil, fmt.Errorf("build balance API request body: %w", err)
 	}
 
-	url := strings.TrimRight(d.balanceAPI.URL, "/") + "/api/public/balance"
+	url := strings.TrimRight(apiURL, "/") + "/api/public/balance"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("build balance API request: %w", err)
@@ -146,6 +187,11 @@ type mothershipTransactionResponse struct {
 // (hidden from the player, alerted to Telegram/console) instead of being
 // misreported as something the player did wrong.
 func (d *MemberinfoService) SubmitTransaction(ctx context.Context, req domain.MothershipTransaction) (*domain.MothershipTransactionResult, error) {
+	company, err := d.getCompany(ctx, req.Idcompany)
+	if err != nil {
+		return nil, fmt.Errorf("resolve company for mothership transaction: %w", err)
+	}
+
 	body, err := json.Marshal(map[string]interface{}{
 		"invoice":       req.Invoice,
 		"pasaran":       req.Pasaran,
@@ -159,7 +205,7 @@ func (d *MemberinfoService) SubmitTransaction(ctx context.Context, req domain.Mo
 		return nil, fmt.Errorf("build mothership transaction request body: %w", err)
 	}
 
-	url := strings.TrimRight(d.balanceAPI.URL, "/") + "/api/public/transaction"
+	url := strings.TrimRight(company.Urlapitoto, "/") + "/api/public/transaction"
 	fmt.Println("Wallet API - kirim playerinvoice:", req.Playerinvoice, "url:", url, "payload:", string(body))
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
@@ -215,7 +261,7 @@ func (d *MemberinfoService) CheckToken(ctx context.Context, req dto.MemberinfoRe
 	// which operator/pasaran the launch belongs to, and market is looked up
 	// scoped to the agent below, so a bad agent has to be caught first or it
 	// would be misreported as a bad market instead.
-	company, err := d.companyRepo.FindByID(ctx, req.Agen)
+	company, err := d.getCompany(ctx, req.Agen)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +287,7 @@ func (d *MemberinfoService) CheckToken(ctx context.Context, req dto.MemberinfoRe
 		return nil, domain.ErrInvalidMarket
 	}
 
-	member, err := d.fetchBalance(ctx, req.Token)
+	member, err := d.fetchBalance(ctx, company.Urlapitoto, req.Token)
 	if err != nil {
 		return nil, err
 	}

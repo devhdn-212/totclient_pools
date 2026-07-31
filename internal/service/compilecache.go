@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devhdn-212/totclient_api/internal/connection"
+	"github.com/devhdn-212/totclient_pools/internal/connection"
 	"github.com/shopspring/decimal"
 )
 

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/devhdn-212/totclient_api/domain"
-	"github.com/devhdn-212/totclient_api/internal/connection"
-	"github.com/devhdn-212/totclient_api/internal/util"
+	"github.com/devhdn-212/totclient_pools/domain"
+	"github.com/devhdn-212/totclient_pools/internal/connection"
+	"github.com/devhdn-212/totclient_pools/internal/util"
 )
 
 const (

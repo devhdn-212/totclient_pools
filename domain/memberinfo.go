@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/devhdn-212/totclient_api/dto"
+	"github.com/devhdn-212/totclient_pools/dto"
 	"github.com/shopspring/decimal"
 )
 
@@ -32,6 +32,7 @@ type Memberinfo struct {
 // the player's balance. Exactly one of Credit/Debit must be greater than
 // zero (mothership rejects otherwise); checkout only ever sends Debit.
 type MothershipTransaction struct {
+	Idcompany     string
 	Invoice       string
 	Pasaran       string
 	Playerinvoice string

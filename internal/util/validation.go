@@ -3,7 +3,7 @@ package util
 import (
 	"fmt"
 
-	validasicustom "github.com/devhdn-212/totclient_api/internal/util/validasicustom"
+	validasicustom "github.com/devhdn-212/totclient_pools/internal/util/validasicustom"
 	"github.com/go-playground/validator/v10"
 )
 

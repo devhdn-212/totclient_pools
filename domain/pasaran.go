@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/devhdn-212/totclient_api/dto"
+	"github.com/devhdn-212/totclient_pools/dto"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )

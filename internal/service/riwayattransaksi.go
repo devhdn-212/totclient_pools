@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/devhdn-212/totclient_api/domain"
-	"github.com/devhdn-212/totclient_api/dto"
+	"github.com/devhdn-212/totclient_pools/domain"
+	"github.com/devhdn-212/totclient_pools/dto"
 )
 
 type riwayatTransaksiService struct {

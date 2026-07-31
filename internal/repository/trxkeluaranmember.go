@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/devhdn-212/totclient_api/domain"
-	"github.com/devhdn-212/totclient_api/internal/config"
-	"github.com/devhdn-212/totclient_api/internal/util"
+	"github.com/devhdn-212/totclient_pools/domain"
+	"github.com/devhdn-212/totclient_pools/internal/config"
+	"github.com/devhdn-212/totclient_pools/internal/util"
 	"github.com/jackc/pgx/v5"
 )
 

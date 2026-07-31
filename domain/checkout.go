@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/devhdn-212/totclient_api/dto"
+	"github.com/devhdn-212/totclient_pools/dto"
 )
 
 // ErrInsufficientBalance is returned when the player's balance (from the

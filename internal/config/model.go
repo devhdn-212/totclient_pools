@@ -45,9 +45,9 @@ type Telegram struct {
 
 // BalanceAPI holds the credentials for the upstream member wallet service
 // that resolves a launch token into a username + live balance (see
-// service.MemberinfoService.CheckToken). URL should include the trailing
-// slash, same convention as totclient_client's PATH_API.
+// service.MemberinfoService.CheckToken). The URL itself is per-agent — it
+// comes from tbl_company.urlapitoto (cached in Redis, see
+// MemberinfoService.getCompany), not from config/env.
 type BalanceAPI struct {
-	URL    string
 	APIKey string
 }

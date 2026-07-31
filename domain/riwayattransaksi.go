@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	"github.com/devhdn-212/totclient_api/dto"
+	"github.com/devhdn-212/totclient_pools/dto"
 )
 
 // RiwayatTransaksiService resolves a player's own successful bets across

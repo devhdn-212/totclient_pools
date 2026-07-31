@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/devhdn-212/totclient_api/internal/connection"
+	"github.com/devhdn-212/totclient_pools/internal/connection"
 	"github.com/redis/go-redis/v9"
 )
 

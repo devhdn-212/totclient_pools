@@ -9,7 +9,7 @@ import (
 
 	"time"
 
-	"github.com/devhdn-212/totclient_api/internal/config"
+	"github.com/devhdn-212/totclient_pools/internal/config"
 )
 
 func GetDatabase(conf config.Database) *pgxpool.Pool {
