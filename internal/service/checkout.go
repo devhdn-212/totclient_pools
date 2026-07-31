@@ -292,7 +292,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		nomorForLimit := stripAsterisks(item.Nomor)
 
 		memberKey := "limittotal:" + strings.ToLower(req.Company) + ":" + strconv.Itoa(idtrxkeluaran) +
-			"_" + username + "_" + item.Permainan + "_" + item.Nomor
+			":" + username + "_" + item.Permainan + "_" + item.Nomor
 		memberSeed := func(seedCtx context.Context) (int64, error) {
 			return detailRepo.SumBet(seedCtx, req.Company, idtrxkeluaran, trxkeluaran.Datekeluaran, username, item.Permainan, nomorForLimit)
 		}
@@ -317,7 +317,7 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		redisIncrements = append(redisIncrements, redisLimitIncrement{memberKey, bet})
 
 		globalKey := "limitglobal:" + strings.ToLower(req.Company) + ":" + strconv.Itoa(idtrxkeluaran) +
-			"_" + item.Permainan + "_" + item.Nomor
+			":" + item.Permainan + "_" + item.Nomor
 		globalSeed := func(seedCtx context.Context) (int64, error) {
 			return detailRepo.SumBet(seedCtx, req.Company, idtrxkeluaran, trxkeluaran.Datekeluaran, "", item.Permainan, nomorForLimit)
 		}
@@ -481,4 +481,3 @@ func (s *checkoutService) Submit(ctx context.Context, req dto.CheckoutRequest, i
 		Balance:       mothershipBalance,
 	}, nil
 }
-
