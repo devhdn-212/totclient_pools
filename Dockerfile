@@ -15,5 +15,6 @@ COPY --from=totmodern_apiclient /go/src/github.com/devhdn-212/totclient_pools/.e
 ENV TZ=Asia/Jakarta
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-EXPOSE 6058
+# No EXPOSE — totclient_pools is a background Kafka consumer worker, not an
+# HTTP server.
 CMD ["./app"]

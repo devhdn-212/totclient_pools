@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/devhdn-212/totclient_pools/dto"
 	"github.com/shopspring/decimal"
 )
 
@@ -59,12 +58,4 @@ type TrxkeluarandetailRepository interface {
 	// the relevant partition(s) instead of scanning every partition ever
 	// created.
 	SumBet(ctx context.Context, idcomp string, idtrx int, datekeluaran time.Time, username, typegame, nomortogel string) (int64, error)
-}
-type TrxkeluarandetailService interface {
-	All(ctx context.Context, idcomp string, idtrx int) ([]dto.TrxkeluarandetailData, error)
-	// AllByUsername is not cached — idtrx is normally a single period the
-	// client just asked to open, so it varies call-to-call for the same
-	// idcomppasaran+username. See the implementation for why.
-	AllByUsername(ctx context.Context, idcomp, idcomppasaran string, idtrx []int, username string) ([]dto.TrxkeluarandetailData, error)
-	Save(ctx context.Context, req dto.TrxkeluarandetailSave, client, idcomp string) error
 }

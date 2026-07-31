@@ -7,6 +7,7 @@ type Config struct {
 	Redis      Redis
 	Telegram   Telegram
 	BalanceAPI BalanceAPI
+	Kafka      Kafka
 }
 
 type Server struct {
@@ -50,4 +51,15 @@ type Telegram struct {
 // MemberinfoService.getCompany), not from config/env.
 type BalanceAPI struct {
 	APIKey string
+}
+
+// Kafka holds the checkout event bus config this worker consumes from — see
+// internal/connection/kafka.go. GroupID makes this a proper consumer group
+// (offsets tracked per group on the broker), so running more than one
+// totclient_pools instance splits the topic's partitions between them
+// instead of every instance processing every message.
+type Kafka struct {
+	Brokers string
+	Topic   string
+	GroupID string
 }

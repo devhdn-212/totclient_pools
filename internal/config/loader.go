@@ -50,5 +50,10 @@ func Get() *Config {
 		BalanceAPI: BalanceAPI{
 			APIKey: os.Getenv("BALANCE_API_KEY"),
 		},
+		Kafka: Kafka{
+			Brokers: os.Getenv("KAFKA_BROKERS"),
+			Topic:   os.Getenv("KAFKA_TOPIC"),
+			GroupID: os.Getenv("KAFKA_GROUP_ID"),
+		},
 	}
 }

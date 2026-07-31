@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/devhdn-212/totclient_pools/dto"
 	"github.com/shopspring/decimal"
 )
 
@@ -57,12 +56,4 @@ type TrxkeluaranmemberRepository interface {
 	FindPeriodsByUsername(ctx context.Context, idcomp, idcomppasaran, username string) ([]TrxkeluaranmemberPeriod, error)
 	Save(ctx context.Context, trxkeluaranmember *Trxkeluaranmember, idcomp string) error
 	Update(ctx context.Context, trxkeluaranmember *Trxkeluaranmember, idcomp string) error
-}
-type TrxkeluaranmemberService interface {
-	All(ctx context.Context, idcomp string, idtrx int) ([]dto.TrxkeluaranmemberData, error)
-	// Periods caches its result per idcomppasaran+username so the cache key
-	// stays valid across period rollovers — checkout.go invalidates by the
-	// same key, see trxkeluaranmemberByUserCacheKey.
-	Periods(ctx context.Context, idcomp, idcomppasaran, username string) ([]dto.TrxkeluaranmemberPeriodData, error)
-	Save(ctx context.Context, req dto.TrxkeluaranmemberSave, client, idcomp string) error
 }
