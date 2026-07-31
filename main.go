@@ -65,7 +65,7 @@ func main() {
 	}))
 	app.Use(etag.New())
 	app.Use(limiter.New(limiter.Config{
-		Max:        20,
+		Max:        200,
 		Expiration: 1 * time.Minute,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
