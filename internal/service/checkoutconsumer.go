@@ -50,6 +50,19 @@ const (
 	redisTrxkeluaranmemberByUser     = "client:trxkeluaranmember"
 )
 
+// redisRiwayatTransaksiPrefix / redisRiwayatDetailTransaksiPrefix mirror the
+// exact cache keys totclient_api's riwayatTransaksiService.Fetch reads
+// (Redisriwayattransaksi / Redisriwayatdetailtransaksi there, see that
+// repo's internal/service/riwayattransaksi.go) — same mirroring rationale
+// as redisAgenTrxkeluaranmemberPrefix above: this worker is what actually
+// persists the bet a checkout represents (trxkeluarandetail/
+// trxkeluaranmember), so it's the one that has to bust these two too, even
+// though it never reads them itself.
+const (
+	redisRiwayatTransaksiPrefix       = "client:riwayattransaksi"
+	redisRiwayatDetailTransaksiPrefix = "client:riwayattransaksi:detail"
+)
+
 func trxkeluaranmemberByUserCacheKey(idcomp, idcomppasaran, username string) string {
 	return redisTrxkeluaranmemberByUser + ":v4:" + strings.ToLower(idcomp) + ":" + idcomppasaran + ":" + username
 }
@@ -267,6 +280,24 @@ func (c *CheckoutConsumer) persist(ctx context.Context, evt domain.CheckoutKafka
 	// reported failure.
 	go connection.DeleteRedis(trxkeluaranmemberByUserCacheKey(evt.Idcompany, evt.PasaranIdcomp, evt.Username))
 	go connection.DeleteRedisByPrefix(redisAgenTrxkeluaranmemberPrefix + ":" + strings.ToLower(evt.Idcompany))
+	// Checkout just added a new bet row for this user/pasaran/period —
+	// scoped down to username (unlike the savenomorkeluaran/revisi
+	// invalidation on the agen side, which busts every player's cache
+	// because a draw settling changes everyone's status at once) since a
+	// new bet here only ever changes what THIS player's own riwayat looks
+	// like.
+	//
+	// Level-1 (period list) is deleted by EXACT key, not prefix: the cache
+	// key riwayatTransaksiService.Fetch writes for this case
+	// ("client:riwayattransaksi:<idcomp>:<pasaran_idcomp>:<username>") has
+	// no segment after username, so DeleteRedisByPrefix's "prefix:*" scan
+	// pattern would never match it (that trailing ":*" requires something
+	// AFTER the prefix) — using it here silently never deleted anything,
+	// which is exactly why the Transaksi list kept showing stale data after
+	// a checkout. Level-2 (detail) genuinely does have a segment after this
+	// same prefix (":<idtrxkeluaran>"), so prefix-delete stays correct there.
+	go connection.DeleteRedis(redisRiwayatTransaksiPrefix + ":" + strings.ToLower(evt.Idcompany) + ":" + evt.PasaranIdcomp + ":" + evt.Username)
+	go connection.DeleteRedisByPrefix(redisRiwayatDetailTransaksiPrefix + ":" + strings.ToLower(evt.Idcompany) + ":" + evt.PasaranIdcomp + ":" + evt.Username)
 	if len(compileItems) > 0 {
 		go cacheCompileData(evt.Idcompany, evt.IDtrxkeluaran, evt.PlayerinvoiceStr, compileItems)
 	}

@@ -15,7 +15,7 @@ import (
 // Postgres for that period regardless (a bet still stuck "RUNNING" after
 // compile runs means it was never settled, whether Redis lost it to
 // expiry/eviction/restart or anything else — see DOKUMENTASI.md).
-const compileCacheTTL = 2 * 24 * time.Hour
+const compileCacheTTL = 3 * 24 * time.Hour
 
 // compileDetailItem is one accepted bet line, cached so a later "compile"
 // step (admin submits the keluaran result → determine win/lose for every bet
