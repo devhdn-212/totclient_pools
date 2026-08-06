@@ -8,6 +8,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func getEnvInt(key string, fallback int) int {
+	v, err := strconv.Atoi(os.Getenv(key))
+	if err != nil {
+		return fallback
+	}
+	return v
+}
+
 func Get() *Config {
 	err := godotenv.Load()
 
@@ -30,6 +38,12 @@ func Get() *Config {
 			Name:   os.Getenv("DB_NAME"),
 			Schema: os.Getenv("DB_SCHEMA"),
 			Tz:     os.Getenv("DB_TIMEZONE"),
+			// Defaults sized for THIS worker's actual concurrency profile
+			// (one Kafka message processed at a time per replica), not
+			// copy-pasted from totclient_api's HTTP-server sizing — see the
+			// doc comment on Database.MaxConns.
+			MaxConns: int32(getEnvInt("DB_MAX_CONNS", 10)),
+			MinConns: int32(getEnvInt("DB_MIN_CONNS", 2)),
 		},
 		Jwt: Jwt{
 			Key:      os.Getenv("JWT_KEY"),

@@ -28,6 +28,16 @@ type Database struct {
 	User   string
 	Pass   string
 	Tz     string
+	// MaxConns/MinConns size the pgxpool ceiling/floor — configurable
+	// (rather than hardcoded) because this worker's right-sized pool is
+	// nowhere near totclient_api's: each replica processes Kafka messages
+	// one at a time (single consumer loop), so it never needs anywhere
+	// close to 100 connections, and every replica running with an
+	// oversized MaxConns compounds fast once this is scaled horizontally
+	// (16 replicas x 100 = a lot of headroom nobody's using). See
+	// DOKUMENTASI.md for the sizing discussion.
+	MaxConns int32
+	MinConns int32
 }
 
 type Redis struct {

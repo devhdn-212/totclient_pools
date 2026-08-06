@@ -33,9 +33,11 @@ func GetDatabase(conf config.Database) *pgxpool.Pool {
 	configPool.ConnConfig.RuntimeParams["search_path"] = conf.Schema
 	configPool.ConnConfig.RuntimeParams["timezone"] = "Asia/Jakarta"
 
-	// 3. Pengaturan Connection Pool
-	configPool.MaxConns = 100
-	configPool.MinConns = 10
+	// 3. Pengaturan Connection Pool — dari config (lihat Database.MaxConns
+	// doc comment), bukan angka tetap: worker ini beda profil pemakaian
+	// dari totclient_api, dan bakal di-scale banyak replica sekaligus.
+	configPool.MaxConns = conf.MaxConns
+	configPool.MinConns = conf.MinConns
 	configPool.MaxConnIdleTime = 5 * time.Minute
 	configPool.MaxConnLifetime = 60 * time.Minute
 
