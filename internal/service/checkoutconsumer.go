@@ -76,13 +76,15 @@ type CheckoutConsumer struct {
 	db                *pgxpool.Pool
 	reader            *kafka.Reader
 	memberinfoService domain.MemberinfoService
+	memberInvoiceRepo domain.MemberInvoiceRepository
 }
 
-func NewCheckoutConsumer(db *pgxpool.Pool, reader *kafka.Reader, memberinfoService domain.MemberinfoService) *CheckoutConsumer {
+func NewCheckoutConsumer(db *pgxpool.Pool, reader *kafka.Reader, memberinfoService domain.MemberinfoService, memberInvoiceRepo domain.MemberInvoiceRepository) *CheckoutConsumer {
 	return &CheckoutConsumer{
 		db:                db,
 		reader:            reader,
 		memberinfoService: memberinfoService,
+		memberInvoiceRepo: memberInvoiceRepo,
 	}
 }
 
@@ -95,6 +97,25 @@ func NewCheckoutConsumer(db *pgxpool.Pool, reader *kafka.Reader, memberinfoServi
 // Telegram alert hook, see below) on every single iteration instead of a
 // bounded rate.
 const fetchRetryBackoff = 5 * time.Second
+
+// processTimeout bounds the "finish this one message no matter what" context
+// below - long enough for a normal debit+persist, short enough that a truly
+// stuck DB/wallet call doesn't hang shutdown forever (orchestrators kill the
+// process outright after their own grace period anyway).
+const processTimeout = 30 * time.Second
+
+// persistMaxAttempts/persistRetryBackoff - dikonfirmasi user: cuma buat
+// persist() (nyimpen trxkeluarandetail/trxkeluaranmember) SETELAH debit
+// wallet sudah sukses, bukan buat SubmitTransaction itu sendiri (retry debit
+// punya risiko beda - kalau percobaan pertama sebenarnya sukses tapi
+// response-nya hilang, retry bisa kirim debit dobel; persist() tidak punya
+// risiko itu karena baru dipanggil SETELAH debit dipastikan sukses). 3x
+// percobaan @1 detik - total tambahan waktu ~2 detik di kasus terburuk,
+// jauh di bawah processTimeout (30 detik) di atas.
+const (
+	persistMaxAttempts  = 3
+	persistRetryBackoff = 1 * time.Second
+)
 
 func (c *CheckoutConsumer) Run(ctx context.Context) {
 	for {
@@ -118,14 +139,33 @@ func (c *CheckoutConsumer) Run(ctx context.Context) {
 			continue
 		}
 
-		c.handle(ctx, msg.Value)
+		// Sengaja pakai context BARU (bukan ctx yang dibatalkan pas shutdown/
+		// redeploy) buat memproses SATU message yang sudah kadung ke-fetch -
+		// dikonfirmasi user ini penyebab nyata sebagian baris "Pending Bet
+		// Request" (DOKUMENTASI.md § 9.8/§13): kalau SIGTERM datang PERSIS di
+		// tengah handle()/persist(), pola lama (pakai ctx yang sama buat
+		// FetchMessage DAN proses+commit) bisa motong transaksi persist di
+		// tengah jalan walau debit wallet-nya udah kadung sukses - uang
+		// kepotong, data hilang, padahal seharusnya bisa dihindari sepenuhnya
+		// kalau restart-nya nunggu message yang lagi diproses selesai dulu.
+		// Message yang sudah di-fetch sekarang SELALU diselesaikan sampai
+		// tuntas (debit+persist+commit offset), baru loop mengecek ctx.Done()
+		// SEBELUM fetch message berikutnya - bukan berhenti di tengah message
+		// yang sedang diproses.
+		processCtx, cancel := context.WithTimeout(context.Background(), processTimeout)
+		c.handle(processCtx, msg.Value)
 
 		// Committed unconditionally (success or a logged wallet/persist
 		// failure) — there is no retry/dead-letter path here, matching how
 		// a wallet rejection is handled below: it's a deliberate,
 		// print-and-move-on decision, not an oversight.
-		if err := c.reader.CommitMessages(ctx, msg); err != nil {
+		if err := c.reader.CommitMessages(processCtx, msg); err != nil {
 			connection.Log.Error("checkout consumer: CommitMessages failed: " + err.Error())
+		}
+		cancel()
+
+		if ctx.Err() != nil {
+			return
 		}
 	}
 }
@@ -168,6 +208,12 @@ func (c *CheckoutConsumer) handle(ctx context.Context, raw []byte) {
 		return
 	}
 
+	// dateTransaction anchors this checkout's row in public.tbl_trx_member_invoice
+	// (PK/partition column) - captured once here so InsertRequested/MarkVoid/
+	// MarkCompleted below all address the exact same row.
+	now := util.GetNowJakarta()
+	dateTransaction := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
 	_, err = c.memberinfoService.SubmitTransaction(ctx, domain.MothershipTransaction{
 		Idcompany:     evt.Idcompany,
 		Invoice:       evt.Invoice,
@@ -182,13 +228,73 @@ func (c *CheckoutConsumer) handle(ctx context.Context, raw []byte) {
 		// decision this bet just never happened as far as
 		// trxkeluarandetail/trxkeluaranmember are concerned. No retry, no
 		// dead-letter, nothing persisted; only a log line survives.
+		//
+		// Deliberately NO row written to tbl_trx_member_invoice on this path
+		// - dikoreksi user: Requested HARUS berarti "dana user sudah
+		// kepotong", titik. Kalau baris ini ditulis di sini (sebelum tahu
+		// debit-nya sukses atau tidak), baris "debit gagal" numpuk bareng
+		// baris "debit sukses tapi persist gagal" di panel Pending Bet
+		// Request, dan admin refund manual bisa KELIRU ngasih kredit ke
+		// invoice yang uangnya belum pernah kepotong sama sekali - itu sama
+		// aja ngasih uang gratis ke player. InsertRequested sengaja dipindah
+		// ke SETELAH SubmitTransaction sukses (di bawah), bukan sebelum -
+		// lihat DOKUMENTASI.md § 9.8.
 		fmt.Println("Checkout consumer - wallet GAGAL, playerinvoice:", evt.PlayerinvoiceStr, "username:", evt.Username, "error:", err)
 		return
 	}
 
-	if err := c.persist(ctx, evt); err != nil {
-		connection.Log.Error("checkout consumer: failed to persist checkout after wallet debit succeeded",
+	// Requested row written HERE, SETELAH debit sukses (bukan sebelumnya) -
+	// deliberately no I/O between the successful SubmitTransaction above and
+	// this insert, so the window where a debit succeeded but no row exists
+	// yet is as close to zero as this code can make it. This ordering
+	// guarantees the OPPOSITE property from before: any row that DOES exist
+	// here is guaranteed to represent "wallet was actually debited" - never
+	// a debit attempt that failed/never happened. See DOKUMENTASI.md § 9.8.
+	if err := c.memberInvoiceRepo.InsertRequested(ctx, &domain.MemberInvoice{
+		AgentCode:       evt.Idcompany,
+		InvoiceID:       evt.Playerinvoice,
+		Username:        evt.Username,
+		PlayerToken:     evt.Token,
+		DebitAmount:     evt.Totalbayar,
+		DateTransaction: dateTransaction,
+	}); err != nil {
+		connection.Log.Error("checkout consumer: failed to insert member invoice (Requested) after debit succeeded",
 			zap.String("playerinvoice", evt.PlayerinvoiceStr), zap.Error(err))
+		// Deliberately NOT returning here - the debit already succeeded, so
+		// persist() below still has to be attempted regardless of whether
+		// this tracking insert worked. Skipping persist() on top of a failed
+		// tracking insert would double the damage of one failure (lost bet
+		// data AND no reconciliation record) instead of just losing the
+		// reconciliation record. persist()'s MarkCompleted no-ops harmlessly
+		// if this row never existed (0 rows matched, not an error).
+	}
+
+	// persist() retried a few times before giving up - dikonfirmasi user:
+	// debit sudah kadung sukses, jadi kalau gagal nyimpen gara-gara gangguan
+	// SESAAT (DB blip, dsb - bukan lagi soal restart/shutdown, itu sudah
+	// ditutup lewat processCtx di Run()), coba lagi dulu beberapa kali
+	// sebelum benar-benar nyerah jadi baris "Requested". persist() buka
+	// transaksi baru sendiri tiap dipanggil, jadi aman dipanggil ulang -
+	// tidak ada state parsial yang perlu dibersihkan di antara percobaan.
+	var persistErr error
+	for attempt := 1; attempt <= persistMaxAttempts; attempt++ {
+		persistErr = c.persist(ctx, evt, dateTransaction)
+		if persistErr == nil {
+			break
+		}
+		if attempt < persistMaxAttempts {
+			connection.Log.Warn(fmt.Sprintf("checkout consumer: persist gagal (percobaan %d/%d), retry dalam %s", attempt, persistMaxAttempts, persistRetryBackoff),
+				zap.String("playerinvoice", evt.PlayerinvoiceStr), zap.Error(persistErr))
+			time.Sleep(persistRetryBackoff)
+		}
+	}
+	if persistErr != nil {
+		connection.Log.Error(fmt.Sprintf("checkout consumer: failed to persist checkout after wallet debit succeeded (sudah dicoba %d kali)", persistMaxAttempts),
+			zap.String("playerinvoice", evt.PlayerinvoiceStr), zap.Error(persistErr))
+		// Deliberately left at Requested (not voided) here - the debit
+		// DID succeed, so this is exactly the "money taken, data missing"
+		// case the member-invoice table exists to catch. Do not touch its
+		// status; totagen_api's reconciliation is what resolves this.
 		return
 	}
 
@@ -200,7 +306,7 @@ func (c *CheckoutConsumer) handle(ctx context.Context, raw []byte) {
 // what totclient_api's checkoutService.Submit used to do inline before this
 // was split across Kafka, just fed from the event instead of a live
 // pasaran-rate calculation (that already happened in totclient_api).
-func (c *CheckoutConsumer) persist(ctx context.Context, evt domain.CheckoutKafkaMessage) error {
+func (c *CheckoutConsumer) persist(ctx context.Context, evt domain.CheckoutKafkaMessage, dateTransaction time.Time) error {
 	tx, err := c.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -210,6 +316,7 @@ func (c *CheckoutConsumer) persist(ctx context.Context, evt domain.CheckoutKafka
 	txExec := repository.NewPGXTxExecutor(tx)
 	detailRepo := repository.NewTrxkeluarandetailRepository(txExec)
 	memberRepo := repository.NewTrxkeluaranmemberRepository(txExec)
+	memberInvoiceRepo := repository.NewMemberInvoiceRepository(txExec)
 
 	compileItems := make([]compileDetailItem, 0, len(evt.Items))
 	for _, item := range evt.Items {
@@ -269,6 +376,14 @@ func (c *CheckoutConsumer) persist(ctx context.Context, evt domain.CheckoutKafka
 	}
 	if err := memberRepo.Save(ctx, member, evt.Idcompany); err != nil {
 		return fmt.Errorf("insert trxkeluaranmember: %w", err)
+	}
+
+	// Completed in the SAME tx as the two inserts above - atomic: either all
+	// three land together, or (on any earlier error/rollback) the Requested
+	// row from handle() stays exactly as it was, still correctly readable by
+	// totagen_api's reconciliation.
+	if err := memberInvoiceRepo.MarkCompleted(ctx, evt.Idcompany, evt.Playerinvoice, dateTransaction); err != nil {
+		return fmt.Errorf("mark member invoice completed: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
