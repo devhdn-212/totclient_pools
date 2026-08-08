@@ -50,6 +50,9 @@ type MemberInvoice struct {
 // repo's domain/memberinvoice.go and documentasi.md bagian 64).
 type MemberInvoiceRepository interface {
 	InsertRequested(ctx context.Context, inv *MemberInvoice) error
-	MarkCompleted(ctx context.Context, agentCode string, invoiceID int, dateTransaction time.Time) error
+	// MarkCompleted returns claimed=false (no error) if the row was no longer
+	// Requested when this ran - i.e. an admin's manual refund already claimed
+	// it first. The caller must treat that as a signal to abort, not ignore.
+	MarkCompleted(ctx context.Context, agentCode string, invoiceID int, dateTransaction time.Time) (claimed bool, err error)
 	EnsureMonthPartition(ctx context.Context, monthStart time.Time) error
 }

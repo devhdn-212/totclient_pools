@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -66,6 +67,15 @@ const (
 func trxkeluaranmemberByUserCacheKey(idcomp, idcomppasaran, username string) string {
 	return redisTrxkeluaranmemberByUser + ":v4:" + strings.ToLower(idcomp) + ":" + idcomppasaran + ":" + username
 }
+
+// errInvoiceAlreadyVoided marks the specific persist() failure where an
+// admin's manual refund won the race and voided this invoice before persist()
+// could complete (see MarkCompleted in internal/repository/memberinvoice.go
+// and DOKUMENTASI.md § 9.9). Unlike other persist() failures, retrying this
+// one is pointless (the row will never become Requested again) and it is not
+// a "money taken, data missing" case needing reconciliation - the money
+// already went back to the player, correctly.
+var errInvoiceAlreadyVoided = errors.New("member invoice already voided by admin refund - aborting persist")
 
 // CheckoutConsumer is the Kafka consumer side of the checkout flow: it reads
 // CheckoutKafkaMessage events totclient_api publishes once balance/limit
@@ -282,6 +292,13 @@ func (c *CheckoutConsumer) handle(ctx context.Context, raw []byte) {
 		if persistErr == nil {
 			break
 		}
+		if errors.Is(persistErr, errInvoiceAlreadyVoided) {
+			// Retrying is pointless - the row is Void now and will never go
+			// back to Requested, so every retry would fail the exact same
+			// way. Stop immediately instead of burning persistMaxAttempts
+			// tries and backoff sleeps on a foregone conclusion.
+			break
+		}
 		if attempt < persistMaxAttempts {
 			connection.Log.Warn(fmt.Sprintf("checkout consumer: persist gagal (percobaan %d/%d), retry dalam %s", attempt, persistMaxAttempts, persistRetryBackoff),
 				zap.String("playerinvoice", evt.PlayerinvoiceStr), zap.Error(persistErr))
@@ -289,6 +306,15 @@ func (c *CheckoutConsumer) handle(ctx context.Context, raw []byte) {
 		}
 	}
 	if persistErr != nil {
+		if errors.Is(persistErr, errInvoiceAlreadyVoided) {
+			// Not a failure needing reconciliation - an admin already
+			// resolved this invoice (refund) before persist() got to it.
+			// The bet is correctly NOT persisted; the money is correctly
+			// back in the player's wallet. See DOKUMENTASI.md § 9.9.
+			connection.Log.Info("checkout consumer: invoice sudah di-void (refund manual admin) sebelum sempat dipersist - bet sengaja tidak disimpan",
+				zap.String("playerinvoice", evt.PlayerinvoiceStr))
+			return
+		}
 		connection.Log.Error(fmt.Sprintf("checkout consumer: failed to persist checkout after wallet debit succeeded (sudah dicoba %d kali)", persistMaxAttempts),
 			zap.String("playerinvoice", evt.PlayerinvoiceStr), zap.Error(persistErr))
 		// Deliberately left at Requested (not voided) here - the debit
@@ -382,8 +408,18 @@ func (c *CheckoutConsumer) persist(ctx context.Context, evt domain.CheckoutKafka
 	// three land together, or (on any earlier error/rollback) the Requested
 	// row from handle() stays exactly as it was, still correctly readable by
 	// totagen_api's reconciliation.
-	if err := memberInvoiceRepo.MarkCompleted(ctx, evt.Idcompany, evt.Playerinvoice, dateTransaction); err != nil {
+	claimed, err := memberInvoiceRepo.MarkCompleted(ctx, evt.Idcompany, evt.Playerinvoice, dateTransaction)
+	if err != nil {
 		return fmt.Errorf("mark member invoice completed: %w", err)
+	}
+	if !claimed {
+		// An admin's manual refund (totagen_api ClaimForRefund) already won
+		// the race on this exact row and flipped it to Void - money has
+		// already gone back to the player's wallet. Abort here (defer
+		// tx.Rollback above undoes the trxkeluarandetail/trxkeluaranmember
+		// inserts too) so this bet never becomes valid data on top of an
+		// already-issued refund. See DOKUMENTASI.md § 9.9.
+		return errInvoiceAlreadyVoided
 	}
 
 	if err := tx.Commit(ctx); err != nil {

@@ -32,15 +32,22 @@ func (a memberInvoiceRepository) InsertRequested(ctx context.Context, inv *domai
 }
 
 // MarkCompleted only moves a row OUT of Requested — WHERE status = 'Requested'
-// guards against updating a row some other caller already resolved (belt and
-// suspenders; in practice each invoice's status is only ever touched once by
-// the checkout flow that created it).
-func (a memberInvoiceRepository) MarkCompleted(ctx context.Context, agentCode string, invoiceID int, dateTransaction time.Time) error {
+// guards against updating a row some other caller already resolved. This is
+// NOT just belt-and-suspenders: an admin's manual refund (totagen_api's
+// ClaimForRefund, same WHERE status='Requested' guard) can race this and win,
+// flipping the row to Void first. The returned bool tells the caller which
+// side won - false means someone else already claimed this row, and the
+// caller (persist(), see checkoutconsumer.go) must treat that as a reason to
+// abort the whole transaction, not a harmless no-op.
+func (a memberInvoiceRepository) MarkCompleted(ctx context.Context, agentCode string, invoiceID int, dateTransaction time.Time) (bool, error) {
 	query := `UPDATE ` + memberInvoiceTable + `
 		SET status = $1, update_at = now()
 		WHERE agent_code = $2 AND invoice_id = $3 AND date_transaction = $4 AND status = $5`
-	_, err := a.db.Exec(ctx, query, domain.MemberInvoiceCompleted, agentCode, invoiceID, dateTransaction, domain.MemberInvoiceRequested)
-	return err
+	tag, err := a.db.Exec(ctx, query, domain.MemberInvoiceCompleted, agentCode, invoiceID, dateTransaction, domain.MemberInvoiceRequested)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 // EnsureMonthPartition mirrors totagen_api/totagen_pools's ensureMonthPartitions
