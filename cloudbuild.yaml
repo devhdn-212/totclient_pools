@@ -1,0 +1,44 @@
+steps:
+  # 1. Build image Docker - dua tag ($BUILD_ID buat deploy presisi lewat
+  #    step 3, :latest cuma biar gototapi-client-pools.yaml tetap valid kalau
+  #    suatu saat di-apply ulang dari nol - lihat komentar cloudbuild.yaml
+  #    totagen_api, pola sama persis).
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/winsoft-isd-cm/totclient_pools:$BUILD_ID'
+      - '-t'
+      - 'gcr.io/winsoft-isd-cm/totclient_pools:latest'
+      - '.'
+
+  # 2. Push kedua tag ke Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/winsoft-isd-cm/totclient_pools:$BUILD_ID']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/winsoft-isd-cm/totclient_pools:latest']
+
+  # 3. Update image di Deployment yang sudah jalan di GKE - trigger rolling
+  #    update ke KEDUA replica (Deployment yang sama, bukan per-pod), Kafka
+  #    otomatis rebalance partisi selama rollout jalan.
+  #
+  #    PRASYARAT SAMA seperti totagen_api: service account Cloud Build
+  #    butuh role "Kubernetes Engine Developer" (roles/container.developer).
+  - name: 'gcr.io/cloud-builders/kubectl'
+    args:
+      - 'set'
+      - 'image'
+      - 'deployment/gototapi-client-pools'
+      - 'client-pools-go=gcr.io/winsoft-isd-cm/totclient_pools:$BUILD_ID'
+      - '-n'
+      - 'gototapi'
+    env:
+      - 'CLOUDSDK_COMPUTE_REGION=asia-southeast1'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=sdsb-stage-autopilot'
+
+images:
+  - 'gcr.io/winsoft-isd-cm/totclient_pools:$BUILD_ID'
+  - 'gcr.io/winsoft-isd-cm/totclient_pools:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

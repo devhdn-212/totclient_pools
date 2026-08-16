@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gototapi-client-pools
+  namespace: gototapi
+spec:
+  # 2 replica - sama pola gototapi-agen-pools (ketahanan + hemat cost). Lokal
+  # docker-compose.yml pakai 5 replica, tapi itu untuk stress-test dev; di
+  # staging 2 sudah cukup dan konsisten dengan totagen_pools. KAFKA_GROUP_ID
+  # di bawah WAJIB sama persis di semua replica.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gototapi-client-pools
+  template:
+    metadata:
+      labels:
+        app: gototapi-client-pools
+    spec:
+      containers:
+        - name: client-pools-go
+          image: gcr.io/winsoft-isd-cm/totclient_pools:latest
+          # Tidak ada "ports" - pure background worker (consumer Kafka),
+          # tidak listen HTTP sama sekali (lihat totclient_pools/Dockerfile).
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: db_host
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: db_user
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: db_pass
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: db_name
+            - name: DB_SCHEMA
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: db_schema
+            - name: DB_PORT
+              value: '5435'
+            - name: DB_MAX_CONNS
+              value: '10'
+            - name: DB_MIN_CONNS
+              value: '2'
+            # Redis IN-CLUSTER dari awal - lihat secret/gototapi-redis.yaml.
+            - name: DB_REDIS_HOST
+              value: 'gototapi-redis-service.gototapi.svc.cluster.local'
+            - name: DB_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gototapi-redis-secret
+                  key: redis_password
+            - name: DB_REDIS_PORT
+              value: '6379'
+            - name: DB_REDIS_NAME
+              value: '0'
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: jwt_key_client
+            - name: JWT_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: jwt_issuer_client
+            - name: JWT_AUDIENCE
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: jwt_audience_client
+            - name: JWT_EXP
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: jwt_exp_client
+            - name: TELEGRAM_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: telegram_bot_token
+            - name: TELEGRAM_CHAT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: telegram_chat_id
+            # BALANCE_API_KEY (bukan TOTWALLET_API_KEY seperti totagen_pools -
+            # nama env beda, value-nya SAMA reuse totwallet_api_key).
+            - name: BALANCE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: totwallet_api_key
+            - name: KAFKA_BROKERS
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: kafka_brokers_agen
+            - name: KAFKA_TOPIC
+              valueFrom:
+                secretKeyRef:
+                  name: stggotot-db-credentials
+                  key: kafka_topic_client
+            # KAFKA_GROUP_ID literal - WAJIB SAMA PERSIS di semua replica
+            # supaya jadi satu consumer group (lihat penjelasan sama di
+            # gototapi-agen-pools.yaml).
+            - name: KAFKA_GROUP_ID
+              value: 'totclient-pools'
+          resources:
+            limits:
+              cpu: 100m
+              ephemeral-storage: 100Mi
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              ephemeral-storage: 100Mi
+              memory: 512Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: default
+      serviceAccount: default
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      schedulerName: default-scheduler
+      tolerations:
+        - key: kubernetes.io/arch
+          operator: Equal
+          value: amd64
+          effect: NoSchedule
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

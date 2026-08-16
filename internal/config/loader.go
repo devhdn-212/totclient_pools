@@ -17,10 +17,12 @@ func getEnvInt(key string, fallback int) int {
 }
 
 func Get() *Config {
-	err := godotenv.Load()
-
-	if err != nil {
-		log.Fatal("Error loading .env file", err.Error())
+	// Info-log kalau tidak ketemu (bukan log.Fatal) - di Kubernetes config
+	// datang dari env var container asli (Secret), bukan file .env (yang
+	// sengaja tidak di-bake ke image lagi - lihat Dockerfile). os.Getenv(...)
+	// di bawah tetap baca env var asli seperti biasa baik ada .env maupun tidak.
+	if err := godotenv.Load(); err != nil {
+		log.Println("Info: .env file tidak ditemukan, pakai environment variable dari OS/container:", err.Error())
 	}
 
 	expInt, _ := strconv.Atoi(os.Getenv("JWT_EXP"))
