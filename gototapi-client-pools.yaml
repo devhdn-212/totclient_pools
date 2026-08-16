@@ -23,11 +23,11 @@ spec:
           # Tidak ada "ports" - pure background worker (consumer Kafka),
           # tidak listen HTTP sama sekali (lihat totclient_pools/Dockerfile).
           env:
+            # DB_HOST/DB_PORT lewat PgBouncer IN-CLUSTER (bukan langsung ke
+            # Postgres VM 34.50.107.48) - mode "transaction pooling", nekan
+            # jumlah koneksi fisik ke Postgres. Lihat secret/gototapi-pgbouncer.yaml.
             - name: DB_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: stggotot-db-credentials
-                  key: db_host
+              value: 'gototapi-pgbouncer-service.gototapi.svc.cluster.local'
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
@@ -49,7 +49,7 @@ spec:
                   name: stggotot-db-credentials
                   key: db_schema
             - name: DB_PORT
-              value: '5435'
+              value: '6432'
             - name: DB_MAX_CONNS
               value: '10'
             - name: DB_MIN_CONNS
